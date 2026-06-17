@@ -1,0 +1,145 @@
+<!-- Swarm 任务列表 — 企业级控制面板 -->
+<view class="task-container {{theme}}">
+
+  <!-- 积分徽章 -->
+  <view class="credits-row">
+    <view class="credits-badge" bindtap="goToCredits">
+      <text class="dot-breathe"></text>
+      <text class="credits-num">{{userCredits}}</text>
+      <text class="credits-unit">算力</text>
+    </view>
+  </view>
+
+  <!-- 统计概览 — 企业级 KPI 卡 -->
+  <view class="kpi-grid">
+    <view class="card kpi-card {{currentFilter === 'RUNNING' ? 'active' : ''}}" data-filter="RUNNING" bindtap="onSelectFilter">
+      <view class="kpi-head">
+        <text class="kpi-label">运行中</text>
+        <view class="status-dot status-dot-running"></view>
+      </view>
+      <text class="kpi-num num-font">{{stats.running}}</text>
+      <text class="kpi-sub">个任务运行中</text>
+    </view>
+
+    <view class="card kpi-card {{currentFilter === 'ALL' ? 'active' : ''}}" data-filter="ALL" bindtap="onSelectFilter">
+      <view class="kpi-head">
+        <text class="kpi-label">全部任务</text>
+      </view>
+      <text class="kpi-num num-font">{{stats.total}}</text>
+      <text class="kpi-sub">已部署</text>
+    </view>
+
+    <view class="card kpi-card {{currentFilter === 'SUCCESS' ? 'active' : ''}}" data-filter="SUCCESS" bindtap="onSelectFilter">
+      <view class="kpi-head">
+        <text class="kpi-label">已完成</text>
+      </view>
+      <text class="kpi-num num-font success">{{stats.success}}</text>
+      <text class="kpi-sub">已归档</text>
+    </view>
+
+    <view class="card kpi-card {{currentFilter === 'FAILED' ? 'active' : ''}}" data-filter="FAILED" bindtap="onSelectFilter">
+      <view class="kpi-head">
+        <text class="kpi-label">异常</text>
+      </view>
+      <text class="kpi-num num-font danger">{{stats.failed || 0}}</text>
+      <text class="kpi-sub">需处理</text>
+    </view>
+  </view>
+
+  <!-- 筛选栏 -->
+  <scroll-view class="filter-bar" scroll-x enable-flex enhanced show-scrollbar="{{false}}">
+    <view class="filter-items">
+      <view
+        wx:for="{{filterOptions}}"
+        wx:key="value"
+        class="pill-filter {{currentFilter === item.value ? 'active' : ''}}"
+        data-filter="{{item.value}}"
+        bindtap="onSelectFilter"
+      >
+        {{item.label}}
+      </view>
+    </view>
+  </scroll-view>
+
+  <!-- 任务列表 -->
+  <view class="task-list">
+    <!-- 骨架加载 -->
+    <view wx:if="{{loading && tasks.length === 0}}">
+      <view class="skeleton skeleton-card" wx:for="{{[1,2,3]}}" wx:key="*this"></view>
+    </view>
+
+    <!-- 空状态 -->
+    <view wx:elif="{{filteredTasks.length === 0}}" class="empty-state">
+      <view class="empty-icon">
+        <view class="t-icon t-icon-mail" style="font-size: 96rpx; color: var(--text-secondary);"></view>
+      </view>
+      <text class="empty-label">暂无任务</text>
+      <text class="empty-desc">部署智能体协同编排流，享受全自动 AI 执行服务</text>
+      <button class="btn-primary" style="width:400rpx;margin-top:40rpx;" bindtap="goToDeploy">创建任务</button>
+    </view>
+
+    <!-- 任务卡片 -->
+    <view wx:else>
+            <!-- 任务卡片 -->
+      <view
+        wx:for="{{filteredTasks}}"
+        wx:key="id"
+        class="card card-actionable task-card status-{{item.statusClass}}"
+        data-id="{{item.id}}"
+        bindtap="goToDetail"
+      >
+        <view class="task-status-bar {{item.statusClass}}"></view>
+
+        <!-- 头部：图标 + 主信息 + 状态 -->
+        <view class="card-head">
+          <view class="task-icon">
+            <text><view class="t-icon t-icon-ai-terminal"></view></text>
+          </view>
+          <view class="task-meta">
+            <view class="task-title-row">
+              <text class="task-name">{{item.displayName}}</text>
+              <text class="task-type-tag">协同</text>
+            </view>
+            <view class="task-sub-row">
+              <text class="task-id">ID: {{item.id}}</text>
+              <text class="task-cost">消耗 {{item.credits_cost || 0}} 积分</text>
+            </view>
+            <text class="task-time">{{item.formattedTime}} 创建</text>
+          </view>
+          <view class="tag tag-{{item.statusClass}}">
+            <view wx:if="{{item.status === 'RUNNING'}}" class="status-dot status-dot-running"></view>
+            <text>{{item.statusLabel}}</text>
+          </view>
+        </view>
+
+        <!-- 属性网格 -->
+        <view class="card-props" wx:if="{{item.result_summary || item.payload.workflowName}}">
+          <view class="prop-grid">
+            <view class="prop-cell span-2" wx:if="{{item.payload.workflowName}}">
+              <text class="prop-label">工作流</text>
+              <text class="prop-value">{{item.payload.workflowName}}</text>
+            </view>
+            <view class="prop-cell" wx:if="{{item.payload.goal}}">
+              <text class="prop-label">目标</text>
+              <text class="prop-value">{{item.payload.goal}}</text>
+            </view>
+            <view class="prop-cell" wx:if="{{item.payload.maxLoops}}">
+              <text class="prop-label">轮数</text>
+              <text class="prop-value">{{item.payload.maxLoops}} 轮</text>
+            </view>
+            <view class="prop-cell span-2" wx:if="{{item.result_summary}}">
+              <text class="prop-label">执行结果</text>
+              <text class="prop-value summary">{{item.result_summary}}</text>
+            </view>
+          </view>
+        </view>
+
+        <!-- 尾部 -->
+        <view class="card-foot">
+          <text class="foot-hint">查看详情</text>
+          <view class="arrow-right-ios"></view>
+        </view>
+      </view>
+    </view>
+  </view>
+</view>

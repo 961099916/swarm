@@ -1,0 +1,6 @@
+{
+  "navigationBarTitleText": "管理大盘",
+  "usingComponents": {
+    "t-button": "tdesign-miniprogram/button/button"
+  }
+}

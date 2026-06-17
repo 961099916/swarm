@@ -1,0 +1,8 @@
+{
+  "navigationBarTitleText": "配置工具",
+  "usingComponents": {
+    "t-button": "tdesign-miniprogram/button/button",
+    "t-switch": "tdesign-miniprogram/switch/switch",
+    "t-popup": "tdesign-miniprogram/popup/popup"
+  }
+}

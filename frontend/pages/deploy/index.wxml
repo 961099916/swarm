@@ -1,0 +1,126 @@
+<page-meta page-style="overflow: {{showAgentModal ? 'hidden' : 'visible'}}"></page-meta>
+<!-- Swarm 部署 — 智能体协同编排 -->
+<view class="deploy-container {{theme}}">
+
+  <!-- 表单面板 -->
+  <view class="card form-panel">
+
+    <!-- 协同编排 -->
+    <view class="form-body">
+      <view class="form-group">
+        <text class="form-label">工作流名称</text>
+        <input class="input-field" value="{{ workflowName }}" placeholder="如: 每日边缘算力分析流" placeholder-class="form-placeholder" bindinput="onWorkflowNameInput" />
+      </view>
+      <view class="form-group">
+        <text class="form-label">任务目标</text>
+        <textarea class="glass-textarea" value="{{ goal }}" placeholder="请输入任务目标，系统将自动召集智能体集群完成" placeholder-class="form-placeholder" bindinput="onGoalInput" />
+      </view>
+      <view class="form-group">
+        <view class="form-label-row">
+          <text class="form-label">配置协同智能体</text>
+          <text class="form-link" bindtap="openAgentModal">+ 创造新模型</text>
+        </view>
+        <view class="agent-list">
+          <view wx:for="{{ availableAgents }}" wx:key="id"
+            class="card card-actionable agent-item {{ selectedAgentIdsMap[item.id] ? 'selected' : '' }}"
+            data-id="{{ item.id }}" bindtap="toggleAgent" hover-class="item-hover">
+            <view class="agent-avatar" style="display: flex; align-items: center; justify-content: center; background: var(--brand-subtle); border-radius: 50%; width: 72rpx; height: 72rpx;">
+              <view class="t-icon t-icon-{{ item.avatar || 'service' }}" style="font-size: 40rpx; color: var(--brand-color);"></view>
+            </view>
+            <view class="agent-info">
+              <text class="agent-name">{{ item.name }} <text class="agent-label {{ item.isPreset ? 'preset' : 'custom' }}">{{ item.isPreset ? '预设' : '自定义' }}</text></text>
+              <text class="agent-role">{{ item.role }}</text>
+            </view>
+            <view wx:if="{{ selectedAgentIdsMap[item.id] }}" class="selected-mark" style="display: flex; align-items: center; justify-content: center; background: var(--brand); border-radius: 50%; width: 36rpx; height: 36rpx;">
+              <view class="t-icon t-icon-check" style="font-size: 24rpx; color: #fff;"></view>
+            </view>
+          </view>
+        </view>
+      </view>
+      <view class="form-group">
+        <view class="form-label-row">
+          <text class="form-label">最大迭代轮数: <text class="num-font" style="color:var(--brand);font-weight:700;">{{ maxLoops }}</text> 轮</text>
+          <text class="form-hint">推荐 5 轮</text>
+        </view>
+        <t-slider value="{{ maxLoops }}" min="{{ 2 }}" max="{{ 8 }}" step="{{ 1 }}" bindchange="onLoopsChange" colors="{{ ['#1E6FFF', '#1E6FFF', 'rgba(255,255,255,0.08)'] }}" />
+      </view>
+    </view>
+
+    <view class="form-group">
+      <text class="form-label">邮件推送地址（可选）</text>
+      <input class="input-field" value="{{ email }}" placeholder="留空则仅在小程序通知" placeholder-class="form-placeholder" bindinput="onEmailInput" />
+    </view>
+  </view>
+
+  <!-- 算力收据 -->
+  <view class="card cost-card">
+    <view class="cost-head">
+      <view class="cost-title">算力消耗清单</view>
+      <text class="cost-status {{ isCreditsEnough ? 'ok' : 'warn' }}">{{ isCreditsEnough ? '算力充足' : '余额不足，请前往积分页面充值' }}</text>
+    </view>
+    <view class="separator"></view>
+    <view class="cost-body">
+      <view class="cost-row">
+        <text class="cost-label">本次消耗</text>
+        <text class="cost-minus">-5</text>
+      </view>
+      <view class="cost-row">
+        <text class="cost-label">账户余额</text>
+        <text class="cost-balance {{ isCreditsEnough ? 'ok' : 'warn' }} num-font">{{ userCredits }} 积分</text>
+      </view>
+    </view>
+    <view class="separator"></view>
+    <text class="cost-note {{ isCreditsEnough ? '' : 'warn' }}">{{ isCreditsEnough ? '算力充足' : '余额不足，请前往积分页面充值' }}</text>
+  </view>
+
+  <button class="btn-primary" style="margin-top:8rpx;" bindtap="handleDeploy" loading="{{ deploying }}">提交部署</button>
+
+  <!-- 创造智能体弹窗 -->
+  <t-popup visible="{{ showAgentModal }}" placement="bottom" closeOnOverlayClick="{{true}}" prevent-scroll-through="{{true}}" overlayProps="{{ { preventScrollThrough: true } }}" showOverlay="{{true}}" bindvisible-change="onPopupVisibleChange">
+    <view class="modal-sheet">
+      <view class="modal-head">
+        <text class="modal-title">新建智能体</text>
+        <view class="t-icon t-icon-close modal-close" style="font-size: 36rpx;" bindtap="closeAgentModal"></view>
+      </view>
+      <view class="modal-body">
+        <view class="form-group">
+          <text class="form-label">智能体名称</text>
+          <t-input class="modal-input" value="{{ agentForm.name }}" placeholder="如: 摘要分析官" borderless bindchange="onAgentNameInput" />
+        </view>
+        <view class="form-group">
+          <text class="form-label">视觉标识</text>
+          <t-input class="modal-input" value="{{ agentForm.avatar }}" placeholder="如: service, user, search..." borderless bindchange="onAgentAvatarInput" />
+        </view>
+        <view class="form-group">
+          <text class="form-label">职责描述</text>
+          <t-input class="modal-input" value="{{ agentForm.role }}" placeholder="描述它的核心职责" borderless bindchange="onAgentRoleInput" />
+        </view>
+        <view class="form-group">
+          <text class="form-label">System Prompt</text>
+          <t-textarea class="modal-textarea" value="{{ agentForm.systemPrompt }}" placeholder="设定专业人设、语气..." disableDefaultPadding bindchange="onAgentSystemPromptInput" />
+        </view>
+        <view class="form-group">
+          <text class="form-label">承载模型</text>
+          <view class="model-opts">
+            <view class="card card-actionable model-opt {{ agentForm.model === 'llama3.2' ? 'active' : '' }}" data-model="llama3.2" bindtap="selectAgentModel">
+              <text class="model-name">Llama 3.2（轻量）</text>
+              <text class="model-desc">低延迟，适合提取总结</text>
+            </view>
+            <view class="card card-actionable model-opt {{ agentForm.model === 'llama3.1' ? 'active' : '' }}" data-model="llama3.1" bindtap="selectAgentModel">
+              <text class="model-name">Llama 3.1（核心）</text>
+              <text class="model-desc">长文本推理，推荐编排</text>
+            </view>
+          </view>
+        </view>
+        <view class="form-group">
+          <text class="form-label">工具授权</text>
+          <view class="tool-opts">
+            <view class="tool-opt {{ agentFormToolsMap['web_fetch'] ? 'active' : '' }}" data-tool="web_fetch" bindtap="toggleAgentTool">网页数据提取</view>
+            <view class="tool-opt {{ agentFormToolsMap['email_notify'] ? 'active' : '' }}" data-tool="email_notify" bindtap="toggleAgentTool">邮件通知</view>
+          </view>
+        </view>
+      </view>
+      <t-button class="save-btn" theme="primary" size="large" loading="{{ savingAgent }}" bindtap="saveCustomAgent">保存</t-button>
+    </view>
+  </t-popup>
+</view>

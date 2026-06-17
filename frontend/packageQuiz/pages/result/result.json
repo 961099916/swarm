@@ -1,0 +1,10 @@
+{
+  "navigationBarTitleText": "性格测评报告",
+  "backgroundColor": "#070913",
+  "backgroundColorTop": "#070913",
+  "backgroundColorBottom": "#070913",
+  "backgroundColorContent": "#070913",
+  "usingComponents": {
+    "cyber-modal": "/components/cyber-modal/cyber-modal"
+  }
+}

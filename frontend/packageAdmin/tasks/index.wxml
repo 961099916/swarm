@@ -1,0 +1,50 @@
+<view class="admin-container {{theme}}">
+  <text class="board-title">任务管理</text>
+
+  <scroll-view class="filter-bar" scroll-x enable-flex enhanced show-scrollbar="{{false}}">
+    <view class="filter-items">
+      <view wx:for="{{statusFilterOptions}}" wx:key="value"
+        class="pill-filter {{currentStatusFilter === item.value ? 'active' : ''}}"
+        data-filter="{{item.value}}" bindtap="onSelectFilter">{{item.label}}</view>
+    </view>
+  </scroll-view>
+
+  <view class="list-section">
+    <view wx:if="{{loading}}" style="padding-top:16rpx;">
+      <view class="skeleton skeleton-card" wx:for="{{[1,2,3]}}" wx:key="*this"></view>
+    </view>
+
+    <view wx:elif="{{tasks.length === 0}}" class="empty-state">
+      <view class="empty-icon">
+        <view class="t-icon t-icon-mail" style="font-size: 96rpx; color: var(--text-secondary);"></view>
+      </view>
+      <text class="empty-label">暂无任务</text>
+    </view>
+
+    <view wx:else>
+      <view wx:for="{{tasks}}" wx:key="id" class="card tcard status-{{item.statusClass}}" data-id="{{item.id}}" bindtap="goToDetail">
+        <view class="tcard-bar status-{{item.statusClass}}"></view>
+        <view class="tcard-head">
+          <view class="tcard-left">
+            <text class="tcard-name">{{item.displayName || item.taskType}}</text>
+            <text class="tcard-id">{{item.id}}</text>
+          </view>
+          <view class="tag tag-{{item.statusClass}}" style="display: flex; align-items: center; padding: 4rpx 12rpx; border-radius: 8rpx;">
+            <view class="t-icon t-icon-{{item.statusDot}}" style="font-size: 28rpx; margin-right: 6rpx;"></view>
+            <text>{{item.statusLabel}}</text>
+          </view>
+        </view>
+        <view class="separator"></view>
+        <view class="tcard-props">
+          <view class="prop-row"><text class="prop-label">创建者</text><text class="prop-value">{{item.userNickname || item.userId}}</text></view>
+          <view class="prop-row"><text class="prop-label">类型</text><text class="prop-value">{{item.taskType}}</text></view>
+          <view class="prop-row"><text class="prop-label">时间</text><text class="prop-value">{{item.formattedTime}}</text></view>
+        </view>
+        <view class="separator"></view>
+        <view class="tcard-foot" wx:if="{{item.status === 'RUNNING' || item.status === 'PENDING' || item.status === 'SLEEPING'}}">
+          <button class="tcard-btn" data-id="{{item.id}}" catchtap="onCancelTask">取消任务</button>
+        </view>
+      </view>
+    </view>
+  </view>
+</view>

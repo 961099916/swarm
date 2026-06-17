@@ -1,0 +1,6 @@
+{
+  "navigationBarTitleText": "协同终端控制台",
+  "usingComponents": {
+    "t-button": "tdesign-miniprogram/button/button"
+  }
+}

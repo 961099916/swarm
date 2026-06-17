@@ -1,0 +1,6 @@
+{
+  "navigationBarTitleText": "算力账户明细",
+  "usingComponents": {
+    "t-popup": "tdesign-miniprogram/popup/popup"
+  }
+}

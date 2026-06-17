@@ -1,0 +1,11 @@
+{
+  "name": "swarm-backend",
+  "private": true,
+  "workspaces": [
+    "packages/*",
+    "workers/*"
+  ],
+  "scripts": {
+    "type-check": "npm run type-check --workspaces --if-present"
+  }
+}

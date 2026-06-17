@@ -1,0 +1,6 @@
+{
+  "navigationBarTitleText": "系统执行流审计",
+  "usingComponents": {
+    "t-button": "tdesign-miniprogram/button/button"
+  }
+}

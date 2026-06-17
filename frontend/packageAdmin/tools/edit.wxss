@@ -1,0 +1,345 @@
+/* File: /Users/zhangjiahao/IdeaProjects/swarm/frontend/packageAdmin/tools/edit.wxss */
+.edit-container {
+  min-height: 100vh;
+  background-color: var(--bg-root);
+  color: var(--text-primary);
+  padding: 40rpx 32rpx 160rpx 32rpx;
+  box-sizing: border-box;
+}
+
+.page-title {
+  font-size: 44rpx;
+  font-weight: 700;
+  margin-bottom: 40rpx;
+  display: block;
+  background: linear-gradient(90deg, var(--brand), var(--brand-light));
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
+/* 分组卡片 */
+.section-card {
+  background: var(--bg-surface);
+  border-radius: 24rpx;
+  padding: 32rpx;
+  margin-bottom: 32rpx;
+  border: 1rpx solid var(--border-default);
+  box-shadow: var(--shadow-sm);
+}
+
+.section-title {
+  font-size: 28rpx;
+  font-weight: 600;
+  color: var(--text-primary);
+  margin-bottom: 24rpx;
+  display: block;
+}
+
+.text-accent {
+  background: linear-gradient(90deg, var(--warning), #FFCC00);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
+.section-hd-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 24rpx;
+}
+
+/* 表单元素 */
+.form-item {
+  display: flex;
+  flex-direction: column;
+  margin-bottom: 24rpx;
+}
+
+.form-label {
+  font-size: 22rpx;
+  color: var(--text-muted);
+  margin-bottom: 12rpx;
+  font-weight: 500;
+}
+
+.form-input {
+  background: var(--bg-surface-hover);
+  border-radius: 12rpx;
+  padding: 20rpx 24rpx;
+  font-size: 26rpx;
+  color: var(--text-primary);
+  border: 1rpx solid var(--border-subtle);
+}
+
+.form-input.disabled {
+  background: var(--bg-surface-active);
+  color: var(--text-muted);
+  border-color: var(--border-subtle);
+}
+
+.form-textarea {
+  background: var(--bg-surface-hover);
+  border-radius: 12rpx;
+  padding: 20rpx 24rpx;
+  font-size: 26rpx;
+  color: var(--text-primary);
+  height: 140rpx;
+  width: 100%;
+  box-sizing: border-box;
+  border: 1rpx solid var(--border-subtle);
+}
+
+.script-area {
+  height: 360rpx;
+}
+
+.help-text {
+  font-size: 20rpx;
+  color: var(--text-muted);
+  margin-top: 8rpx;
+}
+
+/* 引擎模式 Tab 切换 */
+.tabs-row {
+  display: flex;
+  gap: 16rpx;
+  margin-bottom: 32rpx;
+}
+
+.tab-btn {
+  flex: 1;
+  text-align: center;
+  padding: 20rpx 0;
+  font-size: 26rpx;
+  border-radius: 12rpx;
+  background: var(--bg-surface-hover);
+  color: var(--text-secondary);
+}
+
+.tab-btn.active {
+  background: var(--brand);
+  color: #FFFFFF;
+  font-weight: 600;
+}
+
+/* Method / Type */
+.method-row, .type-selector {
+  display: flex;
+  gap: 16rpx;
+}
+
+.method-tag, .type-opt {
+  padding: 12rpx 32rpx;
+  font-size: 24rpx;
+  border-radius: 8rpx;
+  background: var(--bg-surface-hover);
+  color: var(--text-secondary);
+  border: 1rpx solid var(--border-subtle);
+}
+
+.method-tag.active, .type-opt.active {
+  background: var(--brand-subtle);
+  color: var(--brand);
+  border: 1rpx solid var(--brand-border);
+  font-weight: 500;
+}
+
+/* 参数定义列表 */
+.add-param-lbl {
+  font-size: 24rpx;
+  color: var(--brand);
+  font-weight: 500;
+}
+
+.param-empty {
+  text-align: center;
+  padding: 32rpx 0;
+  font-size: 24rpx;
+  color: var(--text-muted);
+}
+
+.param-item-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  background: var(--bg-surface-hover);
+  border-radius: 12rpx;
+  padding: 20rpx 24rpx;
+  margin-bottom: 16rpx;
+  border: 1rpx solid var(--border-subtle);
+}
+
+.param-left {
+  display: flex;
+  flex-direction: column;
+  gap: 8rpx;
+}
+
+.param-tag-row {
+  display: flex;
+  align-items: center;
+  gap: 12rpx;
+}
+
+.param-key {
+  font-size: 26rpx;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.p-tag {
+  font-size: 18rpx;
+  padding: 2rpx 8rpx;
+  border-radius: 4rpx;
+}
+
+.p-tag-type {
+  background: var(--border-subtle);
+  color: var(--text-secondary);
+}
+
+.p-tag-req {
+  background: var(--danger-subtle);
+  color: var(--danger);
+  border: 1rpx solid var(--danger-border);
+}
+
+.param-desc {
+  font-size: 22rpx;
+  color: var(--text-muted);
+}
+
+.param-del {
+  padding: 12rpx;
+}
+
+/* 命令行终端盒 (Terminal Console) */
+.terminal-shell {
+  background: #000000;
+  border-radius: 16rpx;
+  border: 1rpx solid var(--border-default);
+  margin-top: 24rpx;
+  overflow: hidden;
+}
+
+.term-header {
+  background: var(--bg-surface-hover);
+  padding: 12rpx 24rpx;
+  display: flex;
+  align-items: center;
+  border-bottom: 1rpx solid var(--border-subtle);
+}
+
+.dot {
+  width: 16rpx;
+  height: 16rpx;
+  border-radius: 50%;
+  margin-right: 12rpx;
+}
+
+.red-dot { background: #FF5F56; }
+.yellow-dot { background: #FFBD2E; }
+.green-dot { background: #27C93F; }
+
+.term-title {
+  font-size: 20rpx;
+  color: var(--text-muted);
+  margin-left: 12rpx;
+  font-family: monospace;
+}
+
+.term-body {
+  height: 200rpx;
+  padding: 20rpx 24rpx;
+  box-sizing: border-box;
+}
+
+.term-line {
+  font-size: 22rpx;
+  font-family: monospace;
+  margin-bottom: 8rpx;
+}
+
+.term-dir {
+  color: #57F287;
+  font-weight: bold;
+}
+
+.term-cursor {
+  color: #FFFFFF;
+}
+
+.term-muted {
+  color: var(--text-placeholder);
+}
+
+.success-line {
+  color: var(--success);
+}
+
+.error-line {
+  color: var(--danger);
+}
+
+.term-output {
+  font-size: 22rpx;
+  color: var(--text-secondary);
+  padding-left: 20rpx;
+  white-space: pre-wrap;
+  word-break: break-all;
+  margin-bottom: 16rpx;
+}
+
+.text-red {
+  color: var(--danger);
+}
+
+.code-font {
+  font-family: "Courier New", Courier, monospace;
+}
+
+/* 底部操作 */
+.actions-row {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  background: var(--bg-surface);
+  padding: 24rpx 32rpx 48rpx 32rpx;
+  display: flex;
+  gap: 24rpx;
+  border-top: 1rpx solid var(--border-default);
+  box-sizing: border-box;
+  z-index: 100;
+  box-shadow: var(--shadow-md);
+}
+
+/* 添加参数弹窗 */
+.popup-sheet {
+  background: var(--bg-surface);
+  border-radius: 32rpx 32rpx 0 0;
+  padding: 32rpx 32rpx 60rpx 32rpx;
+  color: var(--text-primary);
+  border-top: 1rpx solid var(--border-default);
+}
+
+.sheet-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 32rpx;
+}
+
+.sheet-title {
+  font-size: 32rpx;
+  font-weight: 600;
+}
+
+.sheet-body {
+  margin-bottom: 40rpx;
+}
+
+.sheet-actions {
+  display: flex;
+  gap: 24rpx;
+}

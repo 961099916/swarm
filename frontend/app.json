@@ -1,0 +1,109 @@
+{
+  "pages": [
+    "pages/task/list/index",
+    "pages/deploy/index",
+    "pages/map/index/index",
+    "pages/credits/index",
+    "pages/profile/index",
+    "pages/login/login",
+    "pages/mine/index"
+  ],
+  "subpackages": [
+    {
+      "root": "packageTask",
+      "pages": [
+        "detail/index",
+        "agent/manager/index"
+      ]
+    },
+    {
+      "root": "packageAdmin",
+      "pages": [
+        "dashboard/index",
+        "users/index",
+        "tasks/index",
+        "agents/index",
+        "tools/index",
+        "tools/edit"
+      ]
+    },
+    {
+      "root": "packageQuiz",
+      "pages": [
+        "pages/test/test",
+        "pages/result/result"
+      ]
+    }
+  ],
+  "preloadRule": {
+    "pages/task/list/index": {
+      "network": "all",
+      "packages": [
+        "packageTask"
+      ]
+    },
+    "pages/map/index/index": {
+      "network": "all",
+      "packages": [
+        "packageQuiz"
+      ]
+    },
+    "pages/profile/index": {
+      "network": "all",
+      "packages": [
+        "packageAdmin"
+      ]
+    }
+  },
+  "window": {
+    "backgroundTextStyle": "light",
+    "navigationBarBackgroundColor": "#0D0D10",
+    "navigationBarTitleText": "Swarm",
+    "navigationBarTextStyle": "white",
+    "backgroundColor": "#0D0D10",
+    "backgroundColorContent": "#0D0D10",
+    "backgroundColorTop": "#0D0D10",
+    "backgroundColorBottom": "#0D0D10"
+  },
+  "tabBar": {
+    "color": "#636366",
+    "selectedColor": "#1E6FFF",
+    "backgroundColor": "#0D0D10",
+    "borderStyle": "black",
+    "list": [
+      {
+        "pagePath": "pages/task/list/index",
+        "text": "任务",
+        "iconPath": "static/tabbar/task.png",
+        "selectedIconPath": "static/tabbar/task_active.png"
+      },
+      {
+        "pagePath": "pages/deploy/index",
+        "text": "部署",
+        "iconPath": "static/tabbar/deploy.png",
+        "selectedIconPath": "static/tabbar/deploy_active.png"
+      },
+      {
+        "pagePath": "pages/map/index/index",
+        "text": "地图",
+        "iconPath": "static/tabbar/map.png",
+        "selectedIconPath": "static/tabbar/map_active.png"
+      },
+      {
+        "pagePath": "pages/credits/index",
+        "text": "积分",
+        "iconPath": "static/tabbar/credits.png",
+        "selectedIconPath": "static/tabbar/credits_active.png"
+      },
+      {
+        "pagePath": "pages/profile/index",
+        "text": "我的",
+        "iconPath": "static/tabbar/profile.png",
+        "selectedIconPath": "static/tabbar/profile_active.png"
+      }
+    ]
+  },
+  "usingComponents": {},
+  "sitemapLocation": "sitemap.json",
+  "lazyCodeLoading": "requiredComponents"
+}

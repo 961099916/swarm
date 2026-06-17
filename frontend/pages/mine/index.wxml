@@ -1,0 +1,147 @@
+<view class="page-container">
+  <!-- 顶部个人身份卡片 (Glassmorphism) -->
+  <view class="glass-card user-header-card">
+    <!-- 头像快捷授权按钮 -->
+    <button class="avatar-wrapper-btn" open-type="chooseAvatar" bindchooseavatar="onChooseAvatar">
+      <image class="user-avatar" src="{{userProfile.avatarUrl || '/static/default_avatar.png'}}" mode="aspectFill"></image>
+      <view class="avatar-edit-badge">
+        <view class="camera-icon"></view>
+      </view>
+    </button>
+    <view class="user-info-text">
+      <view class="nickname-row">
+        <block wx:if="{{isEditingNickname}}">
+          <input 
+            class="nickname-input" 
+            type="nickname" 
+            value="" 
+            placeholder="正在获取..." 
+            placeholder-class="nickname-placeholder"
+            focus="{{nicknameFocus}}" 
+            bindinput="onNicknameInput"
+            bindblur="onNicknameBlur" 
+            bindconfirm="onNicknameConfirm"
+          />
+        </block>
+        <block wx:else>
+          <!-- 仅在默认名称时允许点击获取，获取后不允许再次点击，完全封死自定义修改 -->
+          <view 
+            class="nickname-display" 
+            bindtap="{{userProfile.nickname === '性格评估探索家' ? 'onNicknameTap' : ''}}"
+            style="{{userProfile.nickname === '性格评估探索家' ? 'cursor: pointer;' : ''}}"
+          >
+            <text class="nickname-text">{{userProfile.nickname}}</text>
+            <view class="get-nickname-badge" wx:if="{{userProfile.nickname === '性格评估探索家'}}">
+              <text class="badge-get-text">获取微信名称</text>
+            </view>
+          </view>
+        </block>
+      </view>
+      <view class="status-badge-row">
+        <view class="status-badge {{isOffline ? 'badge-offline' : 'badge-online'}}">
+          <view class="status-badge-dot"></view>
+          <text class="status-badge-text">{{isOffline ? '离线单机模式' : '云端同步模式'}}</text>
+        </view>
+      </view>
+    </view>
+  </view>
+
+  <!-- 数据统计仪表盘 (Glassmorphism Panel) -->
+  <view class="glass-card stats-dashboard">
+    <view class="stat-box">
+      <text class="stat-val">{{stats.completedCount || 0}}</text>
+      <text class="stat-lbl">已解锁报告</text>
+    </view>
+    <view class="stat-divider-vertical"></view>
+    <view class="stat-box">
+      <text class="stat-val">{{stats.badgeCount || 0}}</text>
+      <text class="stat-lbl">性格勋章数</text>
+    </view>
+    <view class="stat-divider-vertical"></view>
+    <view class="stat-box">
+      <text class="stat-val">{{stats.completedCount > 0 ? '99' : '0'}}%</text>
+      <text class="stat-lbl">超越探索者</text>
+    </view>
+  </view>
+
+  <!-- 测评报告历史区域 -->
+  <view class="history-title-row">
+    <text class="section-title-mine">测评历史 ({{historyList.length}})</text>
+  </view>
+
+  <scroll-view scroll-y class="history-list-scroll">
+    <!-- 有历史记录 -->
+    <block wx:if="{{historyList.length > 0}}">
+      <block wx:for="{{historyList}}" wx:key="historyId">
+        <view class="glass-card history-item-card" bindtap="onViewDetail" data-id="{{item.historyId}}">
+          <view class="item-header">
+            <text class="item-title">{{item.testTitle}}</text>
+            <view class="delete-btn-area" catchtap="onDeleteHistory" data-id="{{item.historyId}}">
+              <view class="delete-icon"></view>
+            </view>
+          </view>
+          
+          <view class="item-body">
+            <text class="result-badge">{{item.resultCode}}</text>
+            <text class="result-name-text">{{item.resultName}}</text>
+          </view>
+          
+          <view class="item-footer">
+            <text class="time-text">{{item.formattedTime}}</text>
+            <text class="view-report-link">查看详情 →</text>
+          </view>
+        </view>
+      </block>
+    </block>
+
+    <!-- 空状态 -->
+    <block wx:else>
+      <view class="empty-container">
+        <view class="empty-icon-circle">
+          <view class="empty-icon-inner"></view>
+        </view>
+        <text class="empty-title">暂无测评历史报告</text>
+        <text class="empty-subtitle">您还没有参与过任何性格测评，点击下方按钮开始探索您的人格本质吧。</text>
+        <button class="btn-primary btn-empty-action" bindtap="onGoToTest">开启首次测评</button>
+      </view>
+    </block>
+
+  </scroll-view>
+
+  <!-- 大厂关于与说明分流卡片（常驻底部，并排网格布局） -->
+  <view class="service-grid-group">
+    <view class="glass-card service-grid-item" bindtap="onHelpTap">
+      <view class="service-grid-header" style="display: flex; justify-content: space-between; align-items: center; width: 100%;">
+        <view class="t-icon t-icon-help-circle" style="font-size: 36rpx; color: var(--brand-color);"></view>
+        <view class="arrow-icon-mini"></view>
+      </view>
+      <text class="service-grid-title">常见问题</text>
+      <text class="service-grid-desc">数据机制与常见排查</text>
+    </view>
+    
+    <view class="glass-card service-grid-item" bindtap="onAboutTap">
+      <view class="service-grid-header" style="display: flex; justify-content: space-between; align-items: center; width: 100%;">
+        <view class="t-icon t-icon-star" style="font-size: 36rpx; color: var(--warning);"></view>
+        <view class="arrow-icon-mini"></view>
+      </view>
+      <text class="service-grid-title">关于系统</text>
+      <text class="service-grid-desc">AI实验室与版本声明</text>
+    </view>
+  </view>
+
+  <!-- 全局自定义赛博弹窗 (Cyber Modal) -->
+  <cyber-modal
+    show="{{showCyberModal}}"
+    title="{{modalTitle}}"
+    content="{{modalContent}}"
+    showCancel="{{modalShowCancel}}"
+    confirmText="{{modalConfirmText}}"
+    cancelText="{{modalCancelText}}"
+    isDanger="{{modalIsDanger}}"
+    isLoading="{{modalIsLoading}}"
+    bind:confirm="onCyberModalConfirm"
+    bind:cancel="onCyberModalCancel"
+  />
+</view>
+<!-- 底部 safe area 兜底遮罩：覆盖 iOS home indicator 白色区域 -->
+<view class="safe-area-bottom"></view>

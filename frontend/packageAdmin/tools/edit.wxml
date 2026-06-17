@@ -1,0 +1,192 @@
+<page-meta page-style="overflow: {{showAddParamPopup ? 'hidden' : 'visible'}}"></page-meta>
+<!-- packageAdmin/tools/edit.wxml -->
+<view class="edit-container {{theme}}">
+  <text class="page-title">{{isEditMode ? '修改工具配置' : '创建自定义工具'}}</text>
+
+  <!-- 基础配置 -->
+  <view class="card section-card">
+    <text class="section-title">1. 基础配置契约</text>
+    
+    <view class="form-item">
+      <text class="form-label">唯一标识 (Name)</text>
+      <input class="form-input {{isEditMode ? 'disabled' : ''}}" value="{{name}}" disabled="{{isEditMode}}" placeholder="例如 weather_query，保存后不可更改" bindinput="onNameInput" />
+    </view>
+
+    <view class="form-item">
+      <text class="form-label">功能描述 (Description)</text>
+      <textarea class="form-textarea" value="{{description}}" placeholder="向 Agent 准确描述该工具的用途" bindinput="onDescriptionInput"></textarea>
+    </view>
+
+    <view class="form-item">
+      <text class="form-label">分组名称 (Category)</text>
+      <input class="form-input" value="{{category}}" placeholder="默认 general" bindinput="onCategoryInput" />
+    </view>
+  </view>
+
+  <!-- 执行模式选择 -->
+  <view class="card section-card">
+    <text class="section-title">2. 执行驱动引擎</text>
+    <view class="tabs-row">
+      <view class="tab-btn {{runMode === 'script' ? 'active' : ''}}" bindtap="switchRunMode" data-mode="script">FaaS 脚本模式</view>
+      <view class="tab-btn {{runMode === 'api' ? 'active' : ''}}" bindtap="switchRunMode" data-mode="api">API 代理模式</view>
+    </view>
+
+    <!-- API 模式参数 -->
+    <view wx:if="{{runMode === 'api'}}" class="api-fields">
+      <view class="form-item">
+        <text class="form-label">请求方法 (Method)</text>
+        <view class="method-row">
+          <view class="method-tag {{method === 'GET' ? 'active' : ''}}" bindtap="setMethod" data-val="GET">GET</view>
+          <view class="method-tag {{method === 'POST' ? 'active' : ''}}" bindtap="setMethod" data-val="POST">POST</view>
+        </view>
+      </view>
+
+      <view class="form-item">
+        <text class="form-label">API 终点 (Endpoint)</text>
+        <input class="form-input code-font" value="{{endpoint}}" placeholder="https://api.com/v1?city={{city}}" bindinput="onEndpointInput" />
+        <text class="help-text">支持使用双花括号插值占位符，例如 {{city}} 或 {{env.WEATHER_API_KEY}}</text>
+      </view>
+
+      <view class="form-item">
+        <text class="form-label">额外 Headers (JSON)</text>
+        <textarea class="form-textarea code-font" value="{{headersStr}}" placeholder='{"Authorization": "Bearer Token"}' bindinput="onHeadersInput"></textarea>
+      </view>
+
+      <view class="form-item" wx:if="{{method === 'POST'}}">
+        <text class="form-label">Body 模板 (BodyTemplate)</text>
+        <textarea class="form-textarea code-font" value="{{bodyTemplate}}" placeholder='{"city": "{{city}}"}' bindinput="onBodyTemplateInput"></textarea>
+      </view>
+
+      <view class="form-item">
+        <text class="form-label">响应提取字段 (Selector)</text>
+        <input class="form-input code-font" value="{{responseSelector}}" placeholder="例如 data.result.text，不传返回全量Body" bindinput="onSelectorInput" />
+      </view>
+    </view>
+
+    <!-- JS 脚本模式参数 -->
+    <view wx:if="{{runMode === 'script'}}" class="script-fields">
+      <view class="form-item">
+        <text class="form-label">JavaScript 运行脚本 (FaaS)</text>
+        <textarea class="form-textarea code-font script-area" value="{{script}}" placeholder="async function run(input, context) { ... }" maxlength="-1" bindinput="onScriptInput"></textarea>
+        <text class="help-text">必须声明 async function run(input, context) 作为主入口，通过 return 输出内容。</text>
+      </view>
+    </view>
+  </view>
+
+  <!-- 输入参数定义 (Params Schema) -->
+  <view class="card section-card">
+    <view class="section-hd-row">
+      <text class="section-title">3. 输入参数声明</text>
+      <text class="add-param-lbl" bindtap="onOpenAddParam">添加参数定义</text>
+    </view>
+
+    <view class="param-empty" wx:if="{{paramsSchema.length === 0}}">
+      <text>（当前无传参约束，工具将被视为无参调用）</text>
+    </view>
+
+    <view class="param-item-row" wx:for="{{paramsSchema}}" wx:key="name">
+      <view class="param-left">
+        <view class="param-tag-row">
+          <text class="param-key code-font">{{item.name}}</text>
+          <text class="p-tag p-tag-type">{{item.type}}</text>
+          <text class="p-tag p-tag-req" wx:if="{{item.required}}">必填</text>
+        </view>
+        <text class="param-desc">{{item.description}}</text>
+      </view>
+      <view class="param-del" bindtap="onRemoveParam" data-index="{{index}}">
+        <view class="t-icon t-icon-close" style="font-size: 28rpx; color: var(--danger);"></view>
+      </view>
+    </view>
+  </view>
+
+  <!-- 动态调试沙箱控制台 -->
+  <view class="card section-card console-card">
+    <view class="section-hd-row">
+      <text class="section-title text-accent">4. 沙箱调试器 (Dry-Run)</text>
+      <t-button size="extra-small" theme="accent" loading="{{debugging}}" bindtap="onTriggerDebug">测试执行</t-button>
+    </view>
+    
+    <view class="form-item">
+      <text class="form-label">测试参数 (JSON Input)</text>
+      <textarea class="form-textarea code-font" style="height: 120rpx;" value="{{debugInputStr}}" placeholder='{"city": "深圳"}' bindinput="onDebugInputVal"></textarea>
+    </view>
+
+    <!-- 命令行黑窗 (Terminal Console) -->
+    <view class="terminal-shell">
+      <view class="term-header">
+        <view class="dot red-dot"></view>
+        <view class="dot yellow-dot"></view>
+        <view class="dot green-dot"></view>
+        <text class="term-title">sandbox@swarm:~</text>
+      </view>
+      <scroll-view scroll-y class="term-body">
+        <view class="term-line prompt-line" wx:if="{{!debugResult && !debugError}}">
+          <text class="term-dir">~/swarm</text>
+          <text class="term-cursor">$ </text>
+          <text class="term-muted">等待调试启动...</text>
+        </view>
+        
+        <block wx:if="{{debugResult}}">
+          <view class="term-line success-line">
+            <text class="term-tag">[SUCCESS]</text>
+            <text> 执行成功耗时 {{debugDuration}}ms</text>
+          </view>
+          <view class="term-output code-font">{{debugResult}}</view>
+        </block>
+
+        <block wx:if="{{debugError}}">
+          <view class="term-line error-line">
+            <text class="term-tag">[ERROR]</text>
+            <text> 执行终止抛出异常</text>
+          </view>
+          <view class="term-output code-font text-red">{{debugError}}</view>
+        </block>
+      </scroll-view>
+    </view>
+  </view>
+
+  <!-- 底部操作按钮 -->
+  <view class="actions-row">
+    <button class="btn-secondary" style="flex: 1;" bindtap="onCancel">返回</button>
+    <button class="btn-primary" style="flex: 2;" loading="{{saving}}" bindtap="onSave">保存并部署</button>
+  </view>
+
+  <!-- 添加参数弹窗 -->
+  <t-popup visible="{{showAddParamPopup}}" placement="bottom" closeOnOverlayClick="{{true}}" prevent-scroll-through="{{true}}" overlayProps="{{ { preventScrollThrough: true } }}" showOverlay="{{true}}" bindvisible-change="onPopupVisibleChange">
+    <view class="popup-sheet">
+      <view class="sheet-header">
+        <text class="sheet-title">添加参数字段定义</text>
+        <view class="t-icon t-icon-close" style="font-size: 36rpx; color: var(--text-muted); padding: 12rpx;" bindtap="onCloseAddParam"></view>
+      </view>
+      <view class="sheet-body">
+        <view class="form-item">
+          <text class="form-label">参数名称 (key)</text>
+          <input class="form-input code-font" value="{{newParamKey}}" placeholder="例如 city" bindinput="onNewParamKey" />
+        </view>
+        
+        <view class="form-item">
+          <text class="form-label">数据类型 (type)</text>
+          <view class="type-selector">
+            <view class="type-opt {{newParamType === 'string' ? 'active' : ''}}" bindtap="setNewParamType" data-type="string">string</view>
+            <view class="type-opt {{newParamType === 'number' ? 'active' : ''}}" bindtap="setNewParamType" data-type="number">number</view>
+            <view class="type-opt {{newParamType === 'boolean' ? 'active' : ''}}" bindtap="setNewParamType" data-type="boolean">boolean</view>
+          </view>
+        </view>
+
+        <view class="form-item" style="flex-direction:row; justify-content:space-between; align-items:center;">
+          <text class="form-label" style="margin-bottom:0;">强制必填 (Required)</text>
+          <t-switch checked="{{newParamRequired}}" bindchange="onNewParamRequiredChange" color="#1E6FFF" />
+        </view>
+
+        <view class="form-item">
+          <text class="form-label">字段描述 (description)</text>
+          <input class="form-input" value="{{newParamDesc}}" placeholder="该参数说明，告诉 Agent 何时传入" bindinput="onNewParamDesc" />
+        </view>
+      </view>
+      <view class="sheet-actions">
+        <button class="btn-secondary" style="flex:1;" bindtap="onCloseAddParam">取消</button>
+        <button class="btn-primary" style="flex:2;" bindtap="onAddParamConfirm">确认添加</button>
+      </view>
+    </view>
+  </t-popup>
+</view>

@@ -1,0 +1,30 @@
+.credits-container { padding: 20rpx; padding-bottom: calc(160rpx + env(safe-area-inset-bottom)); background: var(--bg-root); color: var(--text); min-height: 100vh; box-sizing: border-box; transition: background 0.3s ease; }
+.credits-container.theme-light { background: var(--bg-root); }
+.balance-card { padding: 24rpx; margin-bottom: 20rpx; }
+.bal-label { font-size: 24rpx; color: var(--text-secondary); margin-bottom: 8rpx; display: block; }
+.bal-row { display: flex; align-items: baseline; gap: 12rpx; margin-bottom: 8rpx; }
+.bal-num { font-size: 56rpx; font-weight: 800; color: var(--text); }
+.bal-unit { font-size: 40rpx; color: var(--brand); }
+.bal-desc { font-size: 22rpx; color: var(--text-muted); margin-bottom: 20rpx; display: block; }
+.bal-actions { display: flex; gap: 12rpx; }
+.bal-btn { flex: 1; background: var(--bg-surface); border: 1rpx solid var(--border-default); border-radius: 10rpx; padding: 18rpx 0; display: flex; flex-direction: column; align-items: center; gap: 8rpx; margin: 0; line-height: 1.3; }
+.bal-btn:active { background: var(--bg-surface-hover); }
+.bal-btn::after { border: none; }
+.bal-btn-icon { font-size: 32rpx; }
+.bal-btn-text { font-size: 20rpx; font-weight: 600; color: var(--text); }
+.filter-bar { width: 100%; white-space: nowrap; margin: 28rpx 0; }
+.filter-items { display: inline-flex; gap: 12rpx; }
+.history-item { display: flex; gap: 12rpx; margin-bottom: 24rpx; position: relative; padding-left: 24rpx; }
+.tl-dot { position: absolute; left: 0; top: 48rpx; width: 14rpx; height: 14rpx; border-radius: 50%; border: 2rpx solid var(--bg-root); z-index: 10; }
+.tl-dot.up { background: var(--brand); }
+.tl-dot.down { background: var(--danger); }
+.history-item::before { content: ''; position: absolute; left: 7rpx; top: 56rpx; bottom: -12rpx; width: 1rpx; border-left: 1rpx dashed var(--border-default); }
+.history-item:last-child::before { display: none; }
+.history-card { padding: 20rpx; width: 100%; box-sizing: border-box; }
+.hist-top { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12rpx; }
+.hist-reason { font-size: 24rpx; font-weight: 600; color: var(--text); }
+.hist-time { font-size: 20rpx; color: var(--text-muted); }
+.hist-amount { font-size: 36rpx; font-weight: 700; display: block; }
+.hist-amount.up { color: var(--success); }
+.hist-amount.down { color: var(--danger); }
+.hist-balance { font-size: 20rpx; color: var(--text-muted); display: block; margin-top: 4rpx; }

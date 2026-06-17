@@ -1,0 +1,28 @@
+# Third-party
+node_modules/
+miniprogram_npm/
+.npm-cache/
+
+# Build output
+dist/
+build/
+.wrangler/
+
+# IDE
+.idea/
+.vscode/
+
+# Git
+.git/
+.gitignore
+
+# Config
+.editorconfig
+.eslintrc.cjs
+.prettierrc
+.prettierignore
+
+# Database
+*.sqlite
+*.sqlite-shm
+*.sqlite-wal

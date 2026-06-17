@@ -1,0 +1,60 @@
+<view class="credits-container {{theme}}">
+
+  <view class="card balance-card">
+    <text class="bal-label">当前可用算力</text>
+    <view class="bal-row">
+      <text class="bal-num num-font">{{ userCredits }}</text>
+      <text class="bal-unit">积分</text>
+    </view>
+    <text class="bal-desc">边缘集群计算点数</text>
+
+    <view class="separator"></view>
+
+    <view class="bal-actions">
+      <button class="bal-btn" bindtap="playVideoAd" loading="{{ adLoading }}">
+        <view class="t-icon t-icon-video bal-btn-icon" style="font-size: 36rpx; margin-right: 8rpx;"></view>
+        <text class="bal-btn-text">观看广告 +20积分</text>
+      </button>
+      <button class="bal-btn" open-type="share">
+        <view class="t-icon t-icon-usergroup bal-btn-icon" style="font-size: 36rpx; margin-right: 8rpx;"></view>
+        <text class="bal-btn-text">邀请好友 +50积分</text>
+      </button>
+    </view>
+  </view>
+
+  <scroll-view class="filter-bar" scroll-x enable-flex enhanced show-scrollbar="{{false}}">
+    <view class="filter-items">
+      <view wx:for="{{typeOptions}}" wx:key="value"
+        class="pill-filter {{currentType === item.value ? 'active' : ''}}"
+        data-type="{{item.value}}" bindtap="switchType">{{item.label}}</view>
+    </view>
+  </scroll-view>
+
+  <view class="history-section">
+    <view wx:if="{{loading}}" style="padding-top:16rpx;">
+      <view class="skeleton skeleton-card" wx:for="{{[1,2,3]}}" wx:key="*this"></view>
+    </view>
+
+    <view wx:elif="{{ledgers.length === 0}}" class="empty-state">
+      <view class="empty-icon">
+        <view class="t-icon t-icon-mail" style="font-size: 96rpx; color: var(--text-secondary);"></view>
+      </view>
+      <text class="empty-label">暂无流水记录</text>
+      <text class="empty-desc">部署任务或获得奖励后，流水将显示在此处</text>
+    </view>
+
+    <view wx:else>
+      <view wx:for="{{ledgers}}" wx:key="id" class="history-item">
+        <view class="tl-dot {{item.delta > 0 ? 'up' : 'down'}}"></view>
+        <view class="card history-card">
+          <view class="hist-top">
+            <text class="hist-reason">{{item.reasonLabel}}</text>
+            <text class="hist-time">{{item.timeOnly}}</text>
+          </view>
+          <text class="hist-amount {{item.delta > 0 ? 'up' : 'down'}} num-font">{{item.delta > 0 ? '+' : ''}}{{item.delta}}</text>
+          <text class="hist-balance num-font">余额: {{item.balance}}</text>
+        </view>
+      </view>
+    </view>
+  </view>
+</view>

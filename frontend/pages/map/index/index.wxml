@@ -1,0 +1,551 @@
+<!-- File: /Users/zhangjiahao/IdeaProjects/wx-test/wx-client/miniprogram/pages/index/index.wxml -->
+
+<view class="game-viewport">
+  
+  <!-- ==================== 1. 2D 滚动游戏地图层 ==================== -->
+  <view class="game-map" style="transform: translate3d({{-cameraX}}px, {{-cameraY}}px, 0); width: {{mapWidth}}px; height: {{mapHeight}}px;">
+    
+    <!-- 地图网格草地背景 (CSS 平铺纹理绘制) -->
+    <view class="map-grid-bg"></view>
+
+    <!-- 地图木围栏边界 -->
+    <view class="map-boundary-wood"></view>
+
+    <!-- 静态自然障碍物渲染 -->
+    <block wx:for="{{obstacles}}" wx:key="id">
+      <view class="obstacle-node obs-{{item.id}}" style="transform: translate3d({{item.x}}px, {{item.y}}px, 0); width: {{item.width}}px; height: {{item.height}}px;">
+        <view class="obstacle-core">
+          <!-- 树桩年轮或者池塘荷叶等内部细节 -->
+          <view class="obs-detail" wx:if="{{item.id === 'pond'}}">🍀</view>
+          <view class="obs-detail" wx:if="{{item.id === 'stump_left'}}">🪵</view>
+          <view class="obs-detail" wx:if="{{item.id === 'fence_right'}}">◉</view>
+        </view>
+      </view>
+    </block>
+
+    <!-- NPC 集合渲染（传送门 / 普通 NPC 使用不同视觉容器） -->
+    <block wx:for="{{renderedNpcList}}" wx:key="id">
+
+      <!-- 「学途之门」专属渲染 -->
+      <!-- 外层容器：仅负责地图坐标定位（translate3d），绝不混入 scale 动效 -->
+      <block wx:if="{{item.npcType === 'portal_study'}}">
+        <view class="portal-node portal-study-node" style="transform: translate3d({{item.x - 24}}px, {{item.y - 80}}px, 0);">
+          <!-- 内层动画容器：接受 portal-active 的 scale 变换，与外层定位完全解耦 -->
+          <view class="portal-anim-inner {{activeNpcId === item.id ? 'portal-active' : ''}}">
+            <!-- 传送门光圈 -->
+            <view class="portal-aura portal-study-aura"></view>
+            <!-- 门体图标 -->
+            <image class="portal-body-img" src="{{item.avatarSvg}}" mode="aspectFit"></image>
+            <!-- 靠近提示 -->
+            <view class="npc-interact-tip portal-interact-tip" wx:if="{{activeNpcId === item.id && !showNpcDialogue}}" style="display: flex; align-items: center;">
+              <view class="t-icon t-icon-login" style="font-size: 28rpx; margin-right: 4rpx; color: var(--warning);"></view>
+              <text>进入</text>
+            </view>
+          </view>
+        </view>
+      </block>
+
+      <!-- 「逍遥之门」专属渲染 -->
+      <!-- 外层容器：仅负责地图坐标定位（translate3d），绝不混入 scale 动效 -->
+      <block wx:elif="{{item.npcType === 'portal_fun'}}">
+        <view class="portal-node portal-fun-node" style="transform: translate3d({{item.x - 24}}px, {{item.y - 80}}px, 0);">
+          <!-- 内层动画容器：接受 portal-active 的 scale 变换，与外层定位完全解耦 -->
+          <view class="portal-anim-inner {{activeNpcId === item.id ? 'portal-active' : ''}}">
+            <!-- 传送门光圈 -->
+            <view class="portal-aura portal-fun-aura"></view>
+            <!-- 门体图标 -->
+            <image class="portal-body-img" src="{{item.avatarSvg}}" mode="aspectFit"></image>
+            <!-- 靠近提示 -->
+            <view class="npc-interact-tip portal-interact-tip" wx:if="{{activeNpcId === item.id && !showNpcDialogue}}">◉ 进入</view>
+          </view>
+        </view>
+      </block>
+
+      <!-- 「副本出口传送门」专属渲染 —— 翡翠绿黑洞，通关后出现在关卡左上角 -->
+      <!-- 外层容器：仅负责地图坐标定位（translate3d），绝不混入 scale 动效 -->
+      <block wx:elif="{{item.npcType === 'portal_exit'}}">
+        <view class="portal-node portal-exit-node" style="transform: translate3d({{item.x - 24}}px, {{item.y - 80}}px, 0);">
+          <!-- 内层动画容器：接受 portal-active 的 scale 变换，与外层定位完全解耦 -->
+          <view class="portal-anim-inner {{activeNpcId === item.id ? 'portal-active' : ''}}">
+            <!-- 传送门光圈 -->
+            <view class="portal-aura portal-exit-aura"></view>
+            <!-- 门体黑洞图标 -->
+            <image class="portal-body-img" src="{{item.avatarSvg}}" mode="aspectFit"></image>
+            <!-- 名称标签 -->
+            <view class="portal-label portal-exit-label">
+              <text class="portal-label-text">{{item.name}}</text>
+            </view>
+            <!-- 靠近提示 -->
+            <view class="npc-interact-tip portal-interact-tip" wx:if="{{activeNpcId === item.id && !showNpcDialogue}}">↩ 回大厅</view>
+          </view>
+        </view>
+      </block>
+
+      <!-- 普通 NPC 渲染 -->
+      <block wx:else>
+        <view class="npc-sprite-container {{activeNpcId === item.id ? 'npc-active' : ''}}" style="transform: translate3d({{item.x - 16}}px, {{item.y - 36}}px, 0);">
+          <!-- NPC 名字与称号 -->
+          <view class="npc-hud-bubble">
+            <text class="npc-title-tag">小镇居民</text>
+            <text class="npc-name-text">{{item.name}}</text>
+          </view>
+          <!-- NPC 靠近后的微浮动交互气泡提示 -->
+          <view class="npc-interact-tip" wx:if="{{activeNpcId === item.id && !showNpcDialogue}}">◉ 对话</view>
+          <!-- NPC 矢量图形 -->
+          <image class="npc-svg-body" src="{{item.avatarSvg}}" mode="aspectFit"></image>
+          <!-- 像素影子底座 -->
+          <view class="npc-shadow-ellipse"></view>
+        </view>
+      </block>
+
+    </block>
+
+
+
+
+    <!-- 玩家角色 Sprite 渲染 -->
+    <view class="player-sprite-container {{playerDir}}" style="transform: translate3d({{playerX}}px, {{playerY}}px, 0);" bindtap="onOpenProfile">
+      <!-- 玩家小人头顶指示 -->
+      <view class="player-tag">
+        <text class="player-tag-text">YOU</text>
+      </view>
+
+      <!-- 增加内层动画包装，杜绝 CSS 动画 transform 覆盖外层绝对定位位移的 BUG -->
+      <view class="player-anim-wrapper {{playerMoving ? 'player-moving' : ''}}">
+        <!-- 玩家矢量图形（根据 playerDir 切换 SVG） -->
+        <image class="player-svg-body" src="{{playerSvgs[playerDir]}}" mode="aspectFit"></image>
+      </view>
+
+      <!-- 玩家脚底像素影子 -->
+      <view class="player-shadow-ring"></view>
+    </view>
+  </view>
+
+  <!-- ==================== 2. 顶层 HUD 交互区 ==================== -->
+  <view class="hud-layer">
+    
+    <!-- 左上角玩家简档 HUD -->
+    <view class="hud-profile-badge" bindtap="onOpenProfile">
+      <image class="hud-avatar" src="{{userProfile.avatarUrl}}" mode="aspectFill"></image>
+      <view class="hud-profile-info">
+        <text class="hud-nickname">{{userProfile.nickname}}</text>
+        <view class="hud-level-row">
+          <text class="hud-level-label">LV.{{stats.level || 1}}</text>
+          <text class="hud-title-text">{{stats.title || '小镇新手'}}</text>
+        </view>
+      </view>
+      <view class="hud-bag-icon" style="display: flex; align-items: center;">
+        <view class="t-icon t-icon-folder-open" style="font-size: 32rpx; margin-right: 6rpx; color: #fff;"></view>
+        <text>背包</text>
+      </view>
+    </view>
+
+    <!-- 右上角地图缩略图 HUD -->
+    <view class="hud-minimap-badge" bindtap="onToggleMinimapDetail">
+      <view class="minimap-viewport">
+        <!-- 地图微缩草坪网格背景 -->
+        <view class="minimap-grid-bg"></view>
+
+        <!-- 静态障碍物缩小投影 -->
+        <block wx:for="{{obstacles}}" wx:key="id">
+          <view class="minimap-obstacle mini-obs-{{item.id}}" style="left: {{item.x / 12}}px; top: {{item.y / 12}}px; width: {{item.width / 12}}px; height: {{item.height / 12}}px;"></view>
+        </block>
+
+        <!-- NPC 缩小投影 -->
+        <block wx:for="{{renderedNpcList}}" wx:key="id">
+          <view class="minimap-npc mini-npc-{{item.id}}" style="left: {{item.x / 12}}px; top: {{item.y / 12}}px;"></view>
+        </block>
+
+
+
+        <!-- 玩家自己 YOU 缩小投影 -->
+        <view class="minimap-player" style="left: {{(playerX + 16) / 12}}px; top: {{(playerY + 24) / 12}}px;"></view>
+      </view>
+
+      <!-- 缩略图下挂的精致木质状态标签（点击切换显示） -->
+      <view class="minimap-label-panel" wx:if="{{showMinimapDetail}}">
+        <text class="minimap-label-title">鹈鹕镇</text>
+        <text class="minimap-label-coords">({{playerXRound}}, {{playerYRound}})</text>
+      </view>
+    </view>
+
+    <!-- 右侧音频控制按钮 -->
+    <view class="hud-sound-btn {{showSoundPanel ? 'hud-sound-btn--active' : ''}}" bindtap="onToggleSoundPanel">
+      <view class="sound-btn-icon" style="display: flex; align-items: center; justify-content: center; height: 100%;">
+        <view class="t-icon t-icon-{{bgmEnabled ? 'sound' : 'sound-mute'}}" style="font-size: 36rpx; color: #fff;"></view>
+      </view>
+    </view>
+
+    <!-- 音频控制面板（展开时显示） -->
+    <view class="hud-sound-panel" wx:if="{{showSoundPanel}}" catchtap="preventTouchMove">
+      <view class="sound-panel-header">
+        <view class="sound-panel-title" style="display: flex; align-items: center;">
+          <view class="t-icon t-icon-music" style="font-size: 32rpx; margin-right: 8rpx; color: var(--text-secondary);"></view>
+          <text>音频设置</text>
+        </view>
+      </view>
+      <view class="sound-panel-item" bindtap="onToggleBgm">
+        <text class="sound-item-label">背景音乐</text>
+        <view class="sound-toggle {{bgmEnabled ? 'sound-toggle--on' : ''}}">
+          <view class="sound-toggle-thumb"></view>
+        </view>
+      </view>
+      <view class="sound-panel-item" bindtap="onToggleSfx">
+        <text class="sound-item-label">游戏音效</text>
+        <view class="sound-toggle {{sfxEnabled ? 'sound-toggle--on' : ''}}">
+          <view class="sound-toggle-thumb"></view>
+        </view>
+      </view>
+    </view>
+
+    <!-- 大面积虚拟摇杆触摸捕捉感应区 (限定屏幕左侧大半区域，防止干扰右下角A键) -->
+    <view class="joystick-touch-zone" catchtouchstart="onJoystickStart" catchtouchmove="onJoystickMove" catchtouchend="onJoystickEnd" catchtouchcancel="onJoystickEnd"></view>
+
+    <!-- 动态定位虚拟木摇杆底盘 (以 fixed 绝对对齐触摸落点，手指抬起时隐藏) -->
+    <view class="joystick-base" style="position: fixed; left: {{joystickX}}px; top: {{joystickY}}px; transform: translate3d(-50%, -50%, 0); opacity: {{showJoystick ? 0.9 : 0}}; pointer-events: none; transition: opacity 0.1s ease; z-index: 95;">
+      <view class="joystick-stick" style="transform: translate3d({{joystickStickX}}px, {{joystickStickY}}px, 0);"></view>
+      <view class="joystick-center-light"></view>
+    </view>
+
+    <!-- 右下角移动控制 & 交互 A 键 -->
+    <view class="hud-controls-container">
+      <!-- 交互 A 键（靠近 NPC 时发光显示） -->
+      <view class="btn-action-a {{showInteractBtn ? 'btn-action-a--active' : ''}}" bindtap="onInteract">
+        <text class="action-a-label">A</text>
+        <text class="action-a-sub">交互</text>
+      </view>
+    </view>
+  </view>
+
+  <!-- ==================== 3. NPC 对话 AVG 气泡框 ==================== -->
+  <view class="dialogue-overlay" wx:if="{{showNpcDialogue}}" bindtap="onOverlayTap">
+    <view class="dialogue-box wood-card" catchtap="preventTouchMove">
+      
+      <view class="dialogue-header">
+        <text class="dialogue-npc-badge">{{isTesting ? '心灵抉择' : '村民对话'}}</text>
+        <text class="dialogue-npc-name">{{dialogueNpcName}}</text>
+      </view>
+
+      <view class="dialogue-body">
+        <!-- 像素风答题进度条 -->
+        <view class="dialogue-progress" wx:if="{{isTesting && testQuestions.length > 0}}">
+          <text class="dialogue-progress-text">灵魂拷问：{{currentQuestionIndex + 1}} / {{testQuestions.length}}</text>
+          <view class="dialogue-progress-track">
+            <view class="dialogue-progress-fill" style="width: {{(currentQuestionIndex + 1) / testQuestions.length * 100}}%;"></view>
+          </view>
+        </view>
+        <!-- 罗夏墨迹测验特殊墨迹图形展示 -->
+        <view class="rorschach-container" wx:if="{{isTesting && testQuestions[currentQuestionIndex].inkblotSvg}}">
+          <image class="rorschach-inkblot" src="{{testQuestions[currentQuestionIndex].inkblotSvg}}" mode="aspectFit"></image>
+        </view>
+        <text class="dialogue-text">{{dialogueText}}</text>
+      </view>
+
+      <view class="dialogue-actions {{isTesting ? 'dialogue-actions--vertical' : ''}}">
+        <block wx:if="{{!isTesting && !showTestSummary}}">
+          <button class="dialogue-btn btn-cancel" bindtap="onCloseDialogue">再等等</button>
+          <button wx:if="{{npcInteractStatus !== 'locked'}}" class="dialogue-btn btn-primary" bindtap="onStartAssessment">{{npcInteractBtnText}}</button>
+        </block>
+        <block wx:elif="{{isTesting}}">
+          <!-- 纵向选项按键，为了方便点击 -->
+          <button wx:for="{{testQuestions[currentQuestionIndex].options}}" wx:key="id" class="dialogue-btn btn-option" bindtap="onSelectOption" data-option-id="{{item.id}}">
+            {{item.id}}. {{item.text}}
+          </button>
+        </block>
+        <block wx:elif="{{showTestSummary}}">
+          <button class="dialogue-btn btn-primary" style="width: 100%; margin: 0 !important;" bindtap="onConfirmResult">查看完整心智图腾</button>
+        </block>
+      </view>
+    </view>
+  </view>
+
+  <!-- ==================== 4. 个人数据档案弹窗 ==================== -->
+  <view class="profile-overlay" wx:if="{{showProfileModal}}" bindtap="onCloseProfile">
+    <view class="profile-modal wood-card" catchtap="preventTouchMove">
+
+      <view class="profile-header">
+        <view class="profile-title" style="display: flex; align-items: center;">
+          <view class="t-icon t-icon-file-txt" style="font-size: 36rpx; margin-right: 8rpx; color: var(--text-secondary);"></view>
+          <text>个人属性与背包档案</text>
+        </view>
+        <view class="profile-close-btn" bindtap="onCloseProfile" style="display: flex; align-items: center; justify-content: center;">
+          <view class="t-icon t-icon-close" style="font-size: 32rpx; color: var(--text-secondary);"></view>
+        </view>
+      </view>
+
+      <scroll-view class="profile-scroll" scroll-y="true">
+        
+        <!-- 玩家基本属性修改卡片 -->
+        <view class="profile-user-card">
+          <button class="avatar-picker-btn" open-type="chooseAvatar" bindchooseavatar="onChooseAvatar">
+            <image class="profile-avatar" src="{{userProfile.avatarUrl}}" mode="aspectFill"></image>
+            <view class="avatar-camera-icon">◉</view>
+          </button>
+
+          <view class="profile-name-section">
+            <view class="nickname-row">
+              <block wx:if="{{!isEditingNickname}}">
+                <text class="profile-nickname" bindtap="onNicknameTap">{{userProfile.nickname}}</text>
+                <view class="edit-icon-pen" bindtap="onNicknameTap" style="display: inline-flex; align-items: center; vertical-align: middle; margin-left: 8rpx;">
+                  <view class="t-icon t-icon-edit" style="font-size: 28rpx; color: var(--text-secondary);"></view>
+                </view>
+              </block>
+              <block wx:else>
+                <input type="nickname" class="nickname-input-box" value="{{userProfile.nickname}}" focus="{{nicknameFocus}}" bindinput="onNicknameInput" bindblur="onNicknameBlur" bindconfirm="onNicknameConfirm" maxlength="12" />
+              </block>
+            </view>
+            <text class="profile-sub-uid">当前位置: 鹈鹕镇广场</text>
+          </view>
+        </view>
+
+        <!-- 星露谷木质心智修习经验条 -->
+        <view class="wood-exp-container">
+          <view class="wood-exp-header">
+            <view class="wood-exp-title" style="display: flex; align-items: center;">
+              <view class="t-icon t-icon-star" style="font-size: 32rpx; margin-right: 8rpx; color: #d4a373;"></view>
+              <text>心智经验 ({{stats.title || '小镇新手'}})</text>
+            </view>
+            <text class="wood-exp-val">{{stats.exp || 0}} EXP</text>
+          </view>
+          <view class="wood-progress-track">
+            <view class="wood-progress-fill" style="width: {{stats.progressPercent || 0}}%;"></view>
+            <text class="wood-progress-text">升级进度 {{stats.progressPercent || 0}}%</text>
+          </view>
+        </view>
+
+        <!-- RPG 数据大三维指标面板 -->
+        <view class="profile-stats-grid">
+          <view class="stats-box">
+            <text class="stats-value">{{stats.completedCount || 0}}</text>
+            <text class="stats-label">已测深度 (次)</text>
+          </view>
+          <view class="stats-box">
+            <text class="stats-value">{{stats.differentCount || 0}}</text>
+            <text class="stats-label">不同试题 (种)</text>
+          </view>
+          <view class="stats-box">
+            <text class="stats-value">LV.{{stats.level || 1}}</text>
+            <text class="stats-label">当前等级</text>
+          </view>
+        </view>
+
+        <!-- 历史测评报告列表 -->
+        <view class="history-title-row" style="display: flex; flex-direction: column; align-items: stretch; margin-top: 30rpx;">
+          <view style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20rpx;">
+            <view class="history-title-label" style="display: flex; align-items: center;">
+              <view class="t-icon t-icon-assignment" style="font-size: 32rpx; margin-right: 8rpx; color: var(--text-secondary);"></view>
+              <text>评测收集图鉴</text>
+            </view>
+            <text class="history-count-badge">{{activeHistoryTab === 'fun' ? funHistoryList.length : studyHistoryList.length}} 份</text>
+          </view>
+          
+          <!-- 复古双 Tab 切换栏 -->
+          <view class="history-tabs-container" style="display: flex; border: 1rpx solid var(--border-default); border-radius: 8rpx; background: var(--bg-surface); overflow: hidden; height: 68rpx; box-sizing: border-box; margin-bottom: 20rpx;">
+            <view bindtap="onSwitchHistoryTab" data-tab="fun" style="flex: 1; display: flex; align-items: center; justify-content: center; font-size: 24rpx; font-weight: 600; color: var(--text-secondary); background: {{activeHistoryTab === 'fun' ? '#d4a373' : 'transparent'}}; transition: background 0.2s;" catchtap="onSwitchHistoryTab">
+              <view class="t-icon t-icon-star" style="font-size: 28rpx; margin-right: 8rpx; color: var(--text-secondary);"></view>逍遥之门
+            </view>
+            <view bindtap="onSwitchHistoryTab" data-tab="study" style="flex: 1; display: flex; align-items: center; justify-content: center; font-size: 24rpx; font-weight: 600; color: var(--text-secondary); background: {{activeHistoryTab === 'study' ? '#d4a373' : 'transparent'}}; border-left: 1rpx solid var(--border-default); transition: background 0.2s;" catchtap="onSwitchHistoryTab">
+              <view class="t-icon t-icon-book" style="font-size: 28rpx; margin-right: 8rpx; color: var(--text-secondary);"></view>学徒之门
+            </view>
+          </view>
+        </view>
+
+        <view class="history-list-container">
+          <block wx:for="{{activeHistoryTab === 'fun' ? funHistoryList : studyHistoryList}}" wx:key="historyId">
+            <view class="history-card" bindtap="onViewDetail" data-id="{{item.historyId}}">
+              <view class="hist-badge-side">
+                <text class="hist-code-neon">{{item.resultCode || 'MBTI'}}</text>
+              </view>
+              <view class="hist-main-info">
+                <text class="hist-title">{{item.testTitle}}</text>
+                <text class="hist-subtitle">获得图腾: <text class="hist-highlight">{{item.resultName}}</text></text>
+                <view class="hist-time" style="display: flex; align-items: center; margin-top: 6rpx;">
+                  <view class="t-icon t-icon-time" style="font-size: 24rpx; margin-right: 8rpx; color: #888;"></view>
+                  <text>{{item.formattedTime}}</text>
+                </view>
+              </view>
+              <view class="hist-action-buttons">
+                <!-- 垃圾桶删除键（使用 catchtap 防止冒泡到 onViewDetail） -->
+                <view class="hist-btn-del" catchtap="onDeleteHistory" data-id="{{item.historyId}}">◉</view>
+                <view class="hist-btn-view" style="display: flex; align-items: center; justify-content: center;">
+                  <view class="t-icon t-icon-chevron-right" style="font-size: 28rpx; color: var(--text-secondary);"></view>
+                </view>
+              </view>
+            </view>
+          </block>
+          
+          <view class="history-empty-tips" wx:if="{{(activeHistoryTab === 'fun' && funHistoryList.length === 0) || (activeHistoryTab === 'study' && studyHistoryList.length === 0)}}">
+            <text wx:if="{{activeHistoryTab === 'fun'}}">你还未进行过性格自测图腾评测，快去逍遥之门测试吧！</text>
+            <text wx:else>你还没有通过任何学科关卡考核，快去教室副本接受挑战吧！</text>
+          </view>
+        </view>
+        
+        <!-- 关于与版本说明 -->
+        <view class="faq-section-badge">
+          <text class="faq-text-desc">由鹈鹕镇心智研究所提供算法支持</text>
+          <text class="faq-text-version">Client Version: 2.1.0-Pelican</text>
+        </view>
+
+      </scroll-view>
+    </view>
+  </view>
+
+
+
+  <!-- ==================== 4.8 关卡副本传送选择弹窗 ==================== -->
+  <view class="profile-overlay" wx:if="{{showStageSelectorModal}}" bindtap="onCloseStageSelector">
+    <view class="profile-modal wood-card stage-selector-modal" catchtap="preventTouchMove">
+      
+      <view class="profile-header">
+        <view class="profile-title" style="display: flex; align-items: center;">
+          <view class="t-icon t-icon-transform" style="font-size: 36rpx; margin-right: 8rpx; color: var(--text-secondary);"></view>
+          <text>鹈鹕镇学堂传送阵</text>
+        </view>
+        <view class="profile-close-btn" bindtap="onCloseStageSelector" style="display: flex; align-items: center; justify-content: center;">
+          <view class="t-icon t-icon-close" style="font-size: 32rpx; color: var(--text-secondary);"></view>
+        </view>
+      </view>
+
+      <view class="stage-selector-desc">
+        <text>请选择要进入的挑战年级副本，只有已通关和当前修习的年级对你开放传送：</text>
+      </view>
+
+      <scroll-view class="stage-list-scroll" scroll-y="true">
+        <block wx:for="{{stageListForSelector}}" wx:key="stageId">
+          <view class="stage-item-card {{item.status === 'locked' ? 'stage-item--locked' : ''}} {{item.status === 'completed' ? 'stage-item--completed' : ''}} {{item.status === 'current' ? 'stage-item--current' : ''}}" bindtap="onSelectStageToEnter" data-stage="{{item}}">
+            <view class="stage-item-left">
+              <view class="stage-badge-status">{{item.statusText}}</view>
+              <text class="stage-item-name">{{item.stageName}}</text>
+            </view>
+            <view class="stage-item-right">
+              <button class="stage-action-btn" disabled="{{item.status === 'locked'}}">{{item.actionText}}</button>
+            </view>
+          </view>
+        </block>
+      </scroll-view>
+      
+    </view>
+  </view>
+
+  <!-- ==================== 5. 复古小镇风格公共警告确认弹窗 ==================== -->
+  <view class="dialogue-overlay" wx:if="{{showCyberModal}}" bindtap="onCyberModalCancel" style="z-index: 100000;">
+    <view class="cyber-modal-box wood-card {{modalIsDanger ? 'cyber-modal-danger' : ''}}" catchtap="preventTouchMove">
+      <text class="modal-title-text">{{modalTitle}}</text>
+      <view class="modal-body-content">
+        <text>{{modalContent}}</text>
+      </view>
+      <view class="modal-actions-row">
+        <button class="modal-btn btn-secondary" bindtap="onCyberModalCancel" wx:if="{{modalShowCancel}}">{{modalCancelText}}</button>
+        <button class="modal-btn btn-primary" bindtap="onCyberModalConfirm" loading="{{modalIsLoading}}">{{modalConfirmText}}</button>
+      </view>
+    </view>
+  </view>
+
+  <!-- ==================== 6. 大地图心智图腾结果弹窗 (Modal) ==================== -->
+  <view class="profile-overlay" wx:if="{{showResultModal}}" bindtap="onCloseResultModal" style="z-index: 2000;">
+    <view class="profile-modal wood-card result-modal" catchtap="preventTouchMove">
+      
+      <view class="profile-header">
+        <view class="profile-title" style="display: flex; align-items: center;">
+          <view class="t-icon t-icon-file-txt" style="font-size: 36rpx; margin-right: 8rpx; color: var(--text-secondary);"></view>
+          <text>{{testReport.code ? '心智图腾分析报告' : '学科考核成绩单'}}</text>
+        </view>
+        <view class="profile-close-btn" bindtap="onCloseResultModal" style="display: flex; align-items: center; justify-content: center;">
+          <view class="t-icon t-icon-close" style="font-size: 32rpx; color: var(--text-secondary);"></view>
+        </view>
+      </view>
+
+      <scroll-view class="profile-scroll" scroll-y="true">
+        
+        <!-- 情况 A: 趣味性格自测结果展示 -->
+        <block wx:if="{{testReport.code}}">
+          <view class="minimap-label-panel result-hero-panel hero-passed" style="margin-top: 0; width: 100%; box-sizing: border-box; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 30rpx;">
+            <text class="result-label-text">您获得了心智图腾</text>
+            <text class="result-code-text" style="font-size: 50rpx; margin: 15rpx 0; color: #b5525c; font-weight: 600;">「 {{testReport.name}} 」</text>
+            <text class="result-desc-text" style="font-size: 26rpx; opacity: 0.9; text-align: center; line-height: 1.5; margin-top: 10rpx; max-width: 90%;">
+              {{testReport.description}}
+            </text>
+          </view>
+
+          <!-- 核心特质 -->
+          <view class="wood-exp-container" style="margin-top: 30rpx;" wx:if="{{testReport.details && testReport.details.length > 0}}">
+            <text class="wood-exp-title">◉ 核心特质</text>
+            <view class="dim-list-container" style="margin-top: 15rpx; padding: 20rpx; border: 1rpx solid var(--border-default); border-radius: 8rpx; background: var(--bg-surface);">
+              <block wx:for="{{testReport.details}}" wx:key="*this">
+                <view style="font-size: 26rpx; color: var(--text-secondary); line-height: 1.6; margin-bottom: 12rpx; display: flex; align-items: center;">
+                  <view class="t-icon t-icon-star-filled" style="font-size: 24rpx; margin-right: 12rpx; color: #b5525c;"></view>
+                  <text style="flex: 1;">{{item}}</text>
+                </view>
+              </block>
+            </view>
+          </view>
+
+          <!-- 专属建议 -->
+          <view class="wood-exp-container" style="margin-top: 30rpx;" wx:if="{{testReport.suggestions && testReport.suggestions.length > 0}}">
+            <text class="wood-exp-title">◉ 专属建议</text>
+            <view class="dim-list-container" style="margin-top: 15rpx; padding: 20rpx; border: 1rpx solid var(--border-default); border-radius: 8rpx; background: var(--bg-surface);">
+              <block wx:for="{{testReport.suggestions}}" wx:key="*this">
+                <view style="font-size: 26rpx; color: var(--text-secondary); line-height: 1.6; margin-bottom: 12rpx; display: flex; align-items: center;">
+                  <view class="t-icon t-icon-check-circle-filled" style="font-size: 24rpx; margin-right: 12rpx; color: #27ae60;"></view>
+                  <text style="flex: 1;">{{item}}</text>
+                </view>
+              </block>
+            </view>
+          </view>
+        </block>
+
+        <!-- 情况 B: 学科考核成绩单展示 -->
+        <block wx:else>
+          <!-- 顶部通过状态卡片 -->
+          <view class="minimap-label-panel result-hero-panel {{testReport.passed ? 'hero-passed' : 'hero-failed'}}" style="margin-top: 0; width: 100%; box-sizing: border-box; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 30rpx;">
+            <text class="result-label-text">当前考核学科状态</text>
+            <text class="result-code-text" style="font-size: 56rpx; margin: 15rpx 0;">{{testReport.passed ? '[通过] 成绩合格' : '[未通过] 再接再厉'}}</text>
+            <text class="result-name-text">正确率：{{testReport.percentage}}%</text>
+            <text class="result-desc-text" style="font-size: 26rpx; opacity: 0.9; margin-top: 10rpx;">
+              答对题数：{{testReport.challengeResult.score}} / {{testReport.challengeResult.total}} (及格线：60%)
+            </text>
+          </view>
+
+          <!-- 错题及试题解析明细 -->
+          <view class="wood-exp-container" style="margin-top: 30rpx;">
+            <view class="wood-exp-title" style="display: flex; align-items: center;">
+              <view class="t-icon t-icon-star" style="font-size: 32rpx; margin-right: 8rpx; color: #d4a373;"></view>
+              <text>试卷对错与解析明细</text>
+            </view>
+            <view class="dim-list-container" style="margin-top: 15rpx;">
+              <block wx:for="{{testReport.challengeResult.details}}" wx:key="questionId">
+                <view class="wood-question-card {{item.correct ? 'wood-question-correct' : 'wood-question-incorrect'}}" style="margin-bottom: 20rpx; padding: 20rpx; border: 1rpx solid var(--border-default); border-radius: 8rpx; background: var(--bg-surface);">
+                  <view style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1rpx dashed var(--border-subtle); padding-bottom: 10rpx; margin-bottom: 10rpx;">
+                    <text style="font-weight: 600; color: var(--text-secondary); font-size: 28rpx;">第 {{index + 1}} 题</text>
+                    <text style="font-weight: 600; font-size: 26rpx; color: {{item.correct ? '#27ae60' : '#c0392b'}};">
+                      {{item.correct ? '[正确] 回答正确' : '[错误] 回答错误'}}
+                    </text>
+                  </view>
+                  <view style="font-size: 26rpx; color: var(--text-secondary); line-height: 1.4;">
+                    <view style="display: flex; margin-bottom: 10rpx;">
+                      <text>您的回答：<text style="font-weight: 600; color: {{item.correct ? '#27ae60' : '#c0392b'}};">{{item.userAnswer || '未答'}}</text></text>
+                      <text style="margin-left: 40rpx;">正确答案：<text style="font-weight: 600; color: #27ae60;">{{item.correctAnswer}}</text></text>
+                    </view>
+                    <view wx:if="{{item.explanation}}" style="margin-top: 12rpx; background: rgba(0,0,0,0.03); padding: 12rpx; border-radius: 6rpx; border-left: 6rpx solid #d4a373;">
+                      <text style="font-size: 24rpx; color: #666; font-style: italic;">◉ 解析：{{item.explanation}}</text>
+                    </view>
+                  </view>
+                </view>
+              </block>
+            </view>
+          </view>
+        </block>
+
+        <!-- 底部确认返回 -->
+        <view class="result-action-row" style="margin-top: 40rpx; margin-bottom: 20rpx; display: flex; justify-content: center;">
+          <button class="dialogue-btn btn-primary result-confirm-btn" style="width: 80%; margin: 0 !important;" bindtap="onCloseResultModal">确认返回小镇</button>
+        </view>
+      </scroll-view>
+    </view>
+  </view>
+
+  <!-- 离屏分析头像色彩 Canvas (8x8 像素降维采样) -->
+  <canvas type="2d" id="colorCanvas" style="width: 8px; height: 8px; position: fixed; left: -9999px;"></canvas>
+  <!-- 离屏海报绘制 Canvas，375×600 逻辑px，隐藏在屏幕外 -->
+  <canvas type="2d" id="posterCanvas" style="width: 375px; height: 650px; position: fixed; left: -9999px; top: -9999px;"></canvas>
+</view>

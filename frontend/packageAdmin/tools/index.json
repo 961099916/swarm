@@ -1,0 +1,7 @@
+{
+  "navigationBarTitleText": "动态工具库配置",
+  "usingComponents": {
+    "t-switch": "tdesign-miniprogram/switch/switch",
+    "t-button": "tdesign-miniprogram/button/button"
+  }
+}

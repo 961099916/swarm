@@ -1,0 +1,429 @@
+@import "./static/styles/icon.wxss";
+
+/* ══════════════════════════════════════════════════════
+   Swarm 企业级设计体系 v2 — Enterprise UI
+   定位：钉钉/飞书风格蓝灰专业主题
+   原则：圆角卡片、细边框、磨砂阴影、蓝灰配色
+   ══════════════════════════════════════════════════════ */
+
+/* ── 1. 设计 Token（暗色默认）── */
+page {
+  /* ── 背景色阶 ── */
+  --bg-root: #0A0A0C;
+  --bg-surface: #151518;
+  --bg-surface-hover: #222226;
+  --bg-surface-active: #2E2E34;
+  --bg-mask: rgba(0, 0, 0, 0.75);
+
+  /* ── 品牌色（钉钉蓝）── */
+  --brand: #1E6FFF;
+  --brand-light: #4D8FFF;
+  --brand-subtle: rgba(30, 111, 255, 0.12);
+  --brand-border: rgba(30, 111, 255, 0.35);
+
+  /* ── 功能色 ── */
+  --success: #34C759;
+  --success-subtle: rgba(52, 199, 89, 0.12);
+  --success-border: rgba(52, 199, 89, 0.35);
+  --warning: #FF9500;
+  --warning-subtle: rgba(255, 149, 0, 0.12);
+  --warning-border: rgba(255, 149, 0, 0.35);
+  --danger: #FF3B30;
+  --danger-subtle: rgba(255, 59, 48, 0.12);
+  --danger-border: rgba(255, 59, 48, 0.35);
+
+  /* ── 文字色阶 ── */
+  --text-primary: #FFFFFF;
+  --text-secondary: #E5E5EA;
+  --text-muted: #9A9A9F;
+  --text-placeholder: #727277;
+
+  /* ── 边框色阶 ── */
+  --border-subtle: #2C2C2E;
+  --border-default: #3A3A3C;
+  --border-strong: #48484A;
+
+  /* ── 圆角体系 ── */
+  --radius-sm: 8rpx;
+  --radius-md: 12rpx;
+  --radius-lg: 16rpx;
+  --radius-full: 999rpx;
+
+  /* ── 阴影体系 ── */
+  --shadow-sm: 0 2rpx 8rpx rgba(0, 0, 0, 0.4);
+  --shadow-md: 0 4rpx 16rpx rgba(0, 0, 0, 0.5);
+  --shadow-lg: 0 8rpx 32rpx rgba(0, 0, 0, 0.6);
+
+  /* ── 字体（企业级系统字族）── */
+  font-family: -apple-system, BlinkMacSystemFont, "PingFang SC", "Helvetica Neue", "Microsoft YaHei", sans-serif;
+  -webkit-font-smoothing: antialiased;
+  background: #0A0A0C;
+  color: #FFFFFF;
+  min-height: 100vh;
+  box-sizing: border-box;
+
+  /* ── 兼容旧版别名映射 ── */
+  --text: var(--text-primary);
+  --text-light: var(--text-primary);
+  --text-dark: #151518;
+  --neon-pink: #FF3B30;
+  --primary-purple: #a855f7;
+  --neon-cyan: #10ac84;
+}
+
+/* ── 2. 亮色主题覆盖 ── */
+.theme-light {
+  --bg-root: #F2F2F7;
+  --bg-surface: #FFFFFF;
+  --bg-surface-hover: #F5F5F7;
+  --bg-surface-active: #E8E8ED;
+  --bg-mask: rgba(0, 0, 0, 0.4);
+
+  --text-primary: #1C1C1E;
+  --text-secondary: #2C2C2E;
+  --text-muted: #555559;
+  --text-placeholder: #8E8E93;
+
+  --border-subtle: #E5E5EA;
+  --border-default: #D1D1D6;
+  --border-strong: #AEAEB2;
+
+  --brand-subtle: rgba(30, 111, 255, 0.08);
+  --success-subtle: rgba(52, 199, 89, 0.08);
+  --warning-subtle: rgba(255, 149, 0, 0.08);
+  --danger-subtle: rgba(255, 59, 48, 0.08);
+
+  --shadow-sm: 0 1rpx 4rpx rgba(0, 0, 0, 0.08);
+  --shadow-md: 0 4rpx 12rpx rgba(0, 0, 0, 0.12);
+  --shadow-lg: 0 8rpx 24rpx rgba(0, 0, 0, 0.16);
+
+  --text: var(--text-primary);
+}
+
+/* ── 3. 卡片系统 ── */
+.card {
+  background: var(--bg-surface);
+  border: 1rpx solid var(--border-default);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-sm);
+  position: relative;
+  box-sizing: border-box;
+  color: var(--text-primary);
+}
+
+.card-premium {
+  background: var(--bg-surface);
+  border: 2rpx solid var(--brand-border);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-md);
+  position: relative;
+  padding: 16rpx;
+  color: var(--text-primary);
+}
+
+.card-actionable {
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+.card-actionable:active {
+  background: var(--bg-surface-hover);
+  border-color: var(--border-strong);
+}
+
+.card-stat {
+  background: var(--bg-surface);
+  border: 1rpx solid var(--border-default);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-sm);
+  padding: 16rpx;
+  min-height: 120rpx;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  color: var(--text-primary);
+}
+
+/* ── 4. 按钮系统 ── */
+.btn-primary {
+  background: var(--brand);
+  color: #FFFFFF;
+  border: none;
+  border-radius: var(--radius-md);
+  height: 80rpx;
+  line-height: 80rpx;
+  font-size: 28rpx;
+  font-weight: 600;
+  text-align: center;
+  transition: opacity 0.2s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.btn-primary:active {
+  opacity: 0.8;
+}
+
+.btn-secondary {
+  background: var(--bg-surface);
+  color: var(--text-primary);
+  border: 1rpx solid var(--border-default);
+  border-radius: var(--radius-md);
+  height: 80rpx;
+  line-height: 78rpx;
+  font-size: 28rpx;
+  font-weight: 500;
+  text-align: center;
+  transition: background 0.2s ease;
+}
+.btn-secondary:active {
+  background: var(--bg-surface-hover);
+}
+
+.btn-danger {
+  background: var(--danger);
+  color: #FFFFFF;
+  border: none;
+  border-radius: var(--radius-md);
+  height: 80rpx;
+  line-height: 80rpx;
+  font-size: 28rpx;
+  font-weight: 600;
+  text-align: center;
+  transition: opacity 0.2s ease;
+}
+.btn-danger:active {
+  opacity: 0.85;
+}
+
+/* ── 5. 标签/徽章系统 ── */
+.tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 6rpx;
+  padding: 4rpx 14rpx;
+  border-radius: var(--radius-sm);
+  font-size: 20rpx;
+  font-weight: 500;
+  line-height: 1.4;
+  background: var(--bg-surface);
+  color: var(--text-secondary);
+  border: 1rpx solid var(--border-default);
+}
+
+.tag-running {
+  background: var(--brand-subtle);
+  color: var(--brand);
+  border-color: var(--brand-border);
+}
+.tag-success {
+  background: var(--success-subtle);
+  color: var(--success);
+  border-color: var(--success-border);
+}
+.tag-failed {
+  background: var(--danger-subtle);
+  color: var(--danger);
+  border-color: var(--danger-border);
+}
+.tag-pending {
+  background: var(--bg-surface);
+  color: var(--text-secondary);
+  border-color: var(--border-default);
+}
+.tag-sleeping {
+  background: var(--warning-subtle);
+  color: var(--warning);
+  border-color: var(--warning-border);
+}
+.tag-cancelled {
+  background: var(--bg-surface);
+  color: var(--text-muted);
+  border-color: var(--border-subtle);
+}
+
+/* ── 6. 状态圆点 ── */
+.status-dot {
+  display: inline-block;
+  width: 8rpx;
+  height: 8rpx;
+  border-radius: 50%;
+  background: var(--text-muted);
+}
+.status-dot-running {
+  background: var(--brand-light);
+  animation: dot-pulse 1.2s ease-in-out infinite;
+}
+.status-dot-success { background: var(--success); }
+.status-dot-failed { background: var(--danger); }
+.status-dot-pending { background: var(--text-muted); }
+.status-dot-sleeping { background: var(--warning); }
+
+@keyframes dot-pulse {
+  0%, 100% { opacity: 0.4; transform: scale(0.9); }
+  50% { opacity: 1; transform: scale(1.2); }
+}
+
+/* ── 7. 筛选胶囊 ── */
+.pill-filter {
+  display: inline-flex;
+  align-items: center;
+  padding: 10rpx 24rpx;
+  border-radius: var(--radius-full);
+  font-size: 24rpx;
+  font-weight: 500;
+  background: var(--bg-surface);
+  color: var(--text-secondary);
+  border: 1rpx solid var(--border-default);
+  transition: all 0.2s ease;
+  white-space: nowrap;
+}
+.pill-filter:active {
+  background: var(--bg-surface-hover);
+}
+.pill-filter.active {
+  background: var(--brand);
+  color: #FFFFFF;
+  border-color: var(--brand);
+}
+
+/* ── 8. 输入框 ── */
+.input-field {
+  width: 100%;
+  height: 80rpx;
+  background: var(--bg-surface);
+  border: 1rpx solid var(--border-default);
+  border-radius: var(--radius-md);
+  padding: 0 24rpx;
+  color: var(--text-primary);
+  font-size: 28rpx;
+  box-sizing: border-box;
+  transition: border-color 0.2s ease;
+}
+.input-field:focus {
+  border-color: var(--brand);
+}
+.input-field::placeholder {
+  color: var(--text-placeholder);
+}
+
+/* ── 9. 分割线 ── */
+.separator {
+  height: 0;
+  border-top: 1rpx solid var(--border-subtle);
+}
+
+/* ── 10. 骨架屏 ── */
+@keyframes skeleton-shimmer {
+  0% { opacity: 0.4; }
+  50% { opacity: 0.7; }
+  100% { opacity: 0.4; }
+}
+
+.skeleton {
+  background: var(--bg-surface-hover);
+  border-radius: var(--radius-sm);
+  animation: skeleton-shimmer 1.5s ease-in-out infinite;
+}
+
+.skeleton-line {
+  height: 24rpx;
+  margin-bottom: 16rpx;
+}
+.skeleton-line.short { width: 60%; }
+.skeleton-line.medium { width: 80%; }
+
+.skeleton-card {
+  height: 200rpx;
+  margin-bottom: 24rpx;
+}
+
+/* ── 11. 空状态 ── */
+.empty-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 100rpx 48rpx;
+  text-align: center;
+}
+
+.empty-state .empty-icon {
+  width: 128rpx;
+  height: 128rpx;
+  border-radius: var(--radius-lg);
+  background: var(--bg-surface);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 32rpx;
+  border: 1rpx solid var(--border-subtle);
+}
+
+.empty-state .empty-label {
+  font-size: 28rpx;
+  font-weight: 600;
+  color: var(--text-primary);
+  margin-bottom: 12rpx;
+}
+
+.empty-state .empty-desc {
+  font-size: 24rpx;
+  color: var(--text-muted);
+  line-height: 1.6;
+  max-width: 500rpx;
+}
+
+/* ── 12. 兼容类映射（旧 pixel 类名 → 新样式）── */
+.glass-card { background: var(--bg-surface); border: 1rpx solid var(--border-default); border-radius: var(--radius-md); box-shadow: var(--shadow-sm); }
+.glass-panel { background: var(--bg-surface); border: 1rpx solid var(--border-default); border-radius: var(--radius-md); box-shadow: var(--shadow-md); }
+.glass-btn-primary { background: var(--brand); color: #FFFFFF; border: none; border-radius: var(--radius-md); height: 80rpx; line-height: 80rpx; font-size: 28rpx; font-weight: 600; text-align: center; }
+.glass-divider { height: 0; border-top: 1rpx solid var(--border-subtle); }
+.glass-sheet { background: var(--bg-surface); border-radius: var(--radius-lg) var(--radius-lg) 0 0; border-top: 1rpx solid var(--border-default); }
+.glass-input { width: 100%; height: 80rpx; background: var(--bg-surface); border: 1rpx solid var(--border-default); border-radius: var(--radius-md); padding: 0 24rpx; color: var(--text-primary); font-size: 28rpx; box-sizing: border-box; }
+.glass-textarea { width: 100%; min-height: 180rpx; background: var(--bg-surface); border: 1rpx solid var(--border-default); border-radius: var(--radius-md); padding: 24rpx; color: var(--text-primary); font-size: 28rpx; box-sizing: border-box; }
+.pill-ios { display: inline-flex; align-items: center; padding: 10rpx 24rpx; border-radius: var(--radius-full); font-size: 24rpx; font-weight: 500; background: var(--bg-surface); color: var(--text-secondary); border: 1rpx solid var(--border-default); }
+.pill-ios.active { background: var(--brand); color: #FFFFFF; border-color: var(--brand); }
+.spinner-ios { width: 28rpx; height: 28rpx; border: 3rpx solid var(--border-subtle); border-top-color: var(--brand); border-radius: 50%; animation: spin 0.8s linear infinite; }
+
+/* ── 13. 工具类 ── */
+.arrow-right-ios {
+  width: 12rpx; height: 12rpx;
+  border-top: 2rpx solid var(--text-muted);
+  border-right: 2rpx solid var(--text-muted);
+  transform: rotate(45deg);
+  flex-shrink: 0;
+}
+
+.num-font {
+  font-family: "SF Mono", "PingFang SC", monospace;
+  font-weight: 600;
+}
+
+button::after { border: none; }
+::-webkit-scrollbar { width: 0; height: 0; }
+
+/* ── 默认头像占位 ── */
+.ag-avatar:empty::after {
+  content: "AI";
+  font-size: 20rpx;
+  font-weight: 600;
+  color: var(--text-muted);
+}
+.ag-avatar {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 48rpx;
+  height: 48rpx;
+  background: var(--bg-surface);
+  border: 1rpx solid var(--border-default);
+  border-radius: var(--radius-sm);
+  font-size: 22rpx;
+  font-weight: 600;
+}
+
+/* ── 14. 通用动画 ── */
+@keyframes spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}

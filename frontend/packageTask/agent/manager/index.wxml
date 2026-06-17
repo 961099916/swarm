@@ -1,0 +1,113 @@
+<page-meta page-style="overflow: {{showModal ? 'hidden' : 'visible'}}"></page-meta>
+<view class="manager-container {{theme}}">
+
+  <view class="card create-card">
+    <view class="create-left">
+      <text class="create-title">定制专属 AI 智能体</text>
+      <text class="create-desc">为您的业务场景量身定做 Prompt 与专属工具的绑定权限</text>
+    </view>
+    <button class="create-btn" bindtap="openCreateModal">+ 新建</button>
+  </view>
+
+  <scroll-view class="agent-scroll" scroll-y>
+    <view class="section-hd-wrapper" style="display: flex; align-items: center; margin-bottom: 20rpx; padding-left: 16rpx;">
+      <view class="t-icon t-icon-user" style="font-size: 36rpx; color: var(--text-secondary); margin-right: 8rpx;"></view>
+      <text class="section-hd" style="margin: 0;">我创造的智能体 ({{customAgents.length}})</text>
+    </view>
+
+    <view wx:if="{{customAgents.length === 0}}" class="empty-state">
+      <view class="empty-icon"></view>
+      <text class="empty-label">暂无自定义智能体</text>
+      <text class="empty-desc">创造专属于您的 Prompt 指令集，随后可在任务编排中使用</text>
+    </view>
+
+    <view wx:else class="agent-grid">
+      <view wx:for="{{customAgents}}" wx:key="id" class="card agent-card">
+        <view class="ag-card-top">
+          <view class="ag-avatar" style="display: flex; align-items: center; justify-content: center; background: var(--brand-subtle); border-radius: 50%; width: 72rpx; height: 72rpx;">
+            <view class="t-icon t-icon-{{item.avatar || 'user'}}" style="font-size: 40rpx; color: var(--brand-color);"></view>
+          </view>
+          <view class="ag-meta">
+            <view class="ag-name-row">
+              <text class="ag-name">{{item.name}}</text>
+              <text class="ag-badge custom">自定义</text>
+            </view>
+            <text class="ag-role">{{item.role}}</text>
+          </view>
+        </view>
+        <view class="separator"></view>
+        <view class="ag-details">
+          <view class="ag-row"><text class="ag-lbl">模型</text><text class="ag-val">{{item.model}}</text></view>
+          <view class="ag-row"><text class="ag-lbl">工具</text><text class="ag-val">{{item.toolsDisplay || '无'}}</text></view>
+        </view>
+        <view class="ag-prompt">
+          <text class="ag-lbl">系统提示词</text>
+          <text class="ag-prompt-txt">{{item.systemPrompt}}</text>
+        </view>
+        <view class="separator"></view>
+        <view class="ag-actions">
+          <view class="ag-act edit" data-id="{{item.id}}" bindtap="onEditAgent">编辑</view>
+          <view class="ag-act delete" data-id="{{item.id}}" bindtap="onDeleteAgent">删除</view>
+        </view>
+      </view>
+    </view>
+
+    <view class="section-hd-wrapper" style="display: flex; align-items: center; margin-top: 40rpx; margin-bottom: 20rpx; padding-left: 16rpx;">
+      <view class="t-icon t-icon-service" style="font-size: 36rpx; color: var(--text-secondary); margin-right: 8rpx;"></view>
+      <text class="section-hd" style="margin: 0;">系统预置 ({{presetAgents.length}})</text>
+    </view>
+    <view class="agent-grid">
+      <view wx:for="{{presetAgents}}" wx:key="id" class="card agent-card">
+        <view class="ag-card-top">
+          <view class="ag-avatar" style="display: flex; align-items: center; justify-content: center; background: var(--brand-subtle); border-radius: 50%; width: 72rpx; height: 72rpx;">
+            <view class="t-icon t-icon-{{item.avatar || 'service'}}" style="font-size: 40rpx; color: var(--brand-color);"></view>
+          </view>
+          <view class="ag-meta">
+            <view class="ag-name-row">
+              <text class="ag-name">{{item.name}}</text>
+              <text class="ag-badge preset">预置</text>
+            </view>
+            <text class="ag-role">{{item.role}}</text>
+          </view>
+        </view>
+        <view class="separator"></view>
+        <view class="ag-details">
+          <view class="ag-row"><text class="ag-lbl">模型</text><text class="ag-val">{{item.model}}</text></view>
+          <view class="ag-row"><text class="ag-lbl">工具</text><text class="ag-val">{{item.toolsDisplay || '无'}}</text></view>
+        </view>
+        <view class="ag-prompt">
+          <text class="ag-lbl">系统提示词</text>
+          <text class="ag-prompt-txt">{{item.systemPrompt}}</text>
+        </view>
+      </view>
+    </view>
+  </scroll-view>
+
+  <t-popup visible="{{showModal}}" placement="bottom" closeOnOverlayClick="{{true}}" prevent-scroll-through="{{true}}" overlayProps="{{ { preventScrollThrough: true } }}" showOverlay="{{true}}" bindvisible-change="closeModal">
+    <view class="modal-sheet">
+      <view class="modal-head">
+        <text class="modal-title">{{isEditMode ? '编辑智能体' : '创造协同模型'}}</text>
+        <view class="t-icon t-icon-close modal-close" style="font-size: 36rpx;" bindtap="closeModal"></view>
+      </view>
+      <view class="modal-body">
+        <view class="form-g"><text class="form-lbl">名称</text><t-input class="modal-inp" value="{{form.name}}" placeholder="如: 摘要分析官" borderless bindchange="onNameChange" /></view>
+        <view class="form-g"><text class="form-lbl">标识</text><t-input class="modal-inp" value="{{form.avatar}}" placeholder="如: service, user, search..." borderless bindchange="onAvatarChange" /></view>
+        <view class="form-g"><text class="form-lbl">职责</text><t-input class="modal-inp" value="{{form.role}}" placeholder="它的核心职责" borderless bindchange="onRoleChange" /></view>
+        <view class="form-g"><text class="form-lbl">System Prompt</text><t-textarea class="modal-tarea" value="{{form.systemPrompt}}" placeholder="设定专业人设..." disableDefaultPadding bindchange="onPromptChange" /></view>
+        <view class="form-g"><text class="form-lbl">模型</text>
+          <view class="model-opts">
+            <view class="mo-item {{form.model === AI_MODELS.SMALL ? 'active' : ''}}" data-model="{{AI_MODELS.SMALL}}" bindtap="onSelectModel"><text class="mo-name">Llama 3.2（轻量）</text><text class="mo-desc">低延迟，适合提取</text></view>
+            <view class="mo-item {{form.model === AI_MODELS.DEFAULT ? 'active' : ''}}" data-model="{{AI_MODELS.DEFAULT}}" bindtap="onSelectModel"><text class="mo-name">Llama 3.1（核心）</text><text class="mo-desc">长推理，推荐编排</text></view>
+          </view>
+        </view>
+        <view class="form-g"><text class="form-lbl">工具</text>
+          <view class="tool-row">
+            <view class="to-opt {{form.toolsWebFetch ? 'active' : ''}}" data-tool="web_fetch" bindtap="toggleTool">网页数据提取</view>
+            <view class="to-opt {{form.toolsEmailNotify ? 'active' : ''}}" data-tool="email_notify" bindtap="toggleTool">邮件通知</view>
+          </view>
+        </view>
+      </view>
+      <t-button class="save-btn" theme="primary" size="large" loading="{{saving}}" bindtap="onSaveAgent">保存</t-button>
+    </view>
+  </t-popup>
+</view>

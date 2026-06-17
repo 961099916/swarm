@@ -1,0 +1,88 @@
+<!-- Swarm 管理看板 — 企业级 KPI 概览 -->
+<view class="admin-container {{theme}}">
+  <text class="board-title">管理看板</text>
+
+  <!-- KPI 统计 -->
+  <view class="kpi-grid">
+    <view class="card-stat">
+      <text class="stat-label">总任务数</text>
+      <text class="stat-num num-font">{{stats.totalTasks || 0}}</text>
+      <text class="stat-sub">全平台累计</text>
+    </view>
+    <view class="card-stat accent-brand">
+      <text class="stat-label">运行中</text>
+      <text class="stat-num num-font accent">{{stats.runningTasks || 0}}</text>
+      <text class="stat-sub">当前执行</text>
+    </view>
+    <view class="card-stat">
+      <text class="stat-label">注册用户</text>
+      <text class="stat-num num-font">{{stats.totalUsers || 0}}</text>
+      <text class="stat-sub">总计成员</text>
+    </view>
+    <view class="card-stat accent-success">
+      <text class="stat-label">已完成</text>
+      <text class="stat-num num-font success">{{stats.successTasks || 0}}</text>
+      <text class="stat-sub">成功归档</text>
+    </view>
+  </view>
+
+  <!-- 骨架加载 -->
+  <view wx:if="{{!stats}}" style="padding-top:24rpx;">
+    <view class="skeleton skeleton-card" wx:for="{{[1,2,3]}}" wx:key="*this"></view>
+  </view>
+
+  <!-- 管理入口 -->
+  <view wx:else>
+    <text class="section-hd">管理入口</text>
+    <view class="menu-list">
+      <view class="card card-actionable menu-item" bindtap="goToUsers">
+        <view class="menu-left">
+          <view class="menu-icon" style="background:var(--brand-subtle); display: flex; align-items: center; justify-content: center;">
+            <view class="t-icon t-icon-usergroup" style="font-size: 36rpx; color: var(--brand-color);"></view>
+          </view>
+          <view class="menu-texts">
+            <text class="menu-title">用户管理</text>
+            <text class="menu-desc">管理所有注册用户与权限</text>
+          </view>
+        </view>
+        <view class="arrow-right-ios"></view>
+      </view>
+      <view class="card card-actionable menu-item" bindtap="goToTasks">
+        <view class="menu-left">
+          <view class="menu-icon" style="background:var(--warning-subtle); display: flex; align-items: center; justify-content: center;">
+            <view class="t-icon t-icon-assignment" style="font-size: 36rpx; color: var(--warning);"></view>
+          </view>
+          <view class="menu-texts">
+            <text class="menu-title">任务管理</text>
+            <text class="menu-desc">监控与干预运行中的任务</text>
+          </view>
+        </view>
+        <view class="arrow-right-ios"></view>
+      </view>
+      <view class="card card-actionable menu-item" bindtap="goToAgents">
+        <view class="menu-left">
+          <view class="menu-icon" style="background:var(--success-subtle); display: flex; align-items: center; justify-content: center;">
+            <view class="t-icon t-icon-service" style="font-size: 36rpx; color: var(--success);"></view>
+          </view>
+          <view class="menu-texts">
+            <text class="menu-title">智能体管理</text>
+            <text class="menu-desc">全局 AI 智能体配置与维护</text>
+          </view>
+        </view>
+        <view class="arrow-right-ios"></view>
+      </view>
+      <view class="card card-actionable menu-item" bindtap="goToTools">
+        <view class="menu-left">
+          <view class="menu-icon" style="background:var(--danger-subtle); display: flex; align-items: center; justify-content: center;">
+            <view class="t-icon t-icon-control-platform" style="font-size: 36rpx; color: var(--danger);"></view>
+          </view>
+          <view class="menu-texts">
+            <text class="menu-title">工具管理</text>
+            <text class="menu-desc">免重启动态 JS 脚本与 API 维护</text>
+          </view>
+        </view>
+        <view class="arrow-right-ios"></view>
+      </view>
+    </view>
+  </view>
+</view>

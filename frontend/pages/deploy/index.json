@@ -1,0 +1,12 @@
+{
+  "navigationBarTitleText": "部署分布式任务",
+  "usingComponents": {
+    "t-segmented": "tdesign-miniprogram/segmented/segmented",
+    "t-input": "tdesign-miniprogram/input/input",
+    "t-textarea": "tdesign-miniprogram/textarea/textarea",
+    "t-popup": "tdesign-miniprogram/popup/popup",
+    "t-slider": "tdesign-miniprogram/slider/slider",
+    "t-button": "tdesign-miniprogram/button/button",
+    "t-badge": "tdesign-miniprogram/badge/badge"
+  }
+}

@@ -1,0 +1,27 @@
+# File: /Users/zhangjiahao/IdeaProjects/swarm/backend/workers/workflow/wrangler.toml
+name = "swarm-workflow"
+main = "src/workflow.ts"
+compatibility_date = "2024-09-23"
+
+[observability]
+enabled = true
+
+[[d1_databases]]
+binding = "DB"
+database_name = "swarm-db"
+database_id = "4f360bda-ea4b-4fde-b3a0-d759f4180295"
+
+[ai]
+binding = "AI"
+
+[[kv_namespaces]]
+binding = "CACHE_KV"
+id = "ac5430ca9d234186862f6b4300d50b5a"
+
+[[workflows]]
+name = "swarm-task-workflow"
+binding = "TASK_WORKFLOW"
+class_name = "TaskOrchestrator"
+
+[vars]
+ALLOWED_ORIGIN = "*"

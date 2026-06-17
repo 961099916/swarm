@@ -1,0 +1,13 @@
+{
+  "name": "swarm-native",
+  "version": "1.0.0",
+  "description": "Swarm 智能体编排原生小程序",
+  "main": "app.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "dependencies": {
+    "tdesign-miniprogram": "^1.5.0"
+  },
+  "devDependencies": {}
+}

@@ -1,0 +1,146 @@
+<page-meta page-style="overflow: {{showEditModal ? 'hidden' : 'visible'}}"></page-meta>
+<view class="profile-container {{theme}}">
+
+  <view class="card hero" wx:if="{{user}}">
+    <view class="hero-row">
+      <view class="avatar-wrap">
+        <view class="avatar-ring {{user.role === 'VIP' ? 'ring-gold' : (user.role === 'ADMIN' ? 'ring-brand' : '')}}" bindtap="onEditProfile">
+          <image class="avatar-img" src="{{user.avatarUrl || '/static/default_avatar.png'}}" mode="aspectFill" />
+          <view class="avatar-edit-overlay">
+            <view class="t-icon t-icon-edit" style="font-size: 28rpx; color: #FFFFFF;"></view>
+          </view>
+        </view>
+      </view>
+      <view class="hero-meta">
+        <view class="hero-name-wrap" bindtap="onEditProfile">
+          <text class="hero-name">{{user.nickname || '未登录用户'}}</text>
+          <view class="hero-name-edit">
+            <view class="t-icon t-icon-edit" style="font-size: 22rpx;"></view>
+          </view>
+        </view>
+        <view class="hero-tags">
+          <text class="role-tag role-{{user.roleClass}}">{{user.roleLabel}}</text>
+          <view class="energy-tag" style="display: flex; align-items: center;">
+            <view class="t-icon t-icon-lighting-circle" style="font-size: 28rpx; margin-right: 4rpx; color: var(--warning);"></view>
+            <text class="num-font">{{user.credits}}</text>
+          </view>
+        </view>
+      </view>
+    </view>
+    <view class="separator" style="margin:32rpx 0;"></view>
+    <view class="hero-days">
+      <text class="days-lbl">节点已运行</text>
+      <view class="days-val">
+        <text class="num-font" style="font-size:40rpx;font-weight:700;color:var(--success);">{{registerDays}}</text>
+        <text style="font-size:20rpx;color:var(--success);">天</text>
+      </view>
+    </view>
+  </view>
+
+  <view class="menu-list">
+    <view class="card card-actionable menu-row" bindtap="goToVip">
+      <view class="menu-left">
+        <view class="menu-icon" style="background:var(--bg-surface); display: flex; align-items: center; justify-content: center;">
+          <view class="t-icon t-icon-user-vip" style="font-size: 36rpx; color: var(--warning);"></view>
+        </view>
+        <text class="menu-label">升级高级会员</text>
+      </view>
+      <view class="menu-right">
+        <text class="menu-tip">限时激活</text>
+        <view class="arrow-right-ios"></view>
+      </view>
+    </view>
+    <view class="card card-actionable menu-row" bindtap="goToAgentManager">
+      <view class="menu-left">
+        <view class="menu-icon" style="background:var(--bg-surface); display: flex; align-items: center; justify-content: center;">
+          <view class="t-icon t-icon-control-platform" style="font-size: 36rpx; color: var(--text-secondary);"></view>
+        </view>
+        <text class="menu-label">自定义智能体工作台</text>
+      </view>
+      <view class="arrow-right-ios"></view>
+    </view>
+    <view class="card menu-row" style="border-radius:12rpx 12rpx 0 0;">
+      <view class="menu-left">
+        <view class="menu-icon" style="background:var(--bg-surface); display: flex; align-items: center; justify-content: center;">
+          <view class="t-icon t-icon-contrast" style="font-size: 36rpx; color: var(--text-secondary);"></view>
+        </view>
+        <text class="menu-label">深色模式</text>
+      </view>
+      <t-switch checked="{{isDark}}" bindchange="toggleTheme" color="#1E6FFF" style="transform:scale(0.8);" />
+    </view>
+    <view class="card menu-row" style="border-radius:0 0 12rpx 12rpx;border-top:none;">
+      <view class="menu-left">
+        <view class="menu-icon" style="background:var(--bg-surface); display: flex; align-items: center; justify-content: center;">
+          <view class="t-icon t-icon-info-circle" style="font-size: 36rpx; color: var(--text-secondary);"></view>
+        </view>
+        <text class="menu-label">关于 Swarm</text>
+      </view>
+      <view class="arrow-right-ios"></view>
+    </view>
+  </view>
+
+  <view class="card invite-card">
+    <view class="invite-head">
+      <text class="invite-hd-txt">邀请好友</text>
+      <text class="invite-tag">+50 积分/人</text>
+    </view>
+    <view class="invite-code-row">
+      <text class="invite-cd-lbl">我的邀请码</text>
+      <view class="invite-cd-box">
+        <text class="invite-code num-font">{{inviteCode}}</text>
+        <text class="invite-copy" bindtap="copyInviteCode">复制</text>
+      </view>
+    </view>
+    <text class="invite-sub">复制并发送邀请码给伙伴。伙伴登录时输入该码进行绑定，你和伙伴均可立即获得 +50 算力补给！</text>
+  </view>
+
+  <view wx:if="{{user && user.role === 'ADMIN'}}" class="card card-actionable admin-entry" bindtap="goToAdmin">
+    <view class="admin-entry-inner">
+    <view class="menu-left">
+      <view class="menu-icon" style="background:var(--danger-subtle); display: flex; align-items: center; justify-content: center;">
+        <view class="t-icon t-icon-user-vip" style="font-size: 36rpx; color: var(--danger);"></view>
+      </view>
+      <view>
+        <text class="menu-label">全局管理控制台</text>
+        <text class="admin-sub">集群状况 · 任务监控 · 算力发放</text>
+      </view>
+    </view>
+    <view class="arrow-right-ios"></view>
+    </view>
+  </view>
+
+  <button class="btn-secondary logout-btn" loading="{{loggingOut}}" bindtap="handleLogout">安全退出</button>
+
+  <!-- 编辑个人资料弹窗 -->
+  <t-popup visible="{{showEditModal}}" placement="bottom" closeOnOverlayClick="{{true}}" prevent-scroll-through="{{true}}" overlayProps="{{ { preventScrollThrough: true } }}" bindvisible-change="onEditPopupChange" showOverlay="{{true}}">
+    <view class="edit-sheet">
+      <view class="edit-head">
+        <text class="edit-title">编辑个人资料</text>
+        <view class="t-icon t-icon-close" style="font-size: 36rpx; color: var(--text-muted); padding: 0 12rpx;" bindtap="onCloseEdit"></view>
+      </view>
+      <view class="edit-body">
+        <!-- 头像 -->
+        <view class="edit-avatar-section">
+          <text class="edit-label">头像</text>
+          <button class="edit-avatar-btn" open-type="chooseAvatar" bindchooseavatar="onChooseAvatar">
+            <image class="edit-avatar-img" src="{{editAvatarUrl || user.avatarUrl || '/static/default_avatar.png'}}" mode="aspectFill" />
+            <view class="edit-avatar-overlay">
+              <view class="t-icon t-icon-edit" style="font-size: 32rpx; color: #FFFFFF;"></view>
+            </view>
+          </button>
+        </view>
+        <!-- 昵称 -->
+        <view class="edit-field-group">
+          <text class="edit-label">昵称</text>
+          <text class="edit-current-nickname" wx:if="{{user.nickname}}">当前昵称：{{user.nickname}}</text>
+          <input class="edit-input edit-input-nickname" type="nickname" value="" placeholder="点击此处可获取微信昵称" maxlength="30" bindinput="onEditNicknameInput" />
+        </view>
+      </view>
+      <view class="edit-actions">
+        <button class="btn-secondary" style="flex:1;" bindtap="onCloseEdit">取消</button>
+        <button class="btn-primary" style="flex:2;" loading="{{savingProfile}}" bindtap="onSaveProfile">保存</button>
+      </view>
+    </view>
+  </t-popup>
+
+</view>

@@ -1,53 +1,70 @@
-<page-meta page-style="overflow: {{activeModal !== 'NONE' ? 'hidden' : 'visible'}}"></page-meta>
 <view class="admin-container {{theme}}">
   <text class="board-title">用户管理</text>
 
-  <t-input class="admin-search" value="{{searchKeyword}}" placeholder="搜索微信昵称或 OpenID" bindinput="onSearchQueryChange" />
+  <!-- 搜索框 -->
+  <view class="search-bar-wrap" style="padding-bottom:12rpx;">
+    <view class="search-bar-inner">
+      <view class="t-icon t-icon-search" style="font-size: 24rpx; color: var(--text-muted); margin-right: 10rpx;"></view>
+      <input class="search-input" placeholder="搜索用户昵称或 ID..." placeholder-class="search-placeholder" value="{{searchQuery}}" bindinput="onSearchInput" confirm-type="search" />
+      <view wx:if="{{searchQuery}}" class="search-clear" bindtap="onSearchInput" data-value="">
+        <view class="t-icon t-icon-close" style="font-size: 20rpx; color: var(--text-muted);"></view>
+      </view>
+    </view>
+  </view>
 
+  <!-- 筛选栏 -->
   <scroll-view class="filter-bar" scroll-x enable-flex enhanced show-scrollbar="{{false}}">
     <view class="filter-items">
       <view wx:for="{{roleFilterOptions}}" wx:key="value"
         class="pill-filter {{currentRoleFilter === item.value ? 'active' : ''}}"
-        data-filter="{{item.value}}" bindtap="onSelectFilter">{{item.label}}</view>
-      <view class="pill-filter {{statusFilter === 'BANNED' ? 'active' : ''}}" data-filter="banned" bindtap="onToggleBanned">已封禁</view>
+        data-filter="{{item.value}}"
+        bindtap="onSelectRoleFilter"
+      >{{item.label}}</view>
     </view>
   </scroll-view>
 
-  <view class="list-section">
-    <view wx:if="{{loading}}" style="padding-top:16rpx;">
+  <!-- 用户列表（下拉刷新 + 上拉加载） -->
+  <scroll-view class="admin-list-scroll" scroll-y enhanced
+    refresher-enabled refresher-triggered="{{refreshing}}"
+    bindrefresherrefresh="onRefresh"
+    bindscrolltolower="loadNextPage"
+  >
+    <!-- 骨架屏 -->
+    <view wx:if="{{loading && users.length === 0}}" style="padding-top:16rpx;">
       <view class="skeleton skeleton-card" wx:for="{{[1,2,3]}}" wx:key="*this"></view>
     </view>
 
-    <view wx:elif="{{users.length === 0}}" class="empty-state">
-      <view class="empty-icon">
-        <view class="t-icon t-icon-usergroup" style="font-size: 96rpx; color: var(--text-secondary);"></view>
-      </view>
-      <text class="empty-label">无匹配用户</text>
+    <!-- 错误状态 -->
+    <view wx:elif="{{errorMsg && users.length === 0}}" class="error-state">
+      <view class="error-icon"><view class="t-icon t-icon-error-circle-filled" style="font-size: 64rpx;"></view></view>
+      <text class="error-label">{{errorMsg}}</text>
+      <button class="error-retry-btn" bindtap="loadFirstPage">重新加载</button>
     </view>
 
-    <view wx:else>
-      <view wx:for="{{users}}" wx:key="id" class="card user-card {{item.is_banned === 1 ? 'banned' : ''}}">
+    <!-- 空状态 -->
+    <view wx:elif="{{!loading && users.length === 0}}" class="empty-state">
+      <view class="empty-icon"><view class="t-icon t-icon-usergroup" style="font-size: 96rpx; color: var(--text-secondary);"></view></view>
+      <text class="empty-label">暂无用户</text>
+    </view>
+
+    <!-- 用户卡片 -->
+    <view wx:else style="padding-top:16rpx;">
+      <view wx:for="{{users}}" wx:key="id" class="card user-card fade-up {{item.is_banned === 1 ? 'banned' : ''}}">
         <view class="uc-top">
-          <view class="uc-avatar">{{item.nickname ? item.nickname[0] : '?'}}</view>
+          <view class="uc-avatar">{{item.nickname ? item.nickname.charAt(0).toUpperCase() : '?'}}</view>
           <view class="uc-meta">
             <view class="uc-name-row">
-              <text class="uc-name">{{item.nickname || '未设置'}}</text>
-              <text class="uc-role role-{{item.roleClass}}">{{item.roleLabel}}</text>
+              <text class="uc-name">{{item.nickname || '匿名用户'}}</text>
+              <text class="uc-role {{item.roleClass}}">{{item.roleLabel}}</text>
             </view>
-            <text class="uc-id">{{item.wx_open_id}}</text>
-            <text class="uc-date">{{item.created_at}}</text>
+            <text class="uc-id">ID: {{item.id}}</text>
+            <text class="uc-date">{{item.created_at ? item.created_at.slice(0,10) : '—'}} 注册</text>
           </view>
-          <view class="uc-right" style="display: flex; flex-direction: column; align-items: flex-end;">
-            <view class="uc-credits num-font" style="display: flex; align-items: center; justify-content: flex-end;">
-              <text style="margin-right: 4rpx;">{{item.credits}}</text>
-              <view class="t-icon t-icon-lighting-circle" style="font-size: 28rpx; color: var(--warning);"></view>
-            </view>
+          <view class="uc-right">
+            <text class="uc-credits">{{item.credits || 0}} 积分</text>
             <text wx:if="{{item.is_banned === 1}}" class="uc-banned">已封禁</text>
           </view>
         </view>
-
-        <view class="separator" style="margin:20rpx 0;"></view>
-
         <view class="uc-actions">
           <button class="uc-btn" data-id="{{item.id}}" bindtap="onOpenRoleModal">角色</button>
           <button class="uc-btn" data-id="{{item.id}}" bindtap="onOpenCreditsModal">积分</button>
@@ -55,33 +72,49 @@
           <button class="uc-btn uc-ban" data-id="{{item.id}}" data-banned="{{item.is_banned}}" bindtap="onToggleBanUser">{{item.is_banned === 1 ? '解封' : '封禁'}}</button>
         </view>
       </view>
-    </view>
-  </view>
 
-  <t-popup visible="{{activeModal === 'ROLE'}}" placement="bottom" closeOnOverlayClick="{{true}}" prevent-scroll-through="{{true}}" overlayProps="{{ { preventScrollThrough: true } }}" showOverlay="{{true}}" bindvisible-change="closeModal">
-    <view class="modal-sheet">
-      <text class="modal-title">更改角色</text>
-      <view class="role-list">
+      <!-- 加载更多 -->
+      <view wx:if="{{loading && users.length > 0}}" class="adm-load-more">
+        <view class="spinner-ios"></view>
+        <text class="adm-load-more-text">加载中...</text>
+      </view>
+      <view wx:elif="{{!hasMore && users.length > 0}}" class="adm-load-more">
+        <text class="adm-load-more-end">— 已展示全部用户 —</text>
+      </view>
+      <view style="height:40rpx;"></view>
+    </view>
+  </scroll-view>
+
+  <!-- 角色设置弹窗 -->
+  <t-popup visible="{{activeModal === 'ROLE'}}" placement="center">
+    <view class="modal-panel">
+      <text class="modal-title">修改用户角色</text>
+      <view class="role-options">
         <view class="card card-actionable row-opt {{targetRole === 'FREE_USER' ? 'selected' : ''}}" data-role="FREE_USER" bindtap="selectTargetRole">免费用户</view>
         <view class="card card-actionable row-opt {{targetRole === 'VIP' ? 'selected' : ''}}" data-role="VIP" bindtap="selectTargetRole">VIP 高级</view>
         <view class="card card-actionable row-opt {{targetRole === 'ADMIN' ? 'selected' : ''}}" data-role="ADMIN" bindtap="selectTargetRole">管理员</view>
       </view>
-      <view class="modal-btns">
-        <button class="btn-primary" style="flex:2;height:80rpx;line-height:80rpx;" bindtap="onSubmitRoleChange" loading="{{roleLoading}}">确认</button>
+      <view class="modal-actions">
+        <button class="btn-primary" style="flex:2;height:80rpx;line-height:80rpx;" bindtap="onSubmitRoleChange">确认</button>
         <button class="btn-secondary" style="flex:1;height:80rpx;line-height:80rpx;" bindtap="closeModal">取消</button>
       </view>
     </view>
   </t-popup>
 
-  <t-popup visible="{{activeModal === 'CREDITS'}}" placement="bottom" closeOnOverlayClick="{{true}}" prevent-scroll-through="{{true}}" overlayProps="{{ { preventScrollThrough: true } }}" showOverlay="{{true}}" bindvisible-change="closeModal">
-    <view class="modal-sheet">
-      <text class="modal-title">调整积分</text>
-      <view class="modal-form">
-        <t-input class="modal-inp" type="number" value="{{creditsDelta}}" placeholder="积分变动值（正加负减）" bindchange="onCreditsDeltaChange" />
-        <t-input class="modal-inp" value="{{creditsReason}}" placeholder="调整原因" bindchange="onCreditsReasonChange" />
+  <!-- 积分调整弹窗 -->
+  <t-popup visible="{{activeModal === 'CREDITS'}}" placement="center">
+    <view class="modal-panel">
+      <text class="modal-title">调整用户积分</text>
+      <view class="form-group">
+        <text class="form-label">积分变动（正数增加，负数扣除）</text>
+        <input class="input-field" type="digit" placeholder="如: 100 或 -50" value="{{creditsDelta}}" bindinput="onCreditsDeltaInput" />
       </view>
-      <view class="modal-btns">
-        <button class="btn-primary" style="flex:2;height:80rpx;line-height:80rpx;" bindtap="onSubmitCreditsChange" loading="{{creditsLoading}}">确认</button>
+      <view class="form-group">
+        <text class="form-label">变动原因（可选）</text>
+        <input class="input-field" placeholder="如: 活动奖励" value="{{creditsReason}}" bindinput="onCreditsReasonInput" />
+      </view>
+      <view class="modal-actions">
+        <button class="btn-primary" style="flex:2;height:80rpx;line-height:80rpx;" bindtap="onSubmitCreditsChange">确认</button>
         <button class="btn-secondary" style="flex:1;height:80rpx;line-height:80rpx;" bindtap="closeModal">取消</button>
       </view>
     </view>

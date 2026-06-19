@@ -1,4 +1,5 @@
 const { request } = require("../../../utils/request.js");
+const { validateAvatar } = require("../../../utils/avatar.js");
 
 const AI_MODELS = {
   SMALL: "meta-llama/Llama-3.2-3B-Instruct",
@@ -60,7 +61,7 @@ Page({
         if (res.success && res.data) {
           const agents = res.data.map(agent => ({
             ...agent,
-            avatar: this.validateAvatar(agent.avatar),
+            avatar: validateAvatar(agent.avatar),
             formattedModel: this.formatModel(agent.model)
           }));
 
@@ -81,16 +82,6 @@ Page({
       .finally(() => {
         this.setData({ loading: false });
       });
-  },
-
-  validateAvatar: function (avatar) {
-    if (!avatar) return "service";
-    // 检测是否为旧版表情字符
-    const EMOJI_REGEX = /[\uD800-\uDBFF][\uDC00-\uDFFF]|[\u2600-\u27BF]|[\u2300-\u23FF]|[\u2b50]/;
-    if (EMOJI_REGEX.test(avatar)) {
-      return "service";
-    }
-    return avatar;
   },
 
   formatModel: function (modelStr) {

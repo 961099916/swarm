@@ -21,5 +21,10 @@ binding = "TASK_WORKFLOW"
 class_name = "TaskOrchestrator"
 script_name = "swarm-workflow"
 
+# 生产消息到异步任务队列（解耦工作流启动）
+[[queues.producers]]
+queue = "swarm-task-queue"
+binding = "TASK_QUEUE"
+
 [vars]
 ALLOWED_ORIGIN = "*"

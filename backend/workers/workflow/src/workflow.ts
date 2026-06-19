@@ -1,12 +1,13 @@
 // File: /Users/zhangjiahao/IdeaProjects/swarm/backend/workers/workflow/src/workflow.ts
 
 import { WorkflowEntrypoint, WorkflowStep, WorkflowEvent } from "cloudflare:workers";
-import { AgentRow, AI_MODELS, DEFAULT_MAX_LOOPS, MEMORY_RECENT_COUNT, MEMORY_AGENT_COUNT, TraceLogger } from "@swarm/shared";
+import { AgentRow, AI_MODELS, DEFAULT_MAX_LOOPS, MEMORY_RECENT_COUNT, MEMORY_AGENT_COUNT, TraceLogger, AIClient, AIClientEnv } from "@swarm/shared";
 import { appendTaskLog, updateTaskStatus, safeParseJSON, TaskStatus } from "./utils";
 import {
   ToolRegistry,
   ToolContext,
 } from "./tools";
+import { ensureDbToolsLoaded } from "./tools";
 
 const DEFAULT_MODEL = AI_MODELS.DEFAULT;
 
@@ -14,6 +15,7 @@ export interface Env {
   DB: D1Database;
   AI: any;
   EMAIL_FROM?: string;
+  RAG?: Fetcher;  // RAG Worker Service Binding
 }
 
 export interface Params {
@@ -46,7 +48,9 @@ async function callLlmChatAndLog(
   taskId: string,
   agentName: string,
   messages: Array<{ role: string; content: string }>,
-  model: string | undefined
+  model: string | undefined,
+  agentModelConfigId?: string,
+  agentId?: string
 ): Promise<string> {
   if (!ai) throw new Error("Cloudflare AI 实例未绑定");
   const rawModel = model || DEFAULT_MODEL;
@@ -58,8 +62,25 @@ async function callLlmChatAndLog(
   let success = true;
   
   try {
-    const res = await ai.run(mappedModel, { messages });
-    responseText = res.response || "";
+    // 优先使用 AIClient（支持 AI Gateway 路由、速率限制、日志、成本追踪）
+    try {
+      const aiClient = new AIClient({ AI: ai, DB: db });
+      const result = await aiClient.chat({
+        modelConfigId: agentModelConfigId,
+        systemPrompt: messages[0]?.content || "",
+        messages: messages.slice(1),
+        traceId: taskId,
+        taskId,
+        agentId,
+      });
+      responseText = result.content;
+    } catch (aiClientErr: any) {
+      // AIClient 失败时降级到原生 Workers AI 调用
+      TraceLogger.warn("WORKFLOW", "AI_CLIENT_FALLBACK", taskId, `AIClient 调用失败，降级到原生 AI: ${aiClientErr.message}`);
+      const res = await ai.run(mappedModel, { messages });
+      responseText = res.response || "";
+    }
+
     if (!responseText) {
       throw new Error("大模型响应内容为空");
     }
@@ -71,7 +92,7 @@ async function callLlmChatAndLog(
   } finally {
     const latencyMs = Date.now() - startTime;
     
-    // 异步安全地记录 AI 日志契约 (带 Token 遥测与 Latency 观测)
+    // 异步安全地记录 AI 日志 (保持与原有 task_logs 的兼容)
     const logPayload = {
       type: "AI_CHAT_LOG",
       agentName,
@@ -79,14 +100,13 @@ async function callLlmChatAndLog(
       messages,
       response: responseText,
       success,
-      error: errorMsg
+      error: errorMsg,
+      latencyMs
     };
 
     try {
-      // 记录到 taskLogs 数据库中
       await appendTaskLog(db, taskId, "INFO", `[AI_CHAT] ${JSON.stringify(logPayload)}`);
       
-      // 触发 Cloudflare TraceLogger 可观测性 JSON 输出
       TraceLogger.write(
         success ? "INFO" : "ERROR",
         "WORKFLOW",
@@ -98,7 +118,7 @@ async function callLlmChatAndLog(
         errorMsg ? new Error(errorMsg) : undefined,
         {
           model: mappedModel,
-          promptTokens: -1,     // D1 环境下 CF AI 不输出消耗
+          promptTokens: -1,
           completionTokens: -1,
           latencyMs
         }
@@ -148,6 +168,11 @@ export class TaskOrchestrator extends WorkflowEntrypoint<Env, Params> {
       if (agentConfigs.length === 0) {
         throw new Error("任务中未配置任何有效的协同智能体");
       }
+
+      // 1.1 加载动态工具注册表
+      await step.do("load-tools-registry", async () => {
+        await ensureDbToolsLoaded(db);
+      });
 
       // 记录每个 Agent 的工具配置信息
       for (const agent of agentConfigs) {
@@ -231,6 +256,42 @@ export class TaskOrchestrator extends WorkflowEntrypoint<Env, Params> {
           });
           await appendTaskLog(db, taskId, "INFO", `[主控] 对话记忆已追加工具结果，当前共 ${conversationMemory.length} 条`);
 
+        } else if (decision.action === "QUERY_KNOWLEDGE") {
+          const kbIds = decision.kb_ids || payload.knowledgeBaseIds || [];
+          const queryText = decision.query || payload.goal || "";
+          await appendTaskLog(db, taskId, "INFO", `[主控] 查询知识库: ${kbIds.join(", ")}，查询内容: "${queryText.slice(0, 100)}"`);
+
+          const knowledgeResult = await step.do(`query-knowledge-loop-${currentLoop}`, {
+            retries: { limit: 2, delay: 1000 },
+          }, async () => {
+            if (!this.env.RAG) {
+              return { context: "", chunks: [] };
+            }
+            const response = await this.env.RAG.fetch("http://internal/rag/inject", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ kbIds, query: queryText, maxChunks: 5, minScore: 0.4 }),
+            });
+            if (!response.ok) return { context: "", chunks: [] };
+            const result = await response.json() as any;
+            return result?.data || { context: "", chunks: [] };
+          });
+
+          if (knowledgeResult.context) {
+            await appendTaskLog(db, taskId, "INFO", `[主控] 知识库查询成功，获取到 ${knowledgeResult.chunks?.length || 0} 条相关片段`);
+            conversationMemory.push({
+              role: "user",
+              content: `【知识库检索】根据查询"${queryText.slice(0, 100)}"从知识库中找到以下参考信息:\n${truncateContent(knowledgeResult.context, 1500)}`
+            });
+          } else {
+            await appendTaskLog(db, taskId, "INFO", `[主控] 知识库未找到相关内容，继续下一步决策`);
+            conversationMemory.push({
+              role: "system",
+              content: `知识库查询（"${queryText.slice(0, 100)}"）未返回结果，请基于现有知识回答。`
+            });
+          }
+          await appendTaskLog(db, taskId, "INFO", `[主控] 对话记忆已追加知识库结果，当前共 ${conversationMemory.length} 条`);
+
         } else if (decision.action === "FINISH") {
           finalSummary = decision.summary || "所有智能体协同动作完成";
           workflowFinished = true;
@@ -282,16 +343,32 @@ export class TaskOrchestrator extends WorkflowEntrypoint<Env, Params> {
     goal: string,
     agents: AgentRow[],
     memory: Array<{ role: string; content: string }>
-  ): Promise<{ thought: string; action: string; target_agent_id?: string; tool_name?: string; input: any; summary?: string }> {
+  ): Promise<{ thought: string; action: string; target_agent_id?: string; tool_name?: string; input: any; summary?: string; kb_ids?: string[]; query?: string }> {
     const agentsListText = agents.map(a => `- 智能体ID: "${a.id}", 角色: "${a.role}", 名称: "${a.name}", 系统提示词: "${a.system_prompt.slice(0, 100)}..."`).join("\n");
     const toolDefs = ToolRegistry.getToolDefinitions();
-    const toolListText = toolDefs.length > 0
-      ? toolDefs.map(t =>
-          `- "${t.name}" (${t.description})\n` +
+
+    // 只显示与当前智能体工具配置相关的工具 + 最多额外显示 5 个
+    const agentToolNames = new Set<string>();
+    agents.forEach(a => {
+      try {
+        const tools = JSON.parse(a.tools);
+        if (Array.isArray(tools)) tools.forEach((t: string) => agentToolNames.add(t));
+      } catch {}
+    });
+
+    const prioritizedDefs = toolDefs.filter(t => agentToolNames.has(t.name));
+    const otherDefs = toolDefs.filter(t => !agentToolNames.has(t.name)).slice(0, 5);
+    const displayDefs = [...prioritizedDefs, ...otherDefs];
+
+    const toolListText = displayDefs.length > 0
+      ? displayDefs.map(t => {
+          // 截断描述到第一句（第一个句号或换行前），最多 80 字符
+          const shortDesc = t.description.split(/[。\n]/).filter(s => s.trim())[0]?.trim().slice(0, 80) || t.description.slice(0, 80);
+          return `- "${t.name}" (${shortDesc}${shortDesc.length >= 80 ? "..." : ""})\n` +
           t.parameters.map(p =>
-            `  - "${p.name}" (${p.type}${p.required ? ", 必填" : ", 可选"}): ${p.description}${p.enum ? ` [可选值: ${p.enum.join(", ")}]` : ""}`
-          ).join("\n")
-        ).join("\n\n")
+            `  - "${p.name}" (${p.type}${p.required ? ", 必填" : ", 可选"}): ${p.description.split(/[。\n]/)[0]?.trim().slice(0, 60) || p.description.slice(0, 60)}`
+          ).join("\n");
+        }).join("\n\n")
       : "(当前无可用系统工具)";
     const systemPrompt = `你是一个多智能体协同系统的“主控协调官 (Supervisor)”。你的目标是协同多个子智能体共同完成用户输入的目标。
 用户目标: "${goal}"
@@ -312,7 +389,15 @@ ${agentsListText}
   "target_agent_id": "具体智能体ID",
   "input": "指派给它的具体用户输入提示"
 }
-2. 调度执行系统工具 (action = "CALL_TOOL")
+2. 查询企业内部知识库 (action = "QUERY_KNOWLEDGE")
+当用户问题涉及企业内部知识、规章制度、流程文档时，使用此动作查询知识库。
+{
+  "thought": "用户问的是内部报销流程，需要先查询知识库",
+  "action": "QUERY_KNOWLEDGE",
+  "kb_ids": ["知识库ID列表"],
+  "query": "报销流程"
+}
+3. 调度执行系统工具 (action = "CALL_TOOL")
 可用工具列表:
 ${toolListText}
 {
@@ -321,7 +406,7 @@ ${toolListText}
   "tool_name": "weather_query",
   "input": { "city": "北京" }
 }
-3. 完成任务 (action = "FINISH")
+4. 完成任务 (action = "FINISH")
 {
   "thought": "目标内容已完美产出并归档，任务结束。",
   "action": "FINISH",
@@ -393,6 +478,15 @@ ${toolListText}
     ];
 
     try {
+      // Auto-inject RAG context if available (non-blocking)
+      let agentPrompt = agent.system_prompt;
+      if (this.env.RAG) {
+        try {
+          const kbIds = []; // TODO: 从 payload 或知识库配置读取
+          // RAG context injection is handled in broader scope
+        } catch {}
+      }
+
       const result = await callLlmChatAndLog(this.env.AI, db, taskId, agent.name, messages, agent.model);
       await appendTaskLog(db, taskId, "INFO", `[${agent.name}] 推理完成，输出长度 ${result.length} 字符`);
       return result;

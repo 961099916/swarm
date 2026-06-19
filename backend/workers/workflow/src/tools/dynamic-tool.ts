@@ -80,12 +80,23 @@ export class DynamicWorkflowTool extends BaseWorkflowTool {
   protected async run(input: any, ctx: ToolContext): Promise<string> {
     const traceId = ctx.traceId || "DYNAMIC_TOOL_RUN";
     
-    if (this.rawConfig.script && this.rawConfig.script.trim()) {
-      return await this.runScriptMode(input, ctx, traceId);
+    // 判断运行模式：优先 API 代理（No-Code），脚本模式（FaaS）作为备选
+    // Cloudflare Workers 生产环境禁止 new Function()，因此脚本模式会失败
+    const hasEndpoint = this.rawConfig.endpoint && this.rawConfig.endpoint.trim();
+    const hasScript = this.rawConfig.script && this.rawConfig.script.trim();
+    
+    if (hasEndpoint) {
+      return await this.runApiProxyMode(input, ctx, traceId);
     }
     
-    if (this.rawConfig.endpoint && this.rawConfig.endpoint.trim()) {
-      return await this.runApiProxyMode(input, ctx, traceId);
+    if (hasScript) {
+      try {
+        return await this.runScriptMode(input, ctx, traceId);
+      } catch (err: any) {
+        // 如果脚本模式失败（如 Cloudflare 禁止 new Function），且没有 endpoint 可降级，才抛出错误
+        TraceLogger.warn("WORKFLOW", "SCRIPT_FALLBACK", traceId, `工具 ${this.name} 脚本执行失败，且无 API 代理模式可降级: ${err.message}`);
+        throw err;
+      }
     }
 
     throw new Error(`[ERROR] [TraceID: ${traceId}] 动态工具 ${this.name} 配置无效: 缺少 script 或 endpoint`);

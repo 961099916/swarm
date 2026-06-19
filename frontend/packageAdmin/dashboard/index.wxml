@@ -33,12 +33,12 @@
 
   <!-- 管理入口 -->
   <view wx:else>
-    <text class="section-hd">管理入口</text>
+    <view class="section-divider">管理入口</view>
     <view class="menu-list">
       <view class="card card-actionable menu-item" bindtap="goToUsers">
         <view class="menu-left">
-          <view class="menu-icon" style="background:var(--brand-subtle); display: flex; align-items: center; justify-content: center;">
-            <view class="t-icon t-icon-usergroup" style="font-size: 36rpx; color: var(--brand-color);"></view>
+          <view class="menu-icon" style="background:var(--brand-gradient); display: flex; align-items: center; justify-content: center;">
+            <view class="t-icon t-icon-usergroup icon-white icon-md"></view>
           </view>
           <view class="menu-texts">
             <text class="menu-title">用户管理</text>
@@ -49,8 +49,8 @@
       </view>
       <view class="card card-actionable menu-item" bindtap="goToTasks">
         <view class="menu-left">
-          <view class="menu-icon" style="background:var(--warning-subtle); display: flex; align-items: center; justify-content: center;">
-            <view class="t-icon t-icon-assignment" style="font-size: 36rpx; color: var(--warning);"></view>
+          <view class="menu-icon" style="background:var(--warning); display: flex; align-items: center; justify-content: center;">
+            <view class="t-icon t-icon-assignment icon-white icon-md"></view>
           </view>
           <view class="menu-texts">
             <text class="menu-title">任务管理</text>
@@ -61,8 +61,8 @@
       </view>
       <view class="card card-actionable menu-item" bindtap="goToAgents">
         <view class="menu-left">
-          <view class="menu-icon" style="background:var(--success-subtle); display: flex; align-items: center; justify-content: center;">
-            <view class="t-icon t-icon-service" style="font-size: 36rpx; color: var(--success);"></view>
+          <view class="menu-icon" style="background:var(--success); display: flex; align-items: center; justify-content: center;">
+            <view class="t-icon t-icon-service icon-white icon-md"></view>
           </view>
           <view class="menu-texts">
             <text class="menu-title">智能体管理</text>
@@ -73,12 +73,24 @@
       </view>
       <view class="card card-actionable menu-item" bindtap="goToTools">
         <view class="menu-left">
-          <view class="menu-icon" style="background:var(--danger-subtle); display: flex; align-items: center; justify-content: center;">
-            <view class="t-icon t-icon-control-platform" style="font-size: 36rpx; color: var(--danger);"></view>
+          <view class="menu-icon" style="background:var(--danger); display: flex; align-items: center; justify-content: center;">
+            <view class="t-icon t-icon-control-platform icon-white icon-md"></view>
           </view>
           <view class="menu-texts">
             <text class="menu-title">工具管理</text>
             <text class="menu-desc">免重启动态 JS 脚本与 API 维护</text>
+          </view>
+        </view>
+        <view class="arrow-right-ios"></view>
+      </view>
+      <view class="card card-actionable menu-item" bindtap="goToKnowledge">
+        <view class="menu-left">
+          <view class="menu-icon" style="background:var(--info, #5B86E5); display: flex; align-items: center; justify-content: center;">
+            <view class="t-icon t-icon-bookmark icon-white icon-md"></view>
+          </view>
+          <view class="menu-texts">
+            <text class="menu-title">知识库管理</text>
+            <text class="menu-desc">RAG 知识库与文档管理</text>
           </view>
         </view>
         <view class="arrow-right-ios"></view>

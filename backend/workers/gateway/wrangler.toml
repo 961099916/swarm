@@ -31,6 +31,10 @@ service = "swarm-admin"
 binding = "QUIZ_SVC"
 service = "swarm-quiz"
 
+[[services]]
+binding = "RAG_SVC"
+service = "swarm-rag"
+
 [vars]
 WX_APP_ID = "wxdebda985cf78a90d"
 ALLOWED_ORIGIN = "*"

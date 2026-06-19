@@ -1,0 +1,8 @@
+/**
+ * Tailwind CSS 入口文件
+ * 运行 `npm run build:tailwind` 生成 tailwind.wxss
+ */
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;

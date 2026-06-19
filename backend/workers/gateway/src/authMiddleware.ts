@@ -100,9 +100,29 @@ export async function authenticateRequest(
     } else if (authInfo === null) {
       // 占位命中，直接拦截
       return { response: ResponseBuilder.error("用户凭证无效，请重新登录", traceId, 401) };
+    } else if (!authInfo.role) {
+      // 5. 【防御旧格式缓存】role 字段缺失，说明命中了代码升级前写入的旧快照
+      // 主动删除该失效 key，强制回源 D1 重新构建完整的鉴权快照
+      TraceLogger.warn("GATEWAY", "CACHE_STALE_FORMAT", traceId, `KV 缓存快照缺少 role 字段(旧格式)，强制删除并回源 D1: userId=${userId}`, userId);
+      await CacheService.delete(kv, cacheKey).catch(() => {});
+
+      const drizzleDb = getDrizzleDb(db);
+      const results = await drizzleDb
+        .select({ tokenVersion: users.tokenVersion, isBanned: users.isBanned, role: users.role })
+        .from(users)
+        .where(eq(users.id, userId));
+
+      if (!results || results.length === 0) {
+        return { response: ResponseBuilder.error("用户不存在，请重新登录", traceId, 401) };
+      }
+
+      const dbUser = results[0];
+      authInfo = { tokenVersion: dbUser.tokenVersion, isBanned: dbUser.isBanned, role: dbUser.role };
+      // 以新格式回写缓存，后续请求直接命中完整快照
+      await CacheService.set(kv, cacheKey, authInfo, 3600).catch(() => {});
     }
 
-    // 5. 校验快照状态
+    // 6. 校验快照状态
     if (authInfo.tokenVersion !== payload.tokenVersion) {
       TraceLogger.info("GATEWAY", "TOKEN_VERSION_REVOKED", traceId, `用户凭证已失效(版本变更) 被迫下线: userId=${userId}`, userId);
       return { response: ResponseBuilder.error("登录凭证已失效，已被强制下线", traceId, 401) };

@@ -1,3 +1,4 @@
+<page-meta root-background-color="#2D2A24"></page-meta>
 <view class="detail-container {{theme}}">
 
   <!-- 状态摘要 -->
@@ -57,8 +58,18 @@
               </view>
             </view>
             <view wx:if="{{item.expanded}}" class="cc-body">
-              <view class="cc-section"><text class="cc-sectitle">输入消息</text><text class="cc-box">{{item.parsed.body.messages || '—'}}</text></view>
-              <view class="cc-section"><text class="cc-sectitle">模型回复</text><text class="cc-box ok">{{item.parsed.body.response || '—'}}</text></view>
+              <view class="cc-section">
+                <text class="cc-sectitle">输入消息</text>
+                <scroll-view scroll-x class="cc-box code-box" wx:if="{{item.parsed.bodyPreview.messages}}">
+                  <text>{{item.parsed.bodyPreview.messages}}</text>
+                </scroll-view>
+              </view>
+              <view class="cc-section">
+                <text class="cc-sectitle">模型回复</text>
+                <scroll-view scroll-x class="cc-box ok code-box" wx:if="{{item.parsed.bodyPreview.response}}">
+                  <text>{{item.parsed.bodyPreview.response}}</text>
+                </scroll-view>
+              </view>
             </view>
           </view>
           <view wx:else class="t-line">

@@ -309,8 +309,268 @@ export interface UpdateAgentReq {
   tools: string[];
 }
 
+// ══════════════════════════════════════════════════
+// 6. RAG 知识库模块类型
+// ══════════════════════════════════════════════════
+
+export type DocumentSourceType = 'UPLOAD' | 'WEB_SCRAPE' | 'MANUAL';
+export type DocumentStatus = 'PENDING' | 'PROCESSING' | 'READY' | 'FAILED';
+
+export interface KnowledgeBaseRow {
+  id: string;
+  name: string;
+  description: string | null;
+  user_id: string | null;
+  is_public: number;
+  embedding_model: string;
+  chunk_size: number;
+  chunk_overlap: number;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface KnowledgeBaseDTO {
+  id: string;
+  name: string;
+  description?: string;
+  userId?: string;
+  isPublic: boolean;
+  embeddingModel: string;
+  chunkSize: number;
+  chunkOverlap: number;
+  documentCount: number;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface CreateKnowledgeBaseReq {
+  name: string;
+  description?: string;
+  isPublic?: boolean;
+  chunkSize?: number;
+  chunkOverlap?: number;
+}
+
+export interface DocumentRow {
+  id: string;
+  kb_id: string;
+  title: string;
+  source_type: DocumentSourceType;
+  source_url: string | null;
+  raw_content: string;
+  chunk_count: number;
+  status: DocumentStatus;
+  error_message: string | null;
+  file_name: string | null;
+  file_size: number | null;
+  created_by: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface DocumentDTO {
+  id: string;
+  kbId: string;
+  title: string;
+  sourceType: DocumentSourceType;
+  sourceUrl?: string;
+  chunkCount: number;
+  status: DocumentStatus;
+  errorMessage?: string;
+  fileName?: string;
+  fileSize?: number;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface AddDocumentByUrlReq {
+  kbId: string;
+  url: string;
+  title?: string;
+}
+
+export interface AddDocumentManualReq {
+  kbId: string;
+  title: string;
+  content: string;
+}
+
+export interface DocumentChunkRow {
+  id: string;
+  document_id: string;
+  kb_id: string;
+  chunk_index: number;
+  chunk_text: string;
+  vector_index_id: string | null;
+  token_count: number;
+  created_at: string;
+}
+
+export interface SearchKnowledgeReq {
+  kbId: string;
+  query: string;
+  topK?: number;
+  minScore?: number;
+}
+
+export interface KnowledgeChunkDTO {
+  chunkId: string;
+  documentId: string;
+  documentTitle: string;
+  kbId: string;
+  chunkIndex: number;
+  content: string;
+  score: number;
+}
+
+export interface SearchKnowledgeRes {
+  results: KnowledgeChunkDTO[];
+  totalChunks: number;
+}
+
+export interface RAGContextInjectReq {
+  kbIds: string[];
+  query: string;
+  maxChunks?: number;
+  minScore?: number;
+}
+
+export interface RAGContextInjectRes {
+  context: string;
+  chunks: KnowledgeChunkDTO[];
+}
+
+// ══════════════════════════════════════════════════
+// 7. AI Gateway 模块类型
+// ══════════════════════════════════════════════════
+
+export type ModelPurpose = 'CHAT' | 'EMBEDDING';
+export type AIProvider = 'workers-ai' | 'openai' | 'anthropic' | 'azure-openai';
+export type AICallStatus = 'SUCCESS' | 'FAILED' | 'RATE_LIMITED';
+
+export interface ModelConfigRow {
+  id: string;
+  purpose: string;
+  provider: string;
+  model_name: string;
+  display_name: string | null;
+  is_default: number;
+  is_active: number;
+  rate_limit_rpm: number;
+  rate_limit_tpm: number;
+  cost_per_1k_input: number;
+  cost_per_1k_output: number;
+  config_json: string;
+  priority: number;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface ModelConfigDTO {
+  id: string;
+  purpose: ModelPurpose;
+  provider: AIProvider;
+  modelName: string;
+  displayName?: string;
+  isDefault: boolean;
+  isActive: boolean;
+  rateLimitRpm: number;
+  rateLimitTpm: number;
+  costPer1kInput: number;
+  costPer1kOutput: number;
+  config: Record<string, any>;
+  priority: number;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface AIChatRequest {
+  modelConfigId?: string;
+  systemPrompt: string;
+  messages: Array<{ role: string; content: string }>;
+  maxTokens?: number;
+  temperature?: number;
+  traceId: string;
+  userId?: string;
+  agentId?: string;
+  taskId?: string;
+}
+
+export interface AIChatResponse {
+  content: string;
+  modelConfigId: string;
+  provider: AIProvider;
+  modelName: string;
+  inputTokens: number;
+  outputTokens: number;
+  latencyMs: number;
+  costUsd: number;
+}
+
+export interface AIEmbedRequest {
+  modelConfigId?: string;
+  input: string | string[];
+  traceId: string;
+  userId?: string;
+  kbId?: string;
+  taskId?: string;
+}
+
+export interface AIEmbedResponse {
+  embeddings: number[][];
+  modelConfigId: string;
+  provider: AIProvider;
+  modelName: string;
+  latencyMs: number;
+  costUsd: number;
+}
+
+export interface AICallLogQuery {
+  startTime?: string;
+  endTime?: string;
+  userId?: string;
+  modelName?: string;
+  purpose?: ModelPurpose;
+  status?: AICallStatus;
+  page?: number;
+  limit?: number;
+}
+
+export interface AICallLogDTO {
+  id: number;
+  traceId: string;
+  purpose: ModelPurpose;
+  provider: AIProvider;
+  modelName: string;
+  userId?: string;
+  agentId?: string;
+  taskId?: string;
+  kbId?: string;
+  inputTokens: number;
+  outputTokens: number;
+  latencyMs: number;
+  status: AICallStatus;
+  errorMessage?: string;
+  costUsd: number;
+  createdAt: string;
+}
+
+export interface AIStatsDTO {
+  totalCalls: number;
+  successCalls: number;
+  failedCalls: number;
+  rateLimitedCalls: number;
+  totalInputTokens: number;
+  totalOutputTokens: number;
+  totalCostUsd: number;
+  avgLatencyMs: number;
+  callsByModel: Array<{ modelName: string; count: number; costUsd: number }>;
+  callsByHour: Array<{ hour: string; count: number }>;
+}
+
 // File: /Users/zhangjiahao/IdeaProjects/swarm/backend/packages/shared/src/types.ts
 export * from "./schema";
 export * from "./constants";
 export * from "./logger";
 export * from "./cache";
+export * from "./ai-gateway";

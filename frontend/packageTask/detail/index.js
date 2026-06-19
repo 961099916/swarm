@@ -12,15 +12,21 @@ Page({
     timer: null,
   },
 
-  onLoad: function (options) {
-    if (options && options.taskId) {
-      this.setData({ taskId: options.taskId });
+ onLoad: function (options) {
+   if (options && options.taskId) {
+     this.setData({ taskId: options.taskId });
+   }
+    // 在页面首次渲染前同步主题，避免 onShow 延迟导致视觉跳变
+    const app = getApp();
+    if (app && app.globalData && app.globalData.theme === "light") {
+      this.setData({ theme: "theme-light" });
     }
-  },
+ },
 
   onShow: function () {
     const app = getApp();
     if (app && app.globalData) {
+      // onLoad 已同步主题，此处只需恢复 polling
       this.setData({
         theme: app.globalData.theme === "light" ? "theme-light" : "",
       });
@@ -148,6 +154,10 @@ Page({
         return {
           prefix: "",
           body: payload,
+          bodyPreview: {
+            messages: JSON.stringify(payload.messages, null, 2),
+            response: typeof payload.response === 'string' ? payload.response : JSON.stringify(payload.response, null, 2)
+          },
           systemPrompt,
           userMessages,
           type: "ai-chat",

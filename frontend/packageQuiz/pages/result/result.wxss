@@ -1,3 +1,6 @@
+/* page 背景由 app.wxss 全局统管 */
+
+
 /* File: /Users/zhangjiahao/IdeaProjects/swarm/frontend/packageQuiz/pages/result/result.wxss */
 
 .page-container {
@@ -7,7 +10,9 @@
   background: var(--bg-root);
   padding: 30rpx 40rpx;
   box-sizing: border-box;
+  animation: fade-up 0.35s ease-out both;
 }
+.page-container.theme-light { background: var(--bg-root); }
 
 /* Loading */
 .loading-container {

@@ -7,7 +7,9 @@ Page({
     tools: [],
     filteredTools: [],
     searchQuery: "",
-    refreshing: false
+    loading: false,
+    refreshing: false,
+    errorMsg: ''
   },
 
   onShow: function () {
@@ -22,7 +24,7 @@ Page({
   },
 
   loadTools: function () {
-    this.setData({ refreshing: true });
+    this.setData({ loading: true, refreshing: true, errorMsg: '' });
     request({ url: "/api/v1/admin/tools" })
       .then((res) => {
         if (res.success && res.data) {
@@ -45,10 +47,10 @@ Page({
       })
       .catch((err) => {
         console.error("加载工具列表失败:", err);
-        wx.showToast({ title: "加载系统工具失败", icon: "none" });
+        this.setData({ errorMsg: '网络异常，请稍后重试' });
       })
       .finally(() => {
-        this.setData({ refreshing: false });
+        this.setData({ loading: false, refreshing: false });
       });
   },
 
@@ -56,8 +58,13 @@ Page({
     this.loadTools();
   },
 
+  // 上拉加载（工具 API 暂不支持分页，保留占位）
+  loadNextPage: function () {
+    // 工具为全量加载，无需分页
+  },
+
   onSearchInput: function (e) {
-    const query = e.detail.value;
+    const query = e.detail?.value || '';
     this.setData({
       searchQuery: query,
       filteredTools: this.filterTools(this.data.tools, query)

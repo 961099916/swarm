@@ -33,7 +33,8 @@ function buildCreateTaskValidatorChain(): ValidatorChain<CreateTaskReq> {
 }
 
 /**
- * 方案一：执行本地 D1 强一致物理事务扣减积分并创建任务
+ * 执行 D1 原子批处理创建任务（替代 drizzle 事务，D1 不支持 BEGIN/COMMIT）
+ * 使用 db.batch() 确保原子性
  */
 async function executeCreateTaskTransaction(
   db: D1Database,
@@ -42,57 +43,39 @@ async function executeCreateTaskTransaction(
   taskType: string,
   payload: Record<string, any>
 ): Promise<number> {
-  const drizzleDb = getDrizzleDb(db);
   const now = new Date().toISOString();
   const taskTypeName = "多智能体协同";
 
-  return await drizzleDb.transaction(async (tx: DrizzleD1Database) => {
-    // 1. 原子扣减积分 (users表)
-    // 条件：用户的 credits 必须大于等于 TASK_COST，否则 update 不会影响任何行
-    const updateRes = await tx
-      .update(users)
-      .set({ credits: sql`credits - ${TASK_COST}`, updatedAt: now })
-      .where(and(eq(users.id, userId), sql`credits >= ${TASK_COST}`))
-      .returning({ credits: users.credits });
+  // 1. 先扣减积分并获取新余额（用单个原子查询）
+  const updateRes = await db
+    .prepare(
+      "UPDATE users SET credits = credits - ?, updated_at = ? WHERE id = ? AND credits >= ? RETURNING credits"
+    )
+    .bind(TASK_COST, now, userId, TASK_COST)
+    .all();
 
-    if (updateRes.length === 0) {
-      throw new Error("INSUFFICIENT_CREDITS"); // 直接抛出异常触发 tx 自动回滚，杜绝超扣
-    }
+  if (!updateRes.results || updateRes.results.length === 0) {
+    throw new Error("INSUFFICIENT_CREDITS");
+  }
 
-    const currentBalance = updateRes[0].credits;
+  const currentBalance = (updateRes.results[0] as any).credits;
 
-    // 2. 插入任务表 (tasks表)
-    await tx.insert(tasks).values({
-      id: taskId,
-      userId,
-      taskType,
-      status: "PENDING",
-      payload: JSON.stringify(payload),
-      creditsCost: TASK_COST,
-      createdAt: now,
-      updatedAt: now
-    });
+  // 2. 创建任务、流水和日志（使用 batch 原子写入）
+  await db.batch([
+    db.prepare(
+      "INSERT INTO tasks (id, user_id, task_type, status, payload, credits_cost, created_at, updated_at) VALUES (?, ?, ?, 'PENDING', ?, ?, ?, ?)"
+    ).bind(taskId, userId, taskType, JSON.stringify(payload), TASK_COST, now, now),
 
-    // 3. 写入资产账本流水表 (credits_ledger表)
-    await tx.insert(creditsLedger).values({
-      userId,
-      delta: -TASK_COST,
-      balance: currentBalance,
-      reason: "TASK_COST",
-      refId: taskId,
-      createdAt: now
-    });
+    db.prepare(
+      "INSERT INTO credits_ledger (user_id, delta, balance, reason, ref_id, created_at) VALUES (?, ?, ?, 'TASK_COST', ?, ?)"
+    ).bind(userId, -TASK_COST, currentBalance, taskId, now),
 
-    // 4. 写入任务初始日志
-    await tx.insert(taskLogs).values({
-      taskId,
-      level: "INFO",
-      message: `[系统] 任务已创建，类型: ${taskTypeName}，消耗 ${TASK_COST} 积分，剩余 ${currentBalance} 积分`,
-      createdAt: now
-    });
+    db.prepare(
+      "INSERT INTO task_logs (task_id, level, message, created_at) VALUES (?, 'INFO', ?, ?)"
+    ).bind(taskId, `[系统] 任务已创建，类型: ${taskTypeName}，消耗 ${TASK_COST} 积分，剩余 ${currentBalance} 积分`, now),
+  ]);
 
-    return currentBalance;
-  });
+  return currentBalance;
 }
 
 /**
@@ -105,44 +88,37 @@ async function triggerWorkflowEngine(
   taskType: string,
   payload: Record<string, any>
 ): Promise<void> {
-  const drizzleDb = getDrizzleDb(db);
   const now = new Date().toISOString();
 
   if (workflow && typeof workflow.create === "function") {
-    await drizzleDb.insert(taskLogs).values({
-      taskId,
-      level: "INFO",
-      message: "正在启动工作流编排引擎...",
-      createdAt: now
-    });
+    await db
+      .prepare("INSERT INTO task_logs (task_id, level, message, created_at) VALUES (?, 'INFO', ?, ?)")
+      .bind(taskId, "正在启动工作流编排引擎...", now)
+      .run();
     
     // 异步触发 Cloudflare Workflows
     const run = await workflow.create({ params: { taskId, taskType, payload } });
     
-    await drizzleDb
-      .update(tasks)
-      .set({ workflowRunId: run.id, status: "RUNNING", updatedAt: now })
-      .where(eq(tasks.id, taskId));
+    await db
+      .prepare("UPDATE tasks SET workflow_run_id = ?, status = 'RUNNING', updated_at = ? WHERE id = ?")
+      .bind(run.id, now, taskId)
+      .run();
       
-    await drizzleDb.insert(taskLogs).values({
-      taskId,
-      level: "INFO",
-      message: "工作流编排引擎启动成功，任务状态变更为运行中",
-      createdAt: now
-    });
+    await db
+      .prepare("INSERT INTO task_logs (task_id, level, message, created_at) VALUES (?, 'INFO', ?, ?)")
+      .bind(taskId, "工作流编排引擎启动成功，任务状态变更为运行中", now)
+      .run();
   } else {
     TraceLogger.warn("ENGINE", "WORKFLOW_TRIGGER_FAILED", taskId, `未检测到绑定的 TASK_WORKFLOW 实例，工作流进入兼容悬挂模式`);
-    await drizzleDb.insert(taskLogs).values({
-      taskId,
-      level: "WARN",
-      message: "未检测到工作流引擎绑定，任务处于就绪等待状态",
-      createdAt: now
-    });
+    await db
+      .prepare("INSERT INTO task_logs (task_id, level, message, created_at) VALUES (?, 'WARN', ?, ?)")
+      .bind(taskId, "未检测到工作流引擎绑定，任务处于就绪等待状态", now)
+      .run();
   }
 }
 
 /**
- * 逆向补偿事务：工作流启动失败时原子退款并置任务失败
+ * 逆向补偿：工作流启动失败时原子退款并置任务失败（使用 db.batch 替代 drizzle 事务）
  */
 async function handleWfEngineFailureAndRefund(
   db: D1Database,
@@ -151,44 +127,32 @@ async function handleWfEngineFailureAndRefund(
   errorMsg: string
 ): Promise<void> {
   try {
-    const drizzleDb = getDrizzleDb(db);
     const now = new Date().toISOString();
 
-    // 在本地物理事务中完成退积分及修改状态
-    await drizzleDb.transaction(async (tx: DrizzleD1Database) => {
-      // 1. 原子增加退回的积分
-      const refundRes = await tx
-        .update(users)
-        .set({ credits: sql`credits + ${TASK_COST}`, updatedAt: now })
-        .where(eq(users.id, userId))
-        .returning({ credits: users.credits });
+    // 1. 先原子增加退回的积分
+    const refundRes = await db
+      .prepare("UPDATE users SET credits = credits + ?, updated_at = ? WHERE id = ? RETURNING credits")
+      .bind(TASK_COST, now, userId)
+      .all();
 
-      const newBalance = refundRes.length > 0 ? refundRes[0].credits : 0;
+    const newBalance = refundRes.results && refundRes.results.length > 0
+      ? (refundRes.results[0] as any).credits
+      : 0;
 
-      // 2. 插入退款流水
-      await tx.insert(creditsLedger).values({
-        userId,
-        delta: TASK_COST,
-        balance: newBalance,
-        reason: "ADMIN_ADJUST", // 标记为退款调整
-        refId: taskId,
-        createdAt: now
-      });
+    // 2. 插入退款流水 + 置任务失败 + 日志（batch 原子提交）
+    await db.batch([
+      db.prepare(
+        "INSERT INTO credits_ledger (user_id, delta, balance, reason, ref_id, created_at) VALUES (?, ?, ?, 'ADMIN_ADJUST', ?, ?)"
+      ).bind(userId, TASK_COST, newBalance, taskId, now),
 
-      // 3. 将任务置为失败
-      await tx
-        .update(tasks)
-        .set({ status: "FAILED", resultSummary: `工作流启动失败: ${errorMsg}（积分已原路退回）`, updatedAt: now })
-        .where(eq(tasks.id, taskId));
+      db.prepare(
+        "UPDATE tasks SET status = 'FAILED', result_summary = ?, updated_at = ? WHERE id = ?"
+      ).bind(`工作流启动失败: ${errorMsg}（积分已原路退回）`, now, taskId),
 
-      // 4. 写入任务日志记录错误
-      await tx.insert(taskLogs).values({
-        taskId,
-        level: "ERROR",
-        message: `工作流启动异常: ${errorMsg}，系统自动触发逆向退款补偿成功，退回 ${TASK_COST} 积分，剩余 ${newBalance} 积分`,
-        createdAt: now
-      });
-    });
+      db.prepare(
+        "INSERT INTO task_logs (task_id, level, message, created_at) VALUES (?, 'ERROR', ?, ?)"
+      ).bind(taskId, `工作流启动异常: ${errorMsg}，系统自动触发逆向退款补偿成功，退回 ${TASK_COST} 积分，剩余 ${newBalance} 积分`, now),
+    ]);
 
     TraceLogger.info("ENGINE", "TASK_REFUND_COMPENSATE", taskId, `由于工作流启动异常，系统成功退款补偿 ${TASK_COST} 积分给用户: userId=${userId}`, userId);
   } catch (refundErr: any) {
@@ -203,6 +167,7 @@ export async function handleCreateTask(
   request: Request,
   db: D1Database,
   workflow: WorkflowInstance,
+  taskQueue: Queue,
   userId: string,
   traceId: string
 ): Promise<Response> {
@@ -233,13 +198,33 @@ export async function handleCreateTask(
     const newBalance = await executeCreateTaskTransaction(db, userId, taskId, body.taskType, body.payload);
     TraceLogger.info("ENGINE", "TASK_TRANSACTION_SUBMITTED", traceId, `积分扣减与任务创建物理事务成功: taskId=${taskId}, 扣除=${TASK_COST}, 余额=${newBalance}`, userId);
 
-    // 3. 事务提交成功后，异步触发 Workflows 引擎
+    // 3. 写入任务初始日志
+    const now = new Date().toISOString();
+    await drizzleDb.insert(taskLogs).values({
+      taskId,
+      level: "INFO",
+      message: "任务已进入异步编排队列，等待工作流引擎调度...",
+      createdAt: now,
+    });
+
+    // 4. 将任务消息发送到异步队列（解耦工作流启动）
     try {
-      await triggerWorkflowEngine(db, workflow, taskId, body.taskType, body.payload);
-    } catch (wfError: any) {
-      TraceLogger.error("ENGINE", "WORKFLOW_LAUNCH_FAILED", traceId, `启动工作流引擎异常，触发自动退款补偿机制: ${wfError.message || wfError}`, wfError, userId);
-      // 逆向补偿事务：回滚积分，修改本地 Task 状态为 FAILED，保证最终数据一致性
-      await handleWfEngineFailureAndRefund(db, userId, taskId, wfError.message || "未知异常");
+      await taskQueue.send({
+        taskId,
+        taskType: body.taskType,
+        payload: body.payload,
+        userId,
+        traceId,
+      });
+      TraceLogger.info("ENGINE", "TASK_ENQUEUED", traceId, `任务消息已入队: taskId=${taskId}`, userId);
+    } catch (qErr: any) {
+      // 队列发送失败，走原来的同步路径作为降级
+      TraceLogger.warn("ENGINE", "QUEUE_SEND_FAILED", traceId, `队列发送失败，降级为同步触发: ${qErr.message}`, userId);
+      try {
+        await triggerWorkflowEngine(db, workflow, taskId, body.taskType, body.payload);
+      } catch (wfError: any) {
+        await handleWfEngineFailureAndRefund(db, userId, taskId, wfError.message || "未知异常");
+      }
     }
 
     const resData: CreateTaskRes = { taskId };

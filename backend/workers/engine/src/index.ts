@@ -11,6 +11,7 @@ export interface Env {
   DB: D1Database;
   CACHE_KV: KVNamespace;
   TASK_WORKFLOW: WorkflowInstance;
+  TASK_QUEUE: Queue;
   // Secrets
   INTERNAL_SECRET: string;
 }
@@ -123,7 +124,7 @@ app.delete("/api/v1/agents/delete", async (c) => {
 
 // ─── 任务业务路由 ───
 app.post("/api/v1/tasks/create", async (c) => {
-  return await handleCreateTask(c.req.raw, c.env.DB, c.env.TASK_WORKFLOW, c.get("userId"), c.get("traceId"));
+  return await handleCreateTask(c.req.raw, c.env.DB, c.env.TASK_WORKFLOW, c.env.TASK_QUEUE, c.get("userId"), c.get("traceId"));
 });
 
 app.get("/api/v1/tasks/list", async (c) => {

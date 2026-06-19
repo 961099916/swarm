@@ -1,8 +1,10 @@
 const { request, BASE_URL } = require("../../utils/request.js");
+const { lightTap, mediumTap } = require("../../utils/feedback.js");
 
 Page({
   data: {
     theme: "dark",
+    loading: true,
     isDark: true,
     user: null,
     registerDays: 0,
@@ -88,7 +90,8 @@ Page({
           this.setData({
             user: processedUser,
             registerDays,
-            inviteCode
+            inviteCode,
+            loading: false
           });
 
           // 同步积分到全局
@@ -110,11 +113,13 @@ Page({
 
   // 切换主题模式
   toggleTheme: function () {
+    lightTap();
     const app = getApp();
     if (app && app.toggleTheme) {
       const nextTheme = app.toggleTheme();
       this.setData({
-        theme: nextTheme,
+        theme: nextTheme === "light" ? "theme-light" : "",
+        _raw: nextTheme,
         isDark: nextTheme === "dark"
       });
     }
@@ -137,6 +142,12 @@ Page({
       content: "企业会员可享24小时高频度全天候监控，无限智能体编排数量，并享受最优先的AI算力通道。因小程序端内支付限制，当前请联系客服免费激活！",
       showCancel: false,
       confirmText: "了解详情"
+    });
+  },
+
+  goToCredits: function () {
+    wx.navigateTo({
+      url: "/pages/credits/index"
     });
   },
 

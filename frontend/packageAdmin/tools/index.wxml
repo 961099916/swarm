@@ -1,53 +1,91 @@
-<!-- packageAdmin/tools/index.wxml -->
+<!-- packageAdmin/tools/index.wxml — 暖绒奶油风 v2 -->
 <view class="tools-container {{theme}}">
   <view class="head-row">
-    <text class="page-title">动态工具库</text>
-    <t-button size="small" theme="primary" icon="add" bindtap="onCreateTool">新增工具</t-button>
+    <view>
+      <text class="page-title">动态工具库</text>
+      <text class="page-subtitle">注册与管理可动态加载的智能体工具</text>
+    </view>
+    <button class="create-btn" bindtap="onCreateTool">
+      <view class="t-icon t-icon-add" style="font-size: 28rpx; color: #FFFFFF;"></view>
+      <text>新增</text>
+    </button>
   </view>
 
-  <!-- 搜索栏 -->
-  <view class="search-wrap card">
-    <view class="search-input-box">
-      <view class="t-icon t-icon-search" style="font-size: 32rpx; color: var(--text-muted); margin-right: 12rpx;"></view>
-      <input class="search-input" value="{{searchQuery}}" placeholder="输入工具标识或描述搜索" bindinput="onSearchInput" />
+  <!-- 搜索栏（统一风格） -->
+  <view class="search-bar-wrap" style="padding-bottom:12rpx;">
+    <view class="search-bar-inner">
+      <view class="t-icon t-icon-search" style="font-size: 24rpx; color: var(--text-muted); margin-right: 10rpx;"></view>
+      <input class="search-input" placeholder="搜索工具名称或描述..." placeholder-class="search-placeholder" value="{{searchQuery}}" bindinput="onSearchInput" confirm-type="search" />
+      <view wx:if="{{searchQuery}}" class="search-clear" bindtap="onSearchInput" data-value="">
+        <view class="t-icon t-icon-close" style="font-size: 20rpx; color: var(--text-muted);"></view>
+      </view>
     </view>
   </view>
 
   <!-- 工具列表 -->
-  <scroll-view scroll-y class="list-scroll" bindrefresherrefresh="onRefresh" refresher-enabled refresher-triggered="{{refreshing}}">
-    <view class="empty-state card" wx:if="{{filteredTools.length === 0}}">
-      <view class="t-icon t-icon-info-circle" style="font-size: 80rpx; color: var(--text-muted); margin-bottom: 16rpx;"></view>
-      <text class="empty-text">未检索到动态工具记录</text>
+  <scroll-view scroll-y class="list-scroll" bindrefresherrefresh="onRefresh" refresher-enabled refresher-triggered="{{refreshing}}" bindscrolltolower="loadNextPage">
+    <!-- 骨架屏 -->
+    <view wx:if="{{loading && filteredTools.length === 0}}" style="padding-top:16rpx;">
+      <view class="skeleton skeleton-card" wx:for="{{[1,2,3]}}" wx:key="*this"></view>
     </view>
 
-    <view class="tool-card card" wx:for="{{filteredTools}}" wx:key="name">
+    <!-- 错误状态 -->
+    <view wx:elif="{{errorMsg && filteredTools.length === 0}}" class="error-state">
+      <view class="error-icon"><view class="t-icon t-icon-error-circle-filled" style="font-size: 64rpx;"></view></view>
+      <text class="error-label">{{errorMsg}}</text>
+      <button class="error-retry-btn" bindtap="loadTools">重新加载</button>
+    </view>
+
+    <!-- 空状态 -->
+    <view class="empty-state" wx:if="{{filteredTools.length === 0 && !refreshing}}">
+      <view class="empty-icon">
+        <view class="t-icon t-icon-tools" style="font-size: 96rpx; color: var(--text-secondary);"></view>
+      </view>
+      <text class="empty-label">暂无工具</text>
+      <text class="empty-desc">点击右上角「新增工具」注册第一个动态工具</text>
+    </view>
+
+    <!-- 工具卡片 -->
+    <view class="tool-card fade-up" wx:for="{{filteredTools}}" wx:key="name" style="animation-delay: {{index * 0.06}}s;">
+      <!-- 顶栏：玻璃图标 + 名称 + 开关 -->
       <view class="tool-head">
-        <view class="tool-name-wrap">
-          <text class="tool-name num-font">{{item.name}}</text>
-          <text class="tool-tag tag-script" wx:if="{{item.script}}">FaaS 脚本</text>
-          <text class="tool-tag tag-api" wx:else>API 代理</text>
+        <view class="tool-head-left">
+          <view class="tool-head-info" style="margin-left:0;"><!-- 无图标模式 -->
+            <view class="tool-name-row">
+              <text class="tool-name">{{item.name}}</text>
+              <text class="tool-tag {{item.script ? 'tag-script' : 'tag-api'}}">{{item.script ? 'FaaS' : 'API'}}</text>
+            </view>
+            <text class="tool-desc">{{item.description}}</text>
+          </view>
         </view>
-        <t-switch checked="{{item.enabled}}" data-name="{{item.name}}" data-index="{{index}}" bindchange="onStatusChange" color="#1E6FFF" style="transform:scale(0.85);" />
+        <t-switch checked="{{item.enabled}}" data-name="{{item.name}}" data-index="{{index}}" bindchange="onStatusChange" color="#FF6B6B" style="transform:scale(0.85);flex-shrink:0;" />
       </view>
 
-      <text class="tool-desc">{{item.description}}</text>
-      
-      <view class="tool-meta">
-        <view class="meta-item">
-          <text class="meta-label">分组：</text>
-          <text class="meta-val">{{item.category}}</text>
+      <!-- 元数据行 -->
+      <view class="tool-meta-row">
+        <view class="meta-chip">
+          <view class="t-icon t-icon-folder" style="font-size: 20rpx; margin-right: 4rpx;"></view>
+          <text>{{item.category || 'general'}}</text>
         </view>
-        <view class="meta-item">
-          <text class="meta-label">路由终点：</text>
-          <text class="meta-val code-font">{{item.script ? 'ctx.run()' : item.endpoint}}</text>
+        <view class="meta-chip">
+          <view class="t-icon t-icon-time" style="font-size: 20rpx; margin-right: 4rpx;"></view>
+          <text>{{item.formattedTime}}</text>
+        </view>
+        <view class="meta-chip" wx:if="{{item.endpoint}}">
+          <view class="t-icon t-icon-link" style="font-size: 20rpx; margin-right: 4rpx;"></view>
+          <text class="endpoint-text">{{item.endpoint}}</text>
         </view>
       </view>
 
+      <!-- 底栏：状态 + 操作 -->
       <view class="tool-footer">
-        <text class="time-lbl">更新于: {{item.formattedTime}}</text>
+        <view class="tool-status {{item.enabled ? 'status-on' : ''}}">
+          <view class="status-dot {{item.enabled ? 'status-dot-success' : ''}}"></view>
+          <text>{{item.enabled ? '运行中' : '已停用'}}</text>
+        </view>
         <view class="action-btn-row">
-          <t-button size="extra-small" theme="light" bindtap="onEditTool" data-name="{{item.name}}">配置</t-button>
-          <t-button size="extra-small" theme="danger" variant="text" bindtap="onDeleteTool" data-name="{{item.name}}">删除</t-button>
+          <button class="tool-btn edit-btn" bindtap="onEditTool" data-name="{{item.name}}">配置</button>
+          <button class="tool-btn del-btn" bindtap="onDeleteTool" data-name="{{item.name}}">删除</button>
         </view>
       </view>
     </view>

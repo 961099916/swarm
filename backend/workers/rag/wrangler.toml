@@ -1,0 +1,32 @@
+name = "swarm-rag"
+main = "src/index.ts"
+compatibility_date = "2024-09-23"
+
+[observability]
+enabled = true
+
+[[d1_databases]]
+binding = "DB"
+database_name = "swarm-db"
+database_id = "4f360bda-ea4b-4fde-b3a0-d759f4180295"
+
+[[kv_namespaces]]
+binding = "CACHE_KV"
+id = "ac5430ca9d234186862f6b4300d50b5a"
+
+[ai]
+binding = "AI"
+
+# 文档处理 Workflow
+[[workflows]]
+name = "swarm-doc-process-workflow"
+binding = "DOC_WORKFLOW"
+class_name = "DocumentProcessWorkflow"
+
+# 生产消息到文档处理队列
+[[queues.producers]]
+queue = "swarm-doc-queue"
+binding = "DOC_QUEUE"
+
+[vars]
+ALLOWED_ORIGIN = "*"

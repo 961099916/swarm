@@ -26,6 +26,11 @@ Page({
     data: {
         isOffline: false,
         historyList: [],
+        page: 1,
+        pageSize: 10,
+        hasMore: true,
+        refreshing: false,
+        loading: false,
         userProfile: {
             nickname: '性格评估探索家',
             avatarUrl: '/static/default_avatar.png'
@@ -49,6 +54,13 @@ Page({
     },
     onShow() {
         logger_1.Logger.info('[Mine] 展示测评历史页面');
+        const app = getApp();
+        if (app && app.globalData) {
+            this.setData({
+                theme: app.globalData.theme === 'light' ? 'theme-light' : ''
+            });
+            app.applyTheme(app.globalData.theme);
+        }
         this.loadUserProfile();
         this.loadHistoryList();
     },
@@ -177,17 +189,26 @@ Page({
                 this.loadLocalHistory();
                 return;
             }
-            // 2. 在线状态，拉取云端历史
+            // 2. 在线状态，拉取云端历史（分页）
             try {
+                const { page, pageSize } = this.data;
                 const res = yield (0, request_1.request)({
-                    url: '/api/v1/quiz/test-history',
+                    url: `/api/v1/quiz/test-history?page=${page}&pageSize=${pageSize}`,
                     method: 'GET'
                 });
                 if (res.code === 200) {
-                    const formattedList = res.data.map(item => (Object.assign(Object.assign({}, item), { formattedTime: this.formatTime(item.timestamp) })));
-                    this.setData({ historyList: formattedList }, () => {
-                        this.calculateStats(formattedList);
-                    });
+                    const newItems = res.data || [];
+                    const formattedList = newItems.map(item => (Object.assign(Object.assign({}, item), { formattedTime: this.formatTime(item.timestamp) })));
+                    if (page === 1) {
+                        this.setData({ historyList: formattedList, hasMore: newItems.length >= pageSize }, () => {
+                            this.calculateStats(formattedList);
+                        });
+                    } else {
+                        const merged = [...this.data.historyList, ...formattedList];
+                        this.setData({ historyList: merged, hasMore: newItems.length >= pageSize }, () => {
+                            this.calculateStats(merged);
+                        });
+                    }
                 }
                 else {
                     throw new Error(res.message);
@@ -198,6 +219,8 @@ Page({
                 // 网络请求失败，降级本地拉取
                 this.loadLocalHistory();
             }
+            // 重置刷新/加载状态
+            this.setData({ refreshing: false, loading: false });
         });
     },
     /**
@@ -206,7 +229,7 @@ Page({
     loadLocalHistory() {
         const list = localHistory_1.LocalHistoryService.getHistoryList();
         const formattedList = list.map(item => (Object.assign(Object.assign({}, item), { formattedTime: this.formatTime(item.timestamp) })));
-        this.setData({ historyList: formattedList }, () => {
+        this.setData({ historyList: formattedList, refreshing: false, loading: false }, () => {
             this.calculateStats(formattedList);
         });
     },
@@ -378,5 +401,22 @@ Page({
         const hh = String(date.getHours()).padStart(2, '0');
         const mm = String(date.getMinutes()).padStart(2, '0');
         return `${y}-${m}-${d} ${hh}:${mm}`;
+    },
+
+    /**
+     * 下拉刷新历史列表
+     */
+    onRefresh() {
+        this.setData({ refreshing: true, page: 1, hasMore: true });
+        this.loadHistoryList();
+    },
+
+    /**
+     * 上拉加载更多历史
+     */
+    loadNextPage() {
+        if (this.data.loading || !this.data.hasMore) return;
+        this.setData({ page: this.data.page + 1, loading: true });
+        this.loadHistoryList();
     }
 });

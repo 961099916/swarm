@@ -1,4 +1,5 @@
 const { request } = require("../../utils/request.js");
+const { validateAvatar } = require("../../utils/avatar.js");
 
 const AI_MODELS = {
   SMALL: "meta-llama/Llama-3.2-3B-Instruct",
@@ -9,10 +10,14 @@ Page({
   data: {
     theme: "dark",
     agents: [],
-    filteredAgents: [],
     loading: false,
-    saving: false,
+    refreshing: false,
+    page: 1,
+    pageSize: 10,
+    hasMore: true,
+    errorMsg: '',
     searchQuery: "",
+    saving: false,
 
     // 弹窗状态
     showModal: false,
@@ -48,18 +53,35 @@ Page({
       return;
     }
 
+    this.loadFirstPage();
+  },
+
+  loadFirstPage: function () {
+    this.setData({ page: 1, hasMore: true, loading: true, errorMsg: '', agents: [] });
     this.loadData();
+  },
+
+  onRefresh: function () {
+    this.setData({ refreshing: true, errorMsg: '' });
+    this.loadData();
+  },
+
+  onSearchInput: function (e) {
+    const value = (e.detail?.value || '').trim();
+    this.setData({ searchQuery: value, page: 1, hasMore: true });
+    this.filterAgents();
   },
 
   // 获取全局所有智能体
   loadData: function () {
-    this.setData({ loading: true });
+    this.setData({ loading: true, errorMsg: '' });
+    request({ url: "/api/v1/admin/agents" })
     request({ url: "/api/v1/admin/agents" })
       .then((res) => {
         if (res.success && res.data) {
           const agents = res.data.map(agent => ({
             ...agent,
-            avatar: this.validateAvatar(agent.avatar),
+            avatar: validateAvatar(agent.avatar),
             formattedModel: this.formatModel(agent.model),
             shortUid: this.formatUid(agent.userId)
           }));
@@ -67,14 +89,16 @@ Page({
           this.setData({ agents }, () => {
             this.filterAgents();
           });
+        } else {
+          this.setData({ errorMsg: (res && res.error) || '加载失败' });
         }
       })
       .catch((err) => {
         console.error("加载全局智能体审计列表失败:", err);
-        wx.showToast({ title: "加载列表失败", icon: "none" });
+        this.setData({ errorMsg: '网络异常，请稍后重试' });
       })
       .finally(() => {
-        this.setData({ loading: false });
+        this.setData({ loading: false, refreshing: false });
       });
   },
 
@@ -101,15 +125,6 @@ Page({
     this.setData({ searchQuery: e.detail.value }, () => {
       this.filterAgents();
     });
-  },
-
-  validateAvatar: function (avatar) {
-    if (!avatar) return "service";
-    const EMOJI_REGEX = /[\uD800-\uDBFF][\uDC00-\uDFFF]|[\u2600-\u27BF]|[\u2300-\u23FF]|[\u2b50]/;
-    if (EMOJI_REGEX.test(avatar)) {
-      return "service";
-    }
-    return avatar;
   },
 
   formatModel: function (modelStr) {

@@ -23,5 +23,10 @@ name = "swarm-task-workflow"
 binding = "TASK_WORKFLOW"
 class_name = "TaskOrchestrator"
 
+# RAG Worker Service Binding for knowledge retrieval
+[[services]]
+binding = "RAG"
+service = "swarm-rag"
+
 [vars]
 ALLOWED_ORIGIN = "*"

@@ -548,4 +548,6 @@
   <canvas type="2d" id="colorCanvas" style="width: 8px; height: 8px; position: fixed; left: -9999px;"></canvas>
   <!-- 离屏海报绘制 Canvas，375×600 逻辑px，隐藏在屏幕外 -->
   <canvas type="2d" id="posterCanvas" style="width: 375px; height: 650px; position: fixed; left: -9999px; top: -9999px;"></canvas>
+
+  <!-- 自定义 Tabbar -->
 </view>

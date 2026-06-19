@@ -24,8 +24,8 @@
     <view wx:else class="agent-grid">
       <view wx:for="{{customAgents}}" wx:key="id" class="card agent-card">
         <view class="ag-card-top">
-          <view class="ag-avatar" style="display: flex; align-items: center; justify-content: center; background: var(--brand-subtle); border-radius: 50%; width: 72rpx; height: 72rpx;">
-            <view class="t-icon t-icon-{{item.avatar || 'user'}}" style="font-size: 40rpx; color: var(--brand-color);"></view>
+          <view class="agent-avatar-new">
+            <view class="t-icon t-icon-{{item.avatar || 'user'}}"></view>
           </view>
           <view class="ag-meta">
             <view class="ag-name-row">
@@ -59,8 +59,8 @@
     <view class="agent-grid">
       <view wx:for="{{presetAgents}}" wx:key="id" class="card agent-card">
         <view class="ag-card-top">
-          <view class="ag-avatar" style="display: flex; align-items: center; justify-content: center; background: var(--brand-subtle); border-radius: 50%; width: 72rpx; height: 72rpx;">
-            <view class="t-icon t-icon-{{item.avatar || 'service'}}" style="font-size: 40rpx; color: var(--brand-color);"></view>
+          <view class="agent-avatar-new">
+            <view class="t-icon t-icon-{{item.avatar || 'service'}}"></view>
           </view>
           <view class="ag-meta">
             <view class="ag-name-row">
@@ -83,7 +83,7 @@
     </view>
   </scroll-view>
 
-  <t-popup visible="{{showModal}}" placement="bottom" closeOnOverlayClick="{{true}}" prevent-scroll-through="{{true}}" overlayProps="{{ { preventScrollThrough: true } }}" showOverlay="{{true}}" bindvisible-change="closeModal">
+  <t-popup visible="{{showModal}}" placement="bottom" closeOnOverlayClick="{{true}}" showOverlay="{{true}}" bindvisible-change="closeModal">
     <view class="modal-sheet">
       <view class="modal-head">
         <text class="modal-title">{{isEditMode ? '编辑智能体' : '创造协同模型'}}</text>

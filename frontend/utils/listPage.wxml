@@ -1,0 +1,101 @@
+<!--
+  list-page-template — 列表页通用模板（搜索筛选 + 下拉刷新 + 上拉加载 + 空状态 + 错误重试）
+  用法：在页面 WXML 中 <import src="/utils/listPage.wxml" /> 然后使用 <template is="list-page" data="{{...}}" />
+-->
+<template name="list-page">
+  <!-- 筛选栏（水平滚动胶囊） -->
+  <scroll-view
+    wx:if="{{filterOptions && filterOptions.length > 0}}"
+    class="filter-bar"
+    scroll-x
+    enable-flex
+    enhanced
+    show-scrollbar="{{false}}"
+  >
+    <view class="filter-items">
+      <view
+        wx:for="{{filterOptions}}"
+        wx:key="value"
+        class="pill-filter {{filterValue === item.value ? 'active' : ''}}"
+        data-value="{{item.value}}"
+        bindtap="onFilterChange"
+      >
+        {{item.label}}
+      </view>
+    </view>
+  </scroll-view>
+
+  <!-- 搜索框 -->
+  <view wx:if="{{showSearch !== false}}" class="search-bar-wrap">
+    <view class="search-bar-inner">
+      <view class="t-icon t-icon-search" style="font-size: 24rpx; color: var(--text-muted); margin-right: 10rpx;"></view>
+      <input
+        class="search-input"
+        placeholder="{{searchPlaceholder || '搜索...'}}"
+        placeholder-class="search-placeholder"
+        value="{{searchQuery}}"
+        bindinput="onSearchInput"
+        bindconfirm="onSearchSubmit"
+        confirm-type="search"
+      />
+      <view wx:if="{{searchQuery}}" class="search-clear" bindtap="onSearchInput" data-value="">
+        <view class="t-icon t-icon-close" style="font-size: 20rpx; color: var(--text-muted);"></view>
+      </view>
+    </view>
+  </view>
+
+  <!-- 刷新容器 + 列表 -->
+  <scroll-view
+    class="list-scroll"
+    scroll-y
+    enhanced
+    show-scrollbar="{{false}}"
+    refresher-enabled
+    refresher-triggered="{{refreshing}}"
+    bindrefresherrefresh="onRefresh"
+    bindscrolltolower="loadNextPage"
+    scrolltolower-margin="100rpx"
+  >
+    <!-- 骨架屏加载态 -->
+    <view wx:if="{{loading && (list.length === 0)}}" class="skeleton-wrap">
+      <view class="skeleton skeleton-card" wx:for="{{[1,2,3]}}" wx:key="*this"></view>
+    </view>
+
+    <!-- 错误状态 -->
+    <view wx:elif="{{errorMsg && list.length === 0}}" class="error-state">
+      <view class="error-icon">
+        <view class="t-icon t-icon-error-circle-filled" style="font-size: 64rpx;"></view>
+      </view>
+      <text class="error-label">{{errorMsg}}</text>
+      <button class="error-retry-btn" bindtap="loadFirstPage">重新加载</button>
+    </view>
+
+    <!-- 空状态 -->
+    <view wx:elif="{{!loading && list.length === 0}}" class="empty-state">
+      <view class="empty-icon">
+        <view class="t-icon t-icon-mail" style="font-size: 64rpx; color: var(--text-secondary);"></view>
+      </view>
+      <text class="empty-label">{{emptyText}}</text>
+      <text class="empty-desc">{{emptyDesc || '暂无相关内容'}}</text>
+    </view>
+
+    <!-- 列表内容（由外部通过 <slot> 或自定义模板填充） -->
+    <view wx:else>
+      <slot />
+    </view>
+
+    <!-- 加载更多指示器 -->
+    <view wx:if="{{loading && list.length > 0}}" class="load-more-indicator">
+      <view class="spinner-ios"></view>
+      <text class="load-more-text">加载中...</text>
+    </view>
+
+    <!-- 没有更多了 -->
+    <view wx:elif="{{!hasMore && list.length > 0}}" class="load-more-indicator">
+      <text class="load-more-text load-more-end">— 已展示全部 {{total}} 条 —</text>
+    </view>
+
+    <!-- 底部安全间距 -->
+    <view style="height: 40rpx;"></view>
+  </scroll-view>
+</template>

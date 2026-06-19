@@ -1,5 +1,11 @@
 {
   "navigationBarTitleText": "算力账户明细",
+  "enablePullDownRefresh": true,
+  "onReachBottomDistance": 100,
+  "backgroundColor": "#2D2A24",
+  "backgroundColorContent": "#2D2A24",
+  "backgroundColorTop": "#2D2A24",
+  "backgroundColorBottom": "#2D2A24",
   "usingComponents": {
     "t-popup": "tdesign-miniprogram/popup/popup"
   }

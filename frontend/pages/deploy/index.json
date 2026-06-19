@@ -1,12 +1,18 @@
 {
   "navigationBarTitleText": "部署分布式任务",
+  "backgroundColor": "#2D2A24",
+  "backgroundColorContent": "#2D2A24",
+  "backgroundColorTop": "#2D2A24",
+  "backgroundColorBottom": "#2D2A24",
   "usingComponents": {
-    "t-segmented": "tdesign-miniprogram/segmented/segmented",
+    "t-button": "tdesign-miniprogram/button/button",
     "t-input": "tdesign-miniprogram/input/input",
     "t-textarea": "tdesign-miniprogram/textarea/textarea",
     "t-popup": "tdesign-miniprogram/popup/popup",
     "t-slider": "tdesign-miniprogram/slider/slider",
-    "t-button": "tdesign-miniprogram/button/button",
-    "t-badge": "tdesign-miniprogram/badge/badge"
+    "t-tag": "tdesign-miniprogram/tag/tag",
+    "t-skeleton": "tdesign-miniprogram/skeleton/skeleton",
+    "t-empty": "tdesign-miniprogram/empty/empty",
+    "t-divider": "tdesign-miniprogram/divider/divider"
   }
 }

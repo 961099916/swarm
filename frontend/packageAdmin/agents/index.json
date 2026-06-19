@@ -1,5 +1,9 @@
 {
   "navigationBarTitleText": "平台智能体管控",
+  "backgroundColor": "#2D2A24",
+  "backgroundColorContent": "#2D2A24",
+  "backgroundColorTop": "#2D2A24",
+  "backgroundColorBottom": "#2D2A24",
   "usingComponents": {
     "t-popup": "tdesign-miniprogram/popup/popup",
     "t-input": "tdesign-miniprogram/input/input",

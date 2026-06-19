@@ -144,7 +144,7 @@ async function registerNewUser(
 
 
 async function generateUserToken(user: UserRow, jwtSecret: string): Promise<string> {
-  const expInSeconds = Math.floor(Date.now() / 1000) + TOKEN_EXPIRY_SECONDS * 24 * 60 * 60;
+  const expInSeconds = Math.floor(Date.now() / 1000) + TOKEN_EXPIRY_SECONDS;
   return await signJWT(
     {
       userId: user.id,

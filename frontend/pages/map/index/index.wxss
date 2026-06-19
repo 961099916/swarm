@@ -1,3 +1,6 @@
+/* page 背景由 app.wxss 全局统管 */
+
+
 /* File: /Users/zhangjiahao/IdeaProjects/wx-test/wx-client/miniprogram/pages/index/index.wxss */
 
 /* ==================== 1. 2D 游戏视口与像素地图 ==================== */
@@ -6,7 +9,7 @@
   height: 100vh;
   overflow: hidden;
   position: relative;
-  background: linear-gradient(135deg, #3a7d44 0%, #2d6e3f 50%, #1e5e33 100%); /* 星露谷经典草绿 */
+  background: linear-gradient(135deg, #FF6B6B 0%, #FFA07A 50%, #FDB99B 100%); /* 暖绒奶油风草地 */
 }
 
 /* 2D 滚动地图大背景 */
@@ -25,11 +28,11 @@
   top: 0;
   right: 0;
   bottom: 0;
-  background: #3a7d44; /* 升级为经典的星露谷明亮草绿色 */
+  background: #FDB99B; /* 暖绒奶油风草地 */
   background-image:
-    /* 黄土小径路径 (模拟中心交叉黄土路效果) */
-    radial-gradient(ellipse at 400px 400px, rgba(223, 177, 128, 0.4) 0%, transparent 350px),
-    radial-gradient(ellipse at 850px 300px, rgba(223, 177, 128, 0.4) 0%, transparent 280px),
+    /* 暖色小径 */
+    radial-gradient(ellipse at 400px 400px, rgba(255, 160, 122, 0.3) 0%, transparent 350px),
+    radial-gradient(ellipse at 850px 300px, rgba(255, 160, 122, 0.3) 0%, transparent 280px),
     /* 像素杂色草坪斑点 */
     radial-gradient(circle at 12px 12px, #447227 2px, transparent 2px),
     radial-gradient(circle at 28px 24px, #447227 2px, transparent 2px),
@@ -280,7 +283,7 @@
   z-index: 100;
 }
 
-/* 左上角玩家简档 HUD 木板卡片 */
+/* 左上角玩家简档 HUD 毛玻璃面板 */
 .hud-profile-badge {
   position: absolute;
   left: 32rpx;
@@ -288,8 +291,10 @@
   display: flex;
   flex-direction: row;
   align-items: center;
-  background: var(--bg-surface);
-  border: 1rpx solid var(--border-default);
+  background: var(--glass-bg);
+  backdrop-filter: var(--glass-blur);
+  -webkit-backdrop-filter: var(--glass-blur);
+  border: 1rpx solid var(--glass-border);
   box-shadow: var(--shadow-sm);
   padding: 8rpx 24rpx 8rpx 8rpx;
   pointer-events: auto;
@@ -317,7 +322,7 @@
 .minimap-viewport {
   width: 100px;
   height: 100px;
-  background: linear-gradient(135deg, #3a7d44 0%, #2d6e3f 50%, #1e5e33 100%);
+  background: linear-gradient(135deg, #FFA07A 0%, #FDB99B 50%, #FFE4D6 100%); /* 暖绒奶油缩略图 */
   border: 1rpx solid var(--border-default);
   box-shadow: var(--shadow-sm);
   position: relative;
@@ -345,11 +350,11 @@
   right: 0;
   bottom: 0;
   background-image: 
-    radial-gradient(circle at 12px 12px, #4d7a27 1px, transparent 1px),
-    radial-gradient(circle at 28px 24px, #4d7a27 1px, transparent 1px),
-    radial-gradient(circle at 6px 36px, #4d7a27 1px, transparent 1px),
-    radial-gradient(ellipse at 33px 33px, rgba(223, 177, 128, 0.4) 0%, transparent 30px),
-    radial-gradient(ellipse at 70px 25px, rgba(223, 177, 128, 0.4) 0%, transparent 24px);
+    radial-gradient(circle at 12px 12px, #FDB99B 1px, transparent 1px),
+    radial-gradient(circle at 28px 24px, #FDB99B 1px, transparent 1px),
+    radial-gradient(circle at 6px 36px, #FFE4D6 1px, transparent 1px),
+    radial-gradient(ellipse at 33px 33px, rgba(255, 160, 122, 0.3) 0%, transparent 30px),
+    radial-gradient(ellipse at 70px 25px, rgba(255, 160, 122, 0.3) 0%, transparent 24px);
   background-size: 48px 48px, 48px 48px, 48px 48px, 100% 100%, 100% 100%;
   z-index: 1;
 }
@@ -718,7 +723,7 @@
 }
 
 .btn-action-a--active {
-  background: #e0a96d; /* 木色 */
+  background: #FDB99B; /* 暖色木 */
   border-color: var(--border-default);
   pointer-events: auto;
   opacity: 1;
@@ -745,24 +750,28 @@
   margin-top: 2rpx;
 }
 
-/* ==================== 5. 星露谷复古木质面板卡片 ==================== */
+/* ==================== 5. 暖绒毛玻璃面板 ==================== */
 .wood-card {
-  background-color: var(--bg-surface) !important; /* 羊皮纸米黄 */
-  border: 8rpx solid var(--border-default) !important; /* 粗木框 */
-  box-shadow: 0 10rpx 0 var(--bg-root) !important; /* 像素实影 */
+  background: var(--glass-bg) !important;
+  backdrop-filter: var(--glass-blur) !important;
+  -webkit-backdrop-filter: var(--glass-blur) !important;
+  border: 1rpx solid var(--glass-border) !important;
+  box-shadow: var(--shadow-md) !important;
+  border-radius: var(--radius-lg) !important;
   position: relative;
   color: var(--text-primary);
 }
 
-/* 内部金色雕花装饰边 */
+/* 内部装饰光晕 */
 .wood-card::after {
   content: '';
   position: absolute;
-  top: 8rpx;
-  left: 8rpx;
-  right: 8rpx;
-  bottom: 8rpx;
-  border: 2rpx solid var(--brand); /* 金边 */
+  top: 4rpx;
+  left: 4rpx;
+  right: 4rpx;
+  bottom: 4rpx;
+  border: 1rpx solid var(--brand-border);
+  border-radius: calc(var(--radius-lg) - 4rpx);
   pointer-events: none;
 }
 
@@ -1563,13 +1572,13 @@
 
 /* ==================== 学科考核成绩单样式 ==================== */
 .hero-passed {
-  background: linear-gradient(135deg, #d4edda 0%, #c3e6cb 100%) !important;
-  border-bottom: 6rpx solid #28a745 !important;
+  background: linear-gradient(135deg, var(--success-subtle) 0%, rgba(46,204,113,0.2) 100%) !important;
+  border-bottom: 6rpx solid var(--success) !important;
 }
 
 .hero-failed {
-  background: linear-gradient(135deg, #f8d7da 0%, #f5c6cb 100%) !important;
-  border-bottom: 6rpx solid #dc3545 !important;
+  background: linear-gradient(135deg, var(--danger-subtle) 0%, rgba(231,76,60,0.2) 100%) !important;
+  border-bottom: 6rpx solid var(--danger) !important;
 }
 
 .hero-passed .result-code-text {
@@ -1615,9 +1624,11 @@
   align-items: center;
   padding: 24rpx 20rpx;
   margin-bottom: 16rpx;
-  background: #fbf0df;
-  border: 1rpx solid var(--border-default);
-  border-radius: 8rpx;
+  background: var(--glass-bg);
+  backdrop-filter: var(--glass-blur);
+  -webkit-backdrop-filter: var(--glass-blur);
+  border: 1rpx solid var(--glass-border);
+  border-radius: var(--radius-md);
   box-shadow: var(--shadow-sm);
   transition: all 0.2s ease;
 }
@@ -1651,80 +1662,83 @@
 /* 三类关卡卡片状态设计 */
 /* 1. 已通关 (Completed) */
 .stage-item--completed {
-  background: #e8f5e9;
-  border-color: #2e7d32;
+  background: var(--success-subtle);
+  border-color: var(--success);
+  backdrop-filter: var(--glass-blur);
+  -webkit-backdrop-filter: var(--glass-blur);
 }
 .stage-item--completed .stage-badge-status {
-  background: #2e7d32;
-  color: #ffffff;
-  border-color: #1b5e20;
+  background: var(--success);
+  color: #FFFFFF;
+  border-color: var(--success);
 }
 .stage-item--completed .stage-item-name {
-  color: #1b5e20;
+  color: var(--success);
 }
 
 /* 2. 进行中 / 当前修习 (Current) */
 .stage-item--current {
-  background: #fff3e0;
-  border-color: #ef6c00;
-  box-shadow: 0 0 10rpx rgba(239, 108, 0, 0.4), 0 4rpx 0 #ef6c00;
+  background: var(--brand-subtle);
+  border-color: var(--brand);
+  box-shadow: 0 0 10rpx rgba(255,107,107,0.3), 0 0 0 1rpx var(--brand-border);
 }
 .stage-item--current .stage-badge-status {
-  background: #ef6c00;
-  color: #ffffff;
-  border-color: #d84315;
+  background: var(--brand);
+  color: #FFFFFF;
+  border-color: var(--brand);
   animation: pulse-badge 1.5s infinite alternate;
 }
 .stage-item--current .stage-item-name {
-  color: #e65100;
+  color: var(--brand);
 }
 
 /* 3. 未解锁锁定 (Locked) */
 .stage-item--locked {
-  background: #eaeaea;
-  border-color: #7f8c8d;
+  background: var(--glass-bg);
+  border-color: var(--border-subtle);
   opacity: 0.6;
   filter: grayscale(1);
 }
 .stage-item--locked .stage-badge-status {
-  background: #7f8c8d;
-  color: #ffffff;
-  border-color: #6c7a89;
+  background: var(--text-muted);
+  color: var(--text-primary);
+  border-color: var(--border-subtle);
 }
 .stage-item--locked .stage-item-name {
-  color: #7f8c8d;
+  color: var(--text-muted);
 }
 
 /* 右侧交互按键 */
 .stage-action-btn {
   font-size: 22rpx;
   font-weight: bold;
-  background: #e0a96d !important;
-  color: var(--border-default) !important;
-  border: 3rpx solid var(--border-default) !important;
-  border-radius: 6rpx !important;
-  padding: 8rpx 20rpx !important;
+  background: var(--brand-gradient) !important;
+  color: #FFFFFF !important;
+  border: none !important;
+  border-radius: var(--radius-full) !important;
+  padding: 8rpx 24rpx !important;
   line-height: 1.2 !important;
   min-height: 0 !important;
   width: auto !important;
 }
 
 .stage-item--completed .stage-action-btn {
-  background: #81c784 !important;
-  color: #1b5e20 !important;
-  border-color: #2e7d32 !important;
+  background: var(--success) !important;
+  color: #FFFFFF !important;
+  border: none !important;
 }
 
 .stage-item--current .stage-action-btn {
-  background: #ffb74d !important;
-  color: #e65100 !important;
-  border-color: #ef6c00 !important;
+  background: var(--brand-gradient) !important;
+  color: #FFFFFF !important;
+  border: none !important;
 }
 
 .stage-item--locked .stage-action-btn {
-  background: #bdc3c7 !important;
-  color: #7f8c8d !important;
-  border-color: #95a5a6 !important;
+  background: var(--text-muted) !important;
+  color: var(--text-primary) !important;
+  border: none !important;
+  opacity: 0.5;
 }
 
 @keyframes pulse-badge {
@@ -1795,22 +1809,22 @@
 
 /* 「学途之门」蓝色光圈 */
 .portal-study-aura {
-  box-shadow: 0 0 14px rgba(74, 158, 255, 0.55), inset 0 0 10px rgba(74, 158, 255, 0.25);
+  box-shadow: 0 0 14px rgba(255, 107, 107, 0.55), inset 0 0 10px rgba(255, 107, 107, 0.25); /* 珊瑚橙光圈 */
   transition: box-shadow 0.25s ease;
 }
 
 .portal-active .portal-study-aura {
-  box-shadow: 0 0 24px rgba(74, 158, 255, 0.95), inset 0 0 14px rgba(74, 158, 255, 0.45);
+  box-shadow: 0 0 24px rgba(255, 107, 107, 0.95), inset 0 0 14px rgba(255, 107, 107, 0.45);
 }
 
-/* 「逍遥之门」粉色光圈 */
+/* 「逍遥之门」光圈 */
 .portal-fun-aura {
-  box-shadow: 0 0 14px rgba(255, 110, 180, 0.55), inset 0 0 10px rgba(255, 110, 180, 0.25);
+  box-shadow: 0 0 14px rgba(184, 169, 212, 0.55), inset 0 0 10px rgba(184, 169, 212, 0.25); /* 薰衣草紫 */
   transition: box-shadow 0.25s ease;
 }
 
 .portal-active .portal-fun-aura {
-  box-shadow: 0 0 24px rgba(255, 110, 180, 0.95), inset 0 0 14px rgba(255, 110, 180, 0.45);
+  box-shadow: 0 0 24px rgba(184, 169, 212, 0.95), inset 0 0 14px rgba(184, 169, 212, 0.45);
 }
 
 .portal-active .portal-aura {

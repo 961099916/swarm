@@ -1,3 +1,5 @@
+'use strict';
+
 /**
  * 任务状态处理工具函数
  * 消除 task/index.js 和 task/detail.js 之间的重复代码
@@ -8,12 +10,12 @@
  * 集中管理状态标签和显示符号，避免多个页面重复 switch
  */
 const STATUS_MAP = {
-  PENDING:   { label: "排队中",   dot: "○" },
-  RUNNING:   { label: "运行中",   dot: "●" },
-  SUCCESS:   { label: "成功",     dot: "✓" },
-  FAILED:    { label: "失败",     dot: "✕" },
-  CANCELLED: { label: "已取消",   dot: "—" },
-  SLEEPING:  { label: "已暂停",   dot: "" },
+  PENDING:   { label: '排队中',   dot: '○' },
+  RUNNING:   { label: '运行中',   dot: '●' },
+  SUCCESS:   { label: '成功',     dot: '✓' },
+  FAILED:    { label: '失败',     dot: '✕' },
+  CANCELLED: { label: '已取消',   dot: '—' },
+  SLEEPING:  { label: '已暂停',   dot: '' },
 };
 
 /**
@@ -22,7 +24,7 @@ const STATUS_MAP = {
  * @returns {string} 中文状态标签
  */
 function getStatusLabel(status) {
-  return STATUS_MAP[status]?.label || status || "未知";
+  return (STATUS_MAP[status] && STATUS_MAP[status].label) || status || '未知';
 }
 
 /**
@@ -31,7 +33,7 @@ function getStatusLabel(status) {
  * @returns {string} 显示符号
  */
 function getStatusDot(status) {
-  return STATUS_MAP[status]?.dot || "○";
+  return (STATUS_MAP[status] && STATUS_MAP[status].dot) || '○';
 }
 
 /**
@@ -40,7 +42,7 @@ function getStatusDot(status) {
  * @returns {string} CSS class 名称
  */
 function getStatusClass(status) {
-  return (status || "pending").toLowerCase();
+  return (status || 'pending').toLowerCase();
 }
 
 /**
@@ -52,9 +54,9 @@ function processTaskItem(task) {
   const displayName =
     task.payload && task.payload.workflowName
       ? task.payload.workflowName
-      : "协同编排";
+      : '协同编排';
 
-  const status = task.status || "PENDING";
+  const status = task.status || 'PENDING';
 
   return {
     ...task,
@@ -72,13 +74,13 @@ function processTaskItem(task) {
  * @returns {string} 格式化后的时间
  */
 function formatTaskTime(isoStr) {
-  if (!isoStr) return "—";
+  if (!isoStr) return '—';
   try {
     const d = new Date(isoStr);
-    const month = String(d.getMonth() + 1).padStart(2, "0");
-    const day = String(d.getDate()).padStart(2, "0");
-    const hour = String(d.getHours()).padStart(2, "0");
-    const min = String(d.getMinutes()).padStart(2, "0");
+    const month = String(d.getMonth() + 1).padStart(2, '0');
+    const day = String(d.getDate()).padStart(2, '0');
+    const hour = String(d.getHours()).padStart(2, '0');
+    const min = String(d.getMinutes()).padStart(2, '0');
     return `${month}-${day} ${hour}:${min}`;
   } catch (_e) {
     return isoStr;
@@ -91,12 +93,12 @@ function formatTaskTime(isoStr) {
  * @returns {string} 格式化后的时间
  */
 function formatTimeHms(isoStr) {
-  if (!isoStr) return "";
+  if (!isoStr) return '';
   try {
     const d = new Date(isoStr);
-    const hour = String(d.getHours()).padStart(2, "0");
-    const min = String(d.getMinutes()).padStart(2, "0");
-    const sec = String(d.getSeconds()).padStart(2, "0");
+    const hour = String(d.getHours()).padStart(2, '0');
+    const min = String(d.getMinutes()).padStart(2, '0');
+    const sec = String(d.getSeconds()).padStart(2, '0');
     return `${hour}:${min}:${sec}`;
   } catch (_e) {
     return isoStr;

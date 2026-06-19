@@ -14,6 +14,7 @@ export interface Env {
   ENGINE_SVC: Fetcher;     // 智能体与任务服务
   ADMIN_SVC: Fetcher;      // 管理后台服务
   QUIZ_SVC: Fetcher;       // 闯关评测服务
+  RAG_SVC: Fetcher;        // RAG 知识库服务
   // Secrets
   INTERNAL_SECRET: string;
   JWT_SECRET: string;
@@ -209,6 +210,11 @@ app.all("/api/v1/admin/*", async (c) => {
 // 6. 评测系统接口转发 (转发至 QUIZ_SVC)
 app.all("/api/v1/quiz/*", async (c) => {
   return await forwardToInternalSvc(c, c.env.QUIZ_SVC, "QUIZ_SVC (Quiz System)");
+});
+
+// 7. RAG 知识库接口转发 (转发至 RAG_SVC)
+app.all("/api/v1/kb/*", async (c) => {
+  return await forwardToInternalSvc(c, c.env.RAG_SVC, "RAG_SVC (Knowledge Base)");
 });
 
 // ─── 404 ───

@@ -69,7 +69,12 @@
     <text class="section-title-mine">测评历史 ({{historyList.length}})</text>
   </view>
 
-  <scroll-view scroll-y class="history-list-scroll">
+  <!-- 历史报告列表（下拉刷新+上拉加载） -->
+  <scroll-view scroll-y class="history-list-scroll"
+    refresher-enabled refresher-triggered="{{refreshing}}"
+    bindrefresherrefresh="onRefresh"
+    bindscrolltolower="loadNextPage"
+  >
     <!-- 有历史记录 -->
     <block wx:if="{{historyList.length > 0}}">
       <block wx:for="{{historyList}}" wx:key="historyId">
@@ -93,6 +98,15 @@
         </view>
       </block>
     </block>
+
+    <!-- 加载更多指示器 -->
+    <view wx:if="{{loading && historyList.length > 0}}" class="mine-load-more">
+      <view class="spinner-ios"></view>
+      <text class="mine-load-more-text">加载中...</text>
+    </view>
+    <view wx:elif="{{!hasMore && historyList.length > 0}}" class="mine-load-more">
+      <text class="mine-load-more-end">— 已展示全部历史 —</text>
+    </view>
 
     <!-- 空状态 -->
     <block wx:else>

@@ -172,4 +172,6 @@ class _SoundManager {
     }
 }
 /** 全局单例 */
-exports.SoundManager = new _SoundManager();
+const SoundManager = new _SoundManager();
+
+module.exports = { SoundManager };

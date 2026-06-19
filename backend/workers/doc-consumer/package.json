@@ -1,0 +1,17 @@
+{
+  "name": "swarm-doc-consumer",
+  "version": "1.0.0",
+  "private": true,
+  "scripts": {
+    "deploy": "wrangler deploy",
+    "type-check": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@swarm/shared": "*"
+  },
+  "devDependencies": {
+    "@cloudflare/workers-types": "^4.20240923.0",
+    "typescript": "^5.0.0",
+    "wrangler": "^3.0.0"
+  }
+}

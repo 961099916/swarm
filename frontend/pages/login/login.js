@@ -28,14 +28,39 @@ Page({
       app.applyTheme(app.globalData.theme);
     }
 
-    // 检测本地是否已有 Token，实现免密重定向
+    // 检测本地是否已有 Token，校验有效性后免密重定向
     const token = wx.getStorageSync("authToken");
     if (token) {
-      console.log("检测到有效的本地 JWT，自动免密重定向跳转首页");
-      wx.reLaunch({
-        url: "/pages/task/list/index"
-      });
+      this.tryAutoLogin();
     }
+  },
+
+  /** 尝试验证本地 Token 是否仍然有效，有效则跳过登录页 */
+  tryAutoLogin: function () {
+    request({ url: "/api/v1/user/profile" })
+      .then((res) => {
+        if (res.success && res.data) {
+          // Token 有效，同步用户信息后跳转
+          wx.setStorageSync("userInfo", res.data);
+          const app = getApp();
+          if (app && app.globalData) {
+            app.globalData.isLoggedIn = true;
+            app.globalData.userCredits = res.data.credits || 0;
+            app.globalData.userInfo = {
+              id: res.data.id,
+              name: res.data.nickname,
+              avatar: res.data.avatarUrl
+            };
+          }
+          wx.reLaunch({ url: "/pages/task/list/index" });
+        }
+      })
+      .catch(() => {
+        // Token 失效，留在登录页
+        wx.removeStorageSync("authToken");
+        wx.removeStorageSync("userInfo");
+        console.log("本地 Token 已失效，停留在登录页");
+      });
   },
 
   // 输入框双向绑定模拟

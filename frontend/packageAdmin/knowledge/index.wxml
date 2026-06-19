@@ -1,0 +1,74 @@
+<view class="page">
+  <!-- 头部 -->
+  <view class="header">
+    <text class="header-title">知识库管理</text>
+    <t-button theme="primary" size="small" bindtap="showCreateDialog">+ 新建</t-button>
+  </view>
+
+  <!-- 加载状态 -->
+  <view wx:if="{{loading}}" class="loading">
+    <text>加载中...</text>
+  </view>
+
+  <!-- 知识库列表 -->
+  <view wx:elif="{{kbList.length > 0}}" class="list">
+    <view
+      wx:for="{{kbList}}"
+      wx:key="id"
+      class="kb-card"
+      data-id="{{item.id}}"
+      bindtap="goToDetail"
+    >
+      <view class="kb-header">
+        <text class="kb-name">{{item.name}}</text>
+        <text class="kb-badge {{item.is_public ? 'public' : 'private'}}">
+          {{item.is_public ? '公开' : '私有'}}
+        </text>
+      </view>
+      <text class="kb-desc" wx:if="{{item.description}}">{{item.description}}</text>
+      <view class="kb-meta">
+        <text>文档: {{item.doc_count || 0}}</text>
+        <text>分块: {{item.chunk_size || 500}}字符</text>
+        <text wx:if="{{item.owner_name}}">创建者: {{item.owner_name}}</text>
+      </view>
+      <view class="kb-actions">
+        <t-button
+          theme="danger" size="extra-small" variant="outline"
+          data-kb="{{item}}"
+          bindtap="onDeleteKB"
+        >删除</t-button>
+      </view>
+    </view>
+  </view>
+
+  <!-- 空状态 -->
+  <view wx:else class="empty">
+    <text>暂无知识库</text>
+    <text class="empty-hint">点击上方"新建"按钮创建知识库</text>
+  </view>
+
+  <!-- 创建知识库弹窗 -->
+  <t-dialog
+    visible="{{showCreateDialog}}"
+    title="新建知识库"
+    confirm-btn="创建"
+    cancel-btn="取消"
+    bindconfirm="onCreateKB"
+    bindcancel="onCancelCreate"
+  >
+    <view class="dialog-content">
+      <t-input
+        label="名称"
+        placeholder="输入知识库名称"
+        value="{{newKBName}}"
+        bindinput="onKBNameInput"
+      />
+      <t-input
+        label="描述"
+        placeholder="可选：知识库描述"
+        value="{{newKBDesc}}"
+        bindinput="onKBDescInput"
+      />
+    </view>
+  </t-dialog>
+</view>

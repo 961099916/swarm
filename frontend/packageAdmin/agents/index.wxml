@@ -2,27 +2,42 @@
 <view class="admin-container {{theme}}">
   <text class="board-title">智能体管理</text>
 
-  <view class="card filter-info">
-    <text class="fi-title">全局 AI 智能体配置</text>
-    <text class="fi-desc">管理所有用户的智能体及系统预置</text>
-    <t-input class="admin-search" value="{{searchKeyword}}" placeholder="搜索智能体名称" bindinput="onSearchQueryChange" />
+  <!-- 搜索框 -->
+  <view class="search-bar-wrap" style="padding-bottom:12rpx;">
+    <view class="search-bar-inner">
+      <view class="t-icon t-icon-search" style="font-size: 24rpx; color: var(--text-muted); margin-right: 10rpx;"></view>
+      <input class="search-input" placeholder="搜索智能体名称..." placeholder-class="search-placeholder" value="{{searchQuery}}" bindinput="onSearchInput" confirm-type="search" />
+      <view wx:if="{{searchQuery}}" class="search-clear" bindtap="onSearchInput" data-value="">
+        <view class="t-icon t-icon-close" style="font-size: 20rpx; color: var(--text-muted);"></view>
+      </view>
+    </view>
   </view>
 
-  <view class="agent-list">
-    <view wx:if="{{loading}}" style="padding-top:16rpx;">
+  <!-- 智能体列表（下拉刷新） -->
+  <scroll-view class="admin-list-scroll" scroll-y enhanced
+    refresher-enabled refresher-triggered="{{refreshing}}"
+    bindrefresherrefresh="onRefresh"
+  >
+    <view wx:if="{{loading && agents.length === 0}}" style="padding-top:16rpx;">
       <view class="skeleton skeleton-card" wx:for="{{[1,2,3]}}" wx:key="*this"></view>
     </view>
 
+    <view wx:elif="{{errorMsg && agents.length === 0}}" class="error-state">
+      <view class="error-icon"><view class="t-icon t-icon-error-circle-filled" style="font-size: 64rpx;"></view></view>
+      <text class="error-label">{{errorMsg}}</text>
+      <button class="error-retry-btn" bindtap="loadFirstPage">重新加载</button>
+    </view>
+
     <view wx:elif="{{filteredAgents.length === 0}}" class="empty-state">
-      <view class="empty-icon"></view>
+      <view class="empty-icon"><view class="t-icon t-icon-service" style="font-size: 64rpx; color: var(--text-secondary);"></view></view>
       <text class="empty-label">无匹配智能体</text>
     </view>
 
-    <view wx:else>
-      <view wx:for="{{filteredAgents}}" wx:key="id" class="card ag-card">
+    <view wx:else style="padding-top:8rpx;">
+      <view wx:for="{{filteredAgents}}" wx:key="id" class="card ag-card fade-up" style="animation-delay: {{index * 0.06}}s;">
         <view class="ag-top">
-          <view class="ag-avatar" style="display: flex; align-items: center; justify-content: center; background: var(--brand-subtle); border-radius: 50%; width: 72rpx; height: 72rpx;">
-            <view class="t-icon t-icon-{{item.avatar || 'service'}}" style="font-size: 40rpx; color: var(--brand-color);"></view>
+          <view class="agent-avatar-new">
+            <view class="t-icon t-icon-{{item.avatar || 'service'}}"></view>
           </view>
           <view class="ag-meta">
             <view class="ag-name-row">
@@ -49,10 +64,11 @@
           <view class="ag-act delete" data-id="{{item.id}}" bindtap="onForceDelete">删除</view>
         </view>
       </view>
+      <view style="height:40rpx;"></view>
     </view>
-  </view>
+  </scroll-view>
 
-  <t-popup visible="{{showModal}}" placement="bottom" closeOnOverlayClick="{{true}}" prevent-scroll-through="{{true}}" overlayProps="{{ { preventScrollThrough: true } }}" showOverlay="{{true}}" bindvisible-change="closeModal">
+  <t-popup visible="{{showModal}}" placement="bottom" closeOnOverlayClick="{{true}}" showOverlay="{{true}}" bindvisible-change="closeModal">
     <view class="modal-sheet">
       <view class="modal-head">
         <text class="modal-title">编辑智能体</text>

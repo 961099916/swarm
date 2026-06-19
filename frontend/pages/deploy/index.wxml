@@ -2,53 +2,78 @@
 <!-- Swarm 部署 — 智能体协同编排 -->
 <view class="deploy-container {{theme}}">
 
+  <!-- 页面标题 -->
+  <view class="page-head-title mb-1">创建任务</view>
+  <text class="page-subtitle mb-3">配置智能体协同编排流，自动执行 AI 任务</text>
+
   <!-- 表单面板 -->
   <view class="card form-panel">
 
-    <!-- 协同编排 -->
+    <!-- 基本信息区 -->
+  <t-divider text="基本信息" align="left" />
     <view class="form-body">
       <view class="form-group">
         <text class="form-label">工作流名称</text>
-        <input class="input-field" value="{{ workflowName }}" placeholder="如: 每日边缘算力分析流" placeholder-class="form-placeholder" bindinput="onWorkflowNameInput" />
+        <t-input class="td-input-custom" value="{{ workflowName }}" placeholder="如: 每日边缘算力分析流" placeholder-class="form-placeholder" borderless="{{false}}" bind:change="onWorkflowNameInput" />
       </view>
-      <view class="form-group">
+      <view class="form-group {{fieldErrors.goal ? 'has-error' : ''}}">
         <text class="form-label">任务目标</text>
-        <textarea class="glass-textarea" value="{{ goal }}" placeholder="请输入任务目标，系统将自动召集智能体集群完成" placeholder-class="form-placeholder" bindinput="onGoalInput" />
-      </view>
-      <view class="form-group">
-        <view class="form-label-row">
-          <text class="form-label">配置协同智能体</text>
-          <text class="form-link" bindtap="openAgentModal">+ 创造新模型</text>
-        </view>
-        <view class="agent-list">
-          <view wx:for="{{ availableAgents }}" wx:key="id"
-            class="card card-actionable agent-item {{ selectedAgentIdsMap[item.id] ? 'selected' : '' }}"
-            data-id="{{ item.id }}" bindtap="toggleAgent" hover-class="item-hover">
-            <view class="agent-avatar" style="display: flex; align-items: center; justify-content: center; background: var(--brand-subtle); border-radius: 50%; width: 72rpx; height: 72rpx;">
-              <view class="t-icon t-icon-{{ item.avatar || 'service' }}" style="font-size: 40rpx; color: var(--brand-color);"></view>
-            </view>
-            <view class="agent-info">
-              <text class="agent-name">{{ item.name }} <text class="agent-label {{ item.isPreset ? 'preset' : 'custom' }}">{{ item.isPreset ? '预设' : '自定义' }}</text></text>
-              <text class="agent-role">{{ item.role }}</text>
-            </view>
-            <view wx:if="{{ selectedAgentIdsMap[item.id] }}" class="selected-mark" style="display: flex; align-items: center; justify-content: center; background: var(--brand); border-radius: 50%; width: 36rpx; height: 36rpx;">
-              <view class="t-icon t-icon-check" style="font-size: 24rpx; color: #fff;"></view>
-            </view>
-          </view>
-        </view>
-      </view>
-      <view class="form-group">
-        <view class="form-label-row">
-          <text class="form-label">最大迭代轮数: <text class="num-font" style="color:var(--brand);font-weight:700;">{{ maxLoops }}</text> 轮</text>
-          <text class="form-hint">推荐 5 轮</text>
-        </view>
-        <t-slider value="{{ maxLoops }}" min="{{ 2 }}" max="{{ 8 }}" step="{{ 1 }}" bindchange="onLoopsChange" colors="{{ ['#1E6FFF', '#1E6FFF', 'rgba(255,255,255,0.08)'] }}" />
+        <t-textarea class="td-textarea-custom" value="{{ goal }}" placeholder="请输入任务目标，系统将自动召集智能体集群完成" placeholder-class="form-placeholder" bind:change="onGoalInput" />
+        <text wx:if="{{fieldErrors.goal}}" class="field-error-text">{{fieldErrors.goal}}</text>
       </view>
     </view>
 
-    <view class="form-group">
+    <!-- 智能体配置区 -->
+    <view class="spacer-md"></view>
+    <t-divider text="智能体配置" align="left" />
+    <view class="form-body">
+      <view class="form-group">
+        <view class="form-label-row flex justify-between items-center">
+          <text class="form-label">选择协同智能体</text>
+          <text class="form-link" bindtap="openAgentModal">+ 创造新模型</text>
+        </view>
+        <view class="agent-list">
+          <block wx:if="{{loadingAgents}}">
+            <t-skeleton loading="{{loadingAgents}}" row-col="{{skeletonConfig}}" />
+          </block>
+          <block wx:elif="{{availableAgents.length === 0}}">
+            <t-empty description="暂无可用智能体，点击下方「创造新模型」创建一个" />
+          </block>
+          <block wx:else>
+            <!-- 已选智能体芯片展示 -->
+            <view wx:if="{{selectedAgentCount > 0}}" class="selected-agents-row">
+              <view wx:for="{{selectedAgentPreview}}" wx:key="id" class="agent-chip">
+                <view class="agent-chip-avatar">{{item.name ? item.name.charAt(0).toUpperCase() : '?'}}</view>
+                <text class="agent-chip-name">{{item.name}}</text>
+                <view class="agent-chip-remove" data-id="{{item.id}}" catchtap="toggleAgent">✕</view>
+              </view>
+            </view>
+            <view class="agent-actions-row flex gap-1">
+              <button class="btn-primary btn-with-icon" bindtap="openAgentPicker">
+                <view class="t-icon t-icon-add btn-icon-add"></view>
+                <text>{{selectedAgentCount > 0 ? '更换智能体' : '选择智能体'}}</text>
+              </button>
+              <button class="btn-secondary btn-with-icon" bindtap="openAgentModal">
+                <view class="t-icon t-icon-add btn-icon-add"></view>
+                <text>创造新模型</text>
+              </button>
+            </view>
+          </block>
+        </view>
+      </view>
+      <view class="form-group">
+        <view class="form-label-row flex justify-between items-center">
+          <text class="form-label">最大迭代轮数: <text class="num-font num-brand">{{ maxLoops }}</text> 轮</text>
+          <text class="form-hint">推荐 5 轮</text>
+        </view>
+        <t-slider value="{{ maxLoops }}" min="{{ 2 }}" max="{{ 8 }}" step="{{ 1 }}" bindchange="onLoopsChange" colors="{{ ['#FF6B6B', '#FF6B6B', 'rgba(255,255,255,0.08)'] }}" />
+      </view>
+    </view>
+
+    <view class="form-group {{fieldErrors.email ? 'has-error' : ''}}">
       <text class="form-label">邮件推送地址（可选）</text>
-      <input class="input-field" value="{{ email }}" placeholder="留空则仅在小程序通知" placeholder-class="form-placeholder" bindinput="onEmailInput" />
+      <t-input class="td-input-custom" value="{{ email }}" placeholder="留空则仅在小程序通知" placeholder-class="form-placeholder" borderless="{{false}}" bind:change="onEmailInput" />
+      <text wx:if="{{fieldErrors.email}}" class="field-error-text">{{fieldErrors.email}}</text>
     </view>
   </view>
 
@@ -56,15 +81,15 @@
   <view class="card cost-card">
     <view class="cost-head">
       <view class="cost-title">算力消耗清单</view>
-      <text class="cost-status {{ isCreditsEnough ? 'ok' : 'warn' }}">{{ isCreditsEnough ? '算力充足' : '余额不足，请前往积分页面充值' }}</text>
+      <text class="cost-status {{ isCreditsEnough ? 'ok' : 'warn' }}">{{ isCreditsEnough ? '算力充足' : '余额不足' }}</text>
     </view>
     <view class="separator"></view>
     <view class="cost-body">
-      <view class="cost-row">
+      <view class="cost-row flex justify-between">
         <text class="cost-label">本次消耗</text>
         <text class="cost-minus">-5</text>
       </view>
-      <view class="cost-row">
+      <view class="cost-row flex justify-between">
         <text class="cost-label">账户余额</text>
         <text class="cost-balance {{ isCreditsEnough ? 'ok' : 'warn' }} num-font">{{ userCredits }} 积分</text>
       </view>
@@ -73,54 +98,63 @@
     <text class="cost-note {{ isCreditsEnough ? '' : 'warn' }}">{{ isCreditsEnough ? '算力充足' : '余额不足，请前往积分页面充值' }}</text>
   </view>
 
-  <button class="btn-primary" style="margin-top:8rpx;" bindtap="handleDeploy" loading="{{ deploying }}">提交部署</button>
+  <!-- 吸底操作栏 -->
+  <view class="sticky-bottom">
+    <button class="btn-primary-lg" loading="{{ deploying }}" bindtap="handleDeploy">提交部署</button>
+  </view>
 
-  <!-- 创造智能体弹窗 -->
-  <t-popup visible="{{ showAgentModal }}" placement="bottom" closeOnOverlayClick="{{true}}" prevent-scroll-through="{{true}}" overlayProps="{{ { preventScrollThrough: true } }}" showOverlay="{{true}}" bindvisible-change="onPopupVisibleChange">
-    <view class="modal-sheet">
-      <view class="modal-head">
-        <text class="modal-title">新建智能体</text>
-        <view class="t-icon t-icon-close modal-close" style="font-size: 36rpx;" bindtap="closeAgentModal"></view>
-      </view>
-      <view class="modal-body">
-        <view class="form-group">
-          <text class="form-label">智能体名称</text>
-          <t-input class="modal-input" value="{{ agentForm.name }}" placeholder="如: 摘要分析官" borderless bindchange="onAgentNameInput" />
-        </view>
-        <view class="form-group">
-          <text class="form-label">视觉标识</text>
-          <t-input class="modal-input" value="{{ agentForm.avatar }}" placeholder="如: service, user, search..." borderless bindchange="onAgentAvatarInput" />
-        </view>
-        <view class="form-group">
-          <text class="form-label">职责描述</text>
-          <t-input class="modal-input" value="{{ agentForm.role }}" placeholder="描述它的核心职责" borderless bindchange="onAgentRoleInput" />
-        </view>
-        <view class="form-group">
-          <text class="form-label">System Prompt</text>
-          <t-textarea class="modal-textarea" value="{{ agentForm.systemPrompt }}" placeholder="设定专业人设、语气..." disableDefaultPadding bindchange="onAgentSystemPromptInput" />
-        </view>
-        <view class="form-group">
-          <text class="form-label">承载模型</text>
-          <view class="model-opts">
-            <view class="card card-actionable model-opt {{ agentForm.model === 'llama3.2' ? 'active' : '' }}" data-model="llama3.2" bindtap="selectAgentModel">
-              <text class="model-name">Llama 3.2（轻量）</text>
-              <text class="model-desc">低延迟，适合提取总结</text>
-            </view>
-            <view class="card card-actionable model-opt {{ agentForm.model === 'llama3.1' ? 'active' : '' }}" data-model="llama3.1" bindtap="selectAgentModel">
-              <text class="model-name">Llama 3.1（核心）</text>
-              <text class="model-desc">长文本推理，推荐编排</text>
-            </view>
+  <!-- 智能体选择器弹窗 — 三段式布局（搜索区 / 列表区 / 操作区） -->
+  <t-popup visible="{{ showAgentPicker }}" placement="bottom" closeOnOverlayClick="{{true}}" showOverlay="{{true}}" bindvisible-change="onPickerVisibleChange">
+    <view class="picker-sheet">
+      <!-- 上区：标题 + 搜索（固定高度，不随列表滚动） -->
+      <view class="picker-top">
+        <view class="picker-header">
+          <text class="picker-title">选择协同智能体</text>
+          <view class="picker-close-btn" bindtap="closeAgentPicker">
+            <view class="t-icon t-icon-close picker-icon-close"></view>
           </view>
         </view>
-        <view class="form-group">
-          <text class="form-label">工具授权</text>
-          <view class="tool-opts">
-            <view class="tool-opt {{ agentFormToolsMap['web_fetch'] ? 'active' : '' }}" data-tool="web_fetch" bindtap="toggleAgentTool">网页数据提取</view>
-            <view class="tool-opt {{ agentFormToolsMap['email_notify'] ? 'active' : '' }}" data-tool="email_notify" bindtap="toggleAgentTool">邮件通知</view>
+        <view class="search-bar-wrap" style="padding:16rpx 24rpx 12rpx;">
+          <view class="search-bar-inner">
+            <view class="t-icon t-icon-search" style="font-size: 24rpx; color: var(--text-muted); margin-right: 10rpx;"></view>
+            <input class="search-input" placeholder="搜索智能体名称..." placeholder-class="search-placeholder" value="{{agentSearchQuery}}" bindinput="onAgentSearchInput" confirm-type="search" />
+            <view wx:if="{{agentSearchQuery}}" class="search-clear" bindtap="onAgentSearchClear"><view class="t-icon t-icon-close" style="font-size: 24rpx;"></view></view>
           </view>
         </view>
       </view>
-      <t-button class="save-btn" theme="primary" size="large" loading="{{ savingAgent }}" bindtap="saveCustomAgent">保存</t-button>
+      <!-- 中区：智能体列表（独立滚动，撑满剩余空间） -->
+      <view class="picker-middle">
+        <scroll-view scroll-y class="picker-list" enhanced>
+          <view wx:if="{{filteredAgents.length === 0}}" class="picker-empty-list">
+            <text class="picker-empty-text">无匹配智能体</text>
+          </view>
+          <view wx:for="{{filteredAgents}}" wx:key="id"
+            class="picker-agent-item {{ selectedAgentIdsMap[item.id] ? 'selected' : '' }}"
+            data-id="{{ item.id }}" bindtap="toggleAgent">
+            <view class="agent-avatar-new agent-avatar-icon-wrap">
+              <view class="t-icon t-icon-{{ item.avatar || 'service' }} agent-avatar-icon"></view>
+            </view>
+            <view class="picker-agent-info">
+              <view class="picker-agent-name">{{ item.name }}
+                <t-tag size="small" theme="{{ item.isPreset ? 'primary' : 'warning' }}" variant="light">{{ item.isPreset ? '预设' : '自定义' }}</t-tag>
+              </view>
+              <text class="picker-agent-role">{{ item.role }}</text>
+            </view>
+            <view wx:if="{{ selectedAgentIdsMap[item.id] }}" class="picker-check">
+              <view class="t-icon t-icon-check picker-icon-check"></view>
+            </view>
+          </view>
+        </scroll-view>
+      </view>
+      <!-- 下区：计数 + 确认按钮（固定高度，不随列表滚动） -->
+      <view class="picker-bottom">
+        <view class="picker-bottom-inner">
+          <text class="picker-selected-count">已选 {{selectedAgentCount}} 个智能体</text>
+          <button class="btn-primary btn-primary-block" bindtap="confirmAgentPicker">确认选择</button>
+        </view>
+      </view>
     </view>
   </t-popup>
 </view>
+
+<!-- 自定义 Tabbar -->

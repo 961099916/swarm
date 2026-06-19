@@ -2,6 +2,8 @@
   "pages": [
     "pages/task/list/index",
     "pages/deploy/index",
+    "pages/knowledge/index",
+    "pages/chat/index",
     "pages/map/index/index",
     "pages/credits/index",
     "pages/profile/index",
@@ -17,6 +19,14 @@
       ]
     },
     {
+      "root": "packageKnowledge",
+      "pages": [
+        "detail/index",
+        "chat/index",
+        "add/index"
+      ]
+    },
+    {
       "root": "packageAdmin",
       "pages": [
         "dashboard/index",
@@ -24,7 +34,9 @@
         "tasks/index",
         "agents/index",
         "tools/index",
-        "tools/edit"
+        "tools/edit",
+        "knowledge/index",
+        "knowledge/detail/index"
       ]
     },
     {
@@ -36,12 +48,6 @@
     }
   ],
   "preloadRule": {
-    "pages/task/list/index": {
-      "network": "all",
-      "packages": [
-        "packageTask"
-      ]
-    },
     "pages/map/index/index": {
       "network": "all",
       "packages": [
@@ -51,25 +57,38 @@
     "pages/profile/index": {
       "network": "all",
       "packages": [
-        "packageAdmin"
+        "packageAdmin",
+        "packageKnowledge"
+      ]
+    },
+    "pages/task/list/index": {
+      "network": "all",
+      "packages": [
+        "packageTask"
+      ]
+    },
+    "pages/knowledge/index": {
+      "network": "all",
+      "packages": [
+        "packageKnowledge"
       ]
     }
   },
   "window": {
-    "backgroundTextStyle": "light",
-    "navigationBarBackgroundColor": "#0D0D10",
+    "backgroundTextStyle": "dark",
+    "navigationBarBackgroundColor": "#2D2A24",
     "navigationBarTitleText": "Swarm",
     "navigationBarTextStyle": "white",
-    "backgroundColor": "#0D0D10",
-    "backgroundColorContent": "#0D0D10",
-    "backgroundColorTop": "#0D0D10",
-    "backgroundColorBottom": "#0D0D10"
+    "backgroundColor": "#2D2A24",
+    "backgroundColorContent": "#2D2A24",
+    "backgroundColorTop": "#2D2A24",
+    "backgroundColorBottom": "#2D2A24"
   },
   "tabBar": {
-    "color": "#636366",
-    "selectedColor": "#1E6FFF",
-    "backgroundColor": "#0D0D10",
-    "borderStyle": "black",
+    "color": "#7A726A",
+    "selectedColor": "#FF6B6B",
+    "backgroundColor": "#2D2A24",
+    "borderStyle": "white",
     "list": [
       {
         "pagePath": "pages/task/list/index",
@@ -84,16 +103,16 @@
         "selectedIconPath": "static/tabbar/deploy_active.png"
       },
       {
-        "pagePath": "pages/map/index/index",
-        "text": "地图",
-        "iconPath": "static/tabbar/map.png",
-        "selectedIconPath": "static/tabbar/map_active.png"
+        "pagePath": "pages/knowledge/index",
+        "text": "知识库",
+        "iconPath": "static/tabbar/knowledge.png",
+        "selectedIconPath": "static/tabbar/knowledge_active.png"
       },
       {
-        "pagePath": "pages/credits/index",
-        "text": "积分",
-        "iconPath": "static/tabbar/credits.png",
-        "selectedIconPath": "static/tabbar/credits_active.png"
+        "pagePath": "pages/map/index/index",
+        "text": "测评",
+        "iconPath": "static/tabbar/map.png",
+        "selectedIconPath": "static/tabbar/map_active.png"
       },
       {
         "pagePath": "pages/profile/index",
@@ -103,7 +122,9 @@
       }
     ]
   },
-  "usingComponents": {},
+  "usingComponents": {
+    "list-page": "/components/list-page/list-page"
+  },
   "sitemapLocation": "sitemap.json",
   "lazyCodeLoading": "requiredComponents"
 }

@@ -1,0 +1,70 @@
+<view class="page">
+  <!-- 头部 -->
+  <view class="header">
+    <view class="header-left" bindtap="toggleDocs">
+      <t-icon name="{{showDocs ? 'chevron-down' : 'bookmark'}}" size="32" />
+      <text class="header-title">{{kbName}}</text>
+    </view>
+  </view>
+
+  <!-- 文档侧栏 -->
+  <view wx:if="{{showDocs}}" class="docs-panel">
+    <view class="docs-header">
+      <text class="docs-title">知识库文档</text>
+      <text class="docs-count">{{documents.length}} 篇</text>
+    </view>
+    <view wx:if="{{loadingDocs}}" class="docs-loading">加载中...</view>
+    <view wx:elif="{{documents.length > 0}}" class="docs-list">
+      <view wx:for="{{documents}}" wx:key="id" class="doc-item">
+        <t-icon name="file-text" size="28" />
+        <view class="doc-item-info">
+          <text class="doc-item-title">{{item.title}}</text>
+          <text class="doc-item-status {{item.status}}">
+            {{item.status === 'READY' ? '就绪' : item.status === 'PROCESSING' ? '处理中' : item.status === 'FAILED' ? '失败' : '待处理'}}
+          </text>
+        </view>
+      </view>
+    </view>
+    <view wx:else class="docs-empty">暂无文档</view>
+  </view>
+
+  <!-- 对话区域 -->
+  <scroll-view class="chat-area" scroll-y scroll-into-view="bottom" scroll-with-animation>
+    <view wx:for="{{messages}}" wx:for-index="idx" wx:key="idx" class="msg {{item.role === 'user' ? 'msg-user' : 'msg-assistant'}}">
+      <view wx:if="{{item.role === 'user'}}" class="msg-bubble user-bubble">{{item.content}}</view>
+      <view wx:else class="msg-bubble assistant-bubble">
+        <view wx:if="{{item.thinking}}" class="thinking">
+          <t-loading size="28rpx" />
+          <text>思考中...</text>
+        </view>
+        <view wx:else>
+          <text>{{item.content}}</text>
+          <view wx:if="{{item.sources}}" class="sources">
+            <text class="sources-label">参考文档：</text>
+            <text wx:for="{{item.sources}}" wx:key="*this" class="source-tag">{{item}}</text>
+          </view>
+        </view>
+      </view>
+    </view>
+    <view id="bottom" />
+  </scroll-view>
+
+  <!-- 输入区域 -->
+  <view class="input-area">
+    <input
+      class="chat-input"
+      value="{{inputValue}}"
+      placeholder="输入你的问题..."
+      bindinput="onInput"
+      bindconfirm="onSend"
+      confirm-type="send"
+    />
+    <t-button
+      theme="primary"
+      size="small"
+      bindtap="onSend"
+      loading="{{sending}}"
+      disabled="{{!inputValue.trim() || sending}}"
+    >发送</t-button>
+  </view>
+</view>

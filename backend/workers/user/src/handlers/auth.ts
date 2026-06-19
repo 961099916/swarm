@@ -163,7 +163,7 @@ async function registerNewUser(
 }
 
 async function generateUserToken(user: UserRow, jwtSecret: string): Promise<string> {
-  const expInSeconds = Math.floor(Date.now() / 1000) + TOKEN_EXPIRY_SECONDS * 24 * 60 * 60;
+  const expInSeconds = Math.floor(Date.now() / 1000) + TOKEN_EXPIRY_SECONDS;
   return await signJWT(
     {
       userId: user.id,
@@ -210,11 +210,12 @@ export async function handleLogin(
     // 生成 JWT
     const token = await generateUserToken(user, env.JWT_SECRET);
 
-    // 缓存预热：将用户的最新鉴权状态存入 KV 缓存中，免去网关后续 API 的查库延迟
+    // 缓存预热：将用户的最新鉴权状态写入 KV 缓存，免去网关后续 API 的查库延迟
+    // 必须包含 role 字段，否则网关 authMiddleware 返回的 userRole 为 undefined → 403
     await CacheService.set(
       env.CACHE_KV,
       `user:auth:${user.id}`,
-      { tokenVersion: user.token_version, isBanned: user.is_banned },
+      { tokenVersion: user.token_version, isBanned: user.is_banned, role: user.role },
       3600 // 缓存 1 小时（CacheService 内部会自动注入 Jitter）
     );
 

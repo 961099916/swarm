@@ -1,3 +1,6 @@
+/* page 背景由 app.wxss 全局统管 */
+
+
 /* File: /Users/zhangjiahao/IdeaProjects/swarm/frontend/packageQuiz/pages/test/test.wxss */
 
 .page-container {
@@ -7,7 +10,9 @@
   padding: 30rpx 40rpx;
   background: var(--bg-root);
   box-sizing: border-box;
+  animation: fade-up 0.35s ease-out both;
 }
+.page-container.theme-light { background: var(--bg-root); }
 
 /* 进度区域 */
 .progress-section {

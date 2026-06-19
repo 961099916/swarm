@@ -1,0 +1,25 @@
+# File: /Users/zhangjiahao/IdeaProjects/swarm/backend/workers/doc-consumer/wrangler.toml
+name = "swarm-doc-consumer"
+main = "src/index.ts"
+compatibility_date = "2024-09-23"
+
+[observability]
+enabled = true
+
+# D1 数据库：读取文档/知识库配置，更新处理状态
+[[d1_databases]]
+binding = "DB"
+database_name = "swarm-db"
+database_id = "4f360bda-ea4b-4fde-b3a0-d759f4180295"
+
+# AI 绑定：生成嵌入向量
+[ai]
+binding = "AI"
+
+# 消费文档处理队列
+[[queues.consumers]]
+queue = "swarm-doc-queue"
+max_batch_size = 3
+max_batch_timeout = 30
+max_retries = 3
+dead_letter_queue = "swarm-doc-dlq"

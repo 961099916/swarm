@@ -1,0 +1,86 @@
+<view class="page">
+  <!-- 头部 -->
+  <view class="page-header">
+    <t-icon name="chevron-left" size="32" bindtap="goBack" />
+    <text class="page-title">添加文档</text>
+    <text class="page-subtitle">{{kbName}}</text>
+  </view>
+
+  <!-- 录入方式 Tab -->
+  <t-tabs value="{{activeTab}}" bindchange="onTabChange">
+    <t-tab-panel label="手动录入" value="manual">
+      <view class="form-section">
+        <input
+          class="field-input"
+          placeholder="文档标题（必填）"
+          value="{{manualTitle}}" bindinput="onManualTitleInput"
+        />
+        <t-textarea
+          label="正文"
+          placeholder="输入文档正文内容，建议至少 10 个字"
+          value="{{manualContent}}" bind:change="onManualContentInput"
+          autosize="{{autoSizeObj}}"
+        />
+        <view class="char-count">{{manualContent.length}} 字</view>
+      </view>
+    </t-tab-panel>
+
+    <t-tab-panel label="网页抓取" value="url">
+      <view class="form-section">
+        <input
+          class="url-input"
+          placeholder="https://example.com/article"
+          value="{{url}}" bindinput="onUrlInput"
+        />
+        <t-input
+          label="标题（可选）" placeholder="自定义标题，留空自动提取"
+          value="{{urlTitle}}" bind:change="onUrlTitleInput"
+        />
+        <view class="tip">系统会自动抓取网页正文内容并提取标题</view>
+      </view>
+    </t-tab-panel>
+
+    <t-tab-panel label="批量录入" value="batch">
+      <view class="form-section">
+        <input
+          class="field-input"
+          placeholder="统一标题（可选），多段文档的共用标题"
+          value="{{batchTitle}}" bindinput="onBatchTitleInput"
+        />
+        <t-textarea
+          label="多段内容"
+          placeholder="每段之间用空行分隔&#10;例如：&#10;&#10;第一段内容...&#10;&#10;第二段内容..."
+          value="{{batchText}}" bind:change="onBatchTextInput"
+          autosize="{{autoSizeObjBig}}"
+        />
+        <view class="tip">每段用空行分隔，系统会自动拆分成多个文档</view>
+      </view>
+    </t-tab-panel>
+  </t-tabs>
+
+  <!-- 提交按钮 -->
+  <view class="submit-area">
+    <t-button
+      theme="primary" size="medium" block loading="{{submitting}}"
+      disabled="{{submitting}}"
+      bindtap="{{activeTab === 'manual' ? 'submitManual' : activeTab === 'url' ? 'submitUrl' : 'submitBatch'}}"
+    >
+      {{activeTab === 'manual' ? '提交文档' : activeTab === 'url' ? '开始抓取' : '批量提交'}}
+    </t-button>
+  </view>
+
+  <!-- 提交结果 -->
+  <view wx:if="{{result}}" class="result-card {{result.success ? 'result-success' : 'result-fail'}}">
+    <t-icon name="{{result.success ? 'check-circle' : 'error-circle'}}" size="36" />
+    <view class="result-text">
+      <text>{{result.message}}</text>
+      <text wx:if="{{result.docId}}" class="result-docid">文档ID: {{result.docId}}</text>
+    </view>
+  </view>
+
+  <!-- 返回链接 -->
+  <view wx:if="{{result && result.success}}" class="back-link" bindtap="goToDetail">
+    <t-icon name="list" size="24" />
+    <text>返回文档列表查看状态</text>
+  </view>
+</view>

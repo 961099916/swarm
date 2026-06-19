@@ -4,7 +4,7 @@ export interface LogPayload {
   traceId: string;
   timestamp: string;      // ISO-8601 格式
   level: "DEBUG" | "INFO" | "WARN" | "ERROR";
-  module: "GATEWAY" | "USER" | "ENGINE" | "WORKFLOW" | "QUIZ" | "ADMIN";
+  module: "GATEWAY" | "USER" | "ENGINE" | "WORKFLOW" | "QUIZ" | "ADMIN" | "RAG" | "AI_GATEWAY";
   event: string;           // 事件类型
   userId?: string;
   message: string;

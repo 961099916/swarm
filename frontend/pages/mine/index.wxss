@@ -1,31 +1,36 @@
-/* File: /Users/zhangjiahao/IdeaProjects/market-review/wx-test/wx-client/miniprogram/pages/mine/mine.wxss */
+/* Swarm 暖绒奶油风 — 个人中心 */
 
-/* ============================================================
- * 锁定页面级背景色：覆盖 iOS safe area（home indicator 底部白条）
- * ============================================================ */
-page {
-  background-color: #070913 !important;
+/* ══════════════════════════════════════════════════
+   页面容器 — 背景由 app.wxss 全局 page 统管
+   ══════════════════════════════════════════════════ */
+.page-container {
+  min-height: 100vh;
+  background: var(--bg-root);
+  animation: fade-up 0.35s ease-out both;
 }
+.page-container.theme-light { background: var(--bg-root); }
 
 /* 底部安全区 safe-area 兜底遮罩（修复 iOS home indicator 白底） */
 .safe-area-bottom {
   width: 100%;
   height: env(safe-area-inset-bottom);
   height: constant(safe-area-inset-bottom);
-  background-color: #070913;
+  background-color: var(--bg-root);
   position: fixed;
   bottom: 0;
   left: 0;
   z-index: 9999;
 }
 
+/* ── 用户身份卡片（珊瑚橙暖色渐变）── */
 .user-header-card {
   display: flex;
   align-items: center;
   gap: 36rpx;
-  background: linear-gradient(135deg, rgba(30, 41, 59, 0.8) 0%, rgba(99, 102, 241, 0.1) 100%);
+  background: linear-gradient(135deg, rgba(255, 107, 107, 0.10) 0%, rgba(255, 160, 122, 0.05) 100%);
   margin-top: 20rpx;
   padding: 48rpx 40rpx;
+  border-bottom: 1rpx solid var(--border-subtle);
 }
 
 .user-info-text {
@@ -34,7 +39,7 @@ page {
   gap: 12rpx;
 }
 
-/* 头像授权按钮样式重置 */
+/* ── 头像授权按钮样式重置（暖色珊瑚橙辉光）── */
 .avatar-wrapper-btn {
   padding: 0 !important;
   width: 110rpx !important;
@@ -45,14 +50,14 @@ page {
   position: relative !important;
   line-height: 1 !important;
   overflow: visible !important;
-  border: 2px solid rgba(255, 255, 255, 0.1);
-  animation: avatarGlow 4s infinite ease-in-out;
+  border: 2rpx solid var(--glass-border);
+  animation: avatarGlowWarm 4s infinite ease-in-out;
 }
 
-@keyframes avatarGlow {
-  0% { box-shadow: 0 4px 16px rgba(168, 85, 247, 0.3), 0 0 0 0 rgba(168, 85, 247, 0.2); }
-  50% { box-shadow: 0 4px 22px rgba(6, 182, 212, 0.5), 0 0 0 10rpx rgba(6, 182, 212, 0); }
-  100% { box-shadow: 0 4px 16px rgba(168, 85, 247, 0.3), 0 0 0 0 rgba(168, 85, 247, 0.2); }
+@keyframes avatarGlowWarm {
+  0%   { box-shadow: 0 4rpx 16rpx rgba(255, 107, 107, 0.25), 0 0 0 0 rgba(255, 107, 107, 0.15); }
+  50%  { box-shadow: 0 4rpx 22rpx rgba(255, 160, 122, 0.40), 0 0 0 10rpx rgba(255, 160, 122, 0); }
+  100% { box-shadow: 0 4rpx 16rpx rgba(255, 107, 107, 0.25), 0 0 0 0 rgba(255, 107, 107, 0.15); }
 }
 
 .avatar-wrapper-btn::after {
@@ -63,7 +68,7 @@ page {
   width: 100%;
   height: 100%;
   border-radius: 50%;
-  background: #1E293B;
+  background: var(--bg-surface-solid);
   display: block;
 }
 
@@ -74,11 +79,12 @@ page {
   width: 36rpx;
   height: 36rpx;
   border-radius: 50%;
-  background: linear-gradient(135deg, var(--neon-pink), var(--primary-purple));
+  background: var(--brand-gradient);
   display: flex;
   align-items: center;
   justify-content: center;
-  border: 2px solid #070913;
+  border: 2rpx solid var(--bg-root);
+  box-shadow: var(--shadow-glow);
 }
 
 .camera-icon {
@@ -114,22 +120,22 @@ page {
 .nickname-input {
   font-size: 34rpx;
   font-weight: 700;
-  color: #FFFFFF;
+  color: var(--text-primary);
   width: 280rpx;
-  border-bottom: 1px dashed rgba(255, 255, 255, 0.2);
+  border-bottom: 1rpx dashed var(--border-subtle);
   padding: 4rpx 0;
 }
 
 .nickname-placeholder {
-  color: rgba(255, 255, 255, 0.3);
+  color: var(--text-placeholder);
 }
 
 .get-nickname-badge {
   padding: 4rpx 14rpx;
-  border-radius: 8rpx;
-  background: linear-gradient(135deg, rgba(6, 182, 212, 0.15) 0%, rgba(168, 85, 247, 0.08) 100%);
-  border: 1px solid rgba(6, 182, 212, 0.4);
-  box-shadow: 0 0 10rpx rgba(6, 182, 212, 0.2);
+  border-radius: var(--radius-sm);
+  background: var(--brand-subtle);
+  border: 1rpx solid var(--brand-border);
+  box-shadow: var(--shadow-glow);
   margin-left: 12rpx;
   display: inline-flex;
   align-items: center;
@@ -137,13 +143,13 @@ page {
 }
 
 .get-nickname-badge:active {
-  background: linear-gradient(135deg, rgba(6, 182, 212, 0.25) 0%, rgba(168, 85, 247, 0.15) 100%);
-  box-shadow: 0 0 15rpx rgba(6, 182, 212, 0.4);
+  background: rgba(255, 107, 107, 0.25);
+  box-shadow: 0 0 15rpx rgba(255, 107, 107, 0.4);
 }
 
 .badge-get-text {
   font-size: 18rpx;
-  color: var(--neon-cyan);
+  color: var(--brand);
   font-weight: 700;
   letter-spacing: 1rpx;
 }
@@ -152,79 +158,126 @@ page {
   display: flex;
 }
 
+/* ── 状态标签（使用全局 .tag 系，并覆盖 old style）── */
 .status-badge {
-  font-size: 18rpx; /* 字号略微收敛，提升精致感 */
-  height: 38rpx; /* 固定高度确保各机型无缝居中 */
-  line-height: 1 !important; /* 强制消除外部继承行高对垂直居中的干扰 */
-  padding: 0 20rpx; /* 左右对称 padding */
-  border-radius: 24rpx;
+  font-size: 18rpx;
+  height: 38rpx;
+  line-height: 1 !important;
+  padding: 0 20rpx;
+  border-radius: var(--radius-full);
   font-weight: 600;
   letter-spacing: 1rpx;
   transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  box-shadow: 0 4rpx 12rpx rgba(0, 0, 0, 0.2);
+  background: var(--glass-bg);
+  color: var(--text-secondary);
+  border: 1rpx solid var(--glass-border);
+  backdrop-filter: var(--glass-blur);
+  -webkit-backdrop-filter: var(--glass-blur);
+  box-shadow: var(--shadow-sm);
 }
 
-/* 呼吸灯真实子节点 */
 .status-badge-dot {
   width: 10rpx;
   height: 10rpx;
   border-radius: 50%;
-  margin-right: 12rpx; /* 指示灯与文字的间距 */
+  margin-right: 12rpx;
   animation: pulseLight 2s infinite ease-in-out;
   flex-shrink: 0;
 }
 
-/* 状态文本 */
 .status-badge-text {
   line-height: 1 !important;
   display: inline-block;
 }
 
 @keyframes pulseLight {
-  0% { transform: scale(0.85); opacity: 0.4; }
-  50% { transform: scale(1.2); opacity: 1; }
+  0%   { transform: scale(0.85); opacity: 0.4; }
+  50%  { transform: scale(1.2);  opacity: 1; }
   100% { transform: scale(0.85); opacity: 0.4; }
 }
 
 .badge-online {
-  background: linear-gradient(135deg, rgba(6, 182, 212, 0.08) 0%, rgba(168, 85, 247, 0.04) 100%) !important;
-  border: 1px solid rgba(6, 182, 212, 0.35) !important;
-  color: var(--neon-cyan);
-  text-shadow: 0 0 8rpx rgba(6, 182, 212, 0.3);
-  box-shadow: 0 0 15rpx rgba(6, 182, 212, 0.1) !important;
+  background: var(--success-subtle) !important;
+  border-color: var(--success-border) !important;
+  color: var(--success) !important;
+  box-shadow: 0 0 15rpx rgba(46, 204, 113, 0.1) !important;
 }
 
 .badge-online .status-badge-dot {
-  background: var(--neon-cyan);
-  box-shadow: 0 0 10rpx var(--neon-cyan);
+  background: var(--success);
+  box-shadow: 0 0 10rpx rgba(46, 204, 113, 0.5);
 }
 
 .badge-offline {
-  background: linear-gradient(135deg, rgba(236, 72, 153, 0.08) 0%, rgba(168, 85, 247, 0.04) 100%) !important;
-  border: 1px solid rgba(236, 72, 153, 0.35) !important;
-  color: var(--neon-pink);
-  text-shadow: 0 0 8rpx rgba(236, 72, 153, 0.3);
-  box-shadow: 0 0 15rpx rgba(236, 72, 153, 0.1) !important;
+  background: var(--glass-bg) !important;
+  border-color: var(--border-default) !important;
+  color: var(--text-muted) !important;
 }
 
 .badge-offline .status-badge-dot {
-  background: var(--neon-pink);
-  box-shadow: 0 0 10rpx var(--neon-pink);
+  background: var(--text-muted);
 }
 
+/* ── 仪表盘（暖色统计数据）── */
+.stats-dashboard {
+  display: flex;
+  justify-content: space-around;
+  align-items: center;
+  padding: 36rpx 20rpx !important;
+  margin-top: -12rpx;
+  margin-bottom: 40rpx;
+  background: var(--glass-bg) !important;
+  backdrop-filter: var(--glass-blur);
+  -webkit-backdrop-filter: var(--glass-blur);
+  border: 1rpx solid var(--glass-border) !important;
+  border-radius: var(--radius-lg);
+}
+
+.stat-box {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  flex: 1;
+}
+
+.stat-val {
+  font-size: 40rpx;
+  font-weight: 900;
+  color: var(--text-primary);
+  background: var(--brand-gradient);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+.stat-lbl {
+  font-size: 20rpx;
+  color: var(--text-muted);
+  font-weight: 500;
+  margin-top: 8rpx;
+}
+
+.stat-divider-vertical {
+  width: 2rpx;
+  height: 50rpx;
+  background: var(--border-subtle);
+}
+
+/* ── 历史标题行 ── */
 .history-title-row {
   margin-top: 30rpx;
   margin-bottom: 24rpx;
 }
 
+/* ── 分段标题（使用全局 .section-divider 风格）── */
 .section-title-mine {
-  font-size: 30rpx;
+  font-size: var(--font-h4);
   font-weight: 700;
-  color: #FFFFFF;
-  border-left: 6rpx solid var(--neon-pink);
+  color: var(--text-primary);
+  border-left: 6rpx solid var(--brand);
   padding-left: 16rpx;
   line-height: 1;
 }
@@ -233,16 +286,21 @@ page {
   flex: 1;
 }
 
+/* ── 历史记录卡片（暖色毛玻璃）── */
 .history-item-card {
-  transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
-  border-left: 6rpx solid var(--neon-cyan) !important; /* 霓虹青发光左侧线 */
-  box-shadow: -6rpx 12rpx 32rpx rgba(6, 182, 212, 0.06), 0 12rpx 40rpx var(--glass-shadow) !important;
+  background: var(--glass-bg);
+  backdrop-filter: var(--glass-blur);
+  -webkit-backdrop-filter: var(--glass-blur);
+  border: 1rpx solid var(--glass-border);
+  border-radius: var(--radius-md);
+  padding: 20rpx;
+  transition: all 0.25s ease;
 }
 
 .history-item-card:active {
   transform: scale(0.98);
-  background: rgba(255, 255, 255, 0.02);
-  box-shadow: -6rpx 8rpx 20rpx rgba(6, 182, 212, 0.12) !important;
+  background: var(--bg-surface-hover);
+  border-color: var(--border-strong);
 }
 
 .item-header {
@@ -253,9 +311,9 @@ page {
 }
 
 .item-title {
-  font-size: 30rpx;
+  font-size: var(--font-h4);
   font-weight: 700;
-  color: #FFFFFF;
+  color: var(--text-primary);
 }
 
 .delete-btn-area {
@@ -269,15 +327,15 @@ page {
 }
 
 .delete-btn-area:active {
-  background: rgba(239, 68, 68, 0.15);
+  background: var(--danger-subtle);
 }
 
 .delete-icon {
   width: 28rpx;
   height: 28rpx;
   opacity: 0.55;
-  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
-  background: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%23EF4444'><path d='M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z'/></svg>") no-repeat center;
+  transition: all 0.2s ease;
+  background: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%23E74C3C'><path d='M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z'/></svg>") no-repeat center;
   background-size: contain;
 }
 
@@ -289,19 +347,19 @@ page {
 }
 
 .result-badge {
-  background: linear-gradient(135deg, var(--neon-pink), var(--primary-purple));
+  background: var(--brand-gradient);
   color: #FFFFFF;
   font-size: 26rpx;
   font-weight: 800;
   padding: 6rpx 16rpx;
-  border-radius: 12rpx;
+  border-radius: var(--radius-sm);
   letter-spacing: 2rpx;
-  box-shadow: 0 0 10rpx rgba(236, 72, 153, 0.3);
+  box-shadow: var(--shadow-glow);
 }
 
 .result-name-text {
-  font-size: 28rpx;
-  color: var(--text-main);
+  font-size: var(--font-body-lg);
+  color: var(--text-primary);
   font-weight: 600;
 }
 
@@ -309,22 +367,22 @@ page {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  border-top: 1px solid rgba(255, 255, 255, 0.05);
+  border-top: 1rpx solid var(--border-subtle);
   padding-top: 20rpx;
 }
 
 .time-text {
-  font-size: 22rpx;
+  font-size: var(--font-caption);
   color: var(--text-muted);
 }
 
 .view-report-link {
-  font-size: 24rpx;
-  color: var(--neon-cyan);
+  font-size: var(--font-body);
+  color: var(--brand);
   font-weight: 700;
 }
 
-/* 空状态 */
+/* ── 空状态 ── */
 .empty-container {
   display: flex;
   flex-direction: column;
@@ -337,8 +395,10 @@ page {
   width: 140rpx;
   height: 140rpx;
   border-radius: 50%;
-  background: rgba(255, 255, 255, 0.02);
-  border: 1px dashed rgba(255, 255, 255, 0.15);
+  background: var(--glass-bg);
+  backdrop-filter: var(--glass-blur);
+  -webkit-backdrop-filter: var(--glass-blur);
+  border: 1rpx dashed var(--border-default);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -349,19 +409,19 @@ page {
   width: 60rpx;
   height: 60rpx;
   border: 4rpx solid var(--text-muted);
-  border-radius: 12rpx;
+  border-radius: var(--radius-sm);
   opacity: 0.4;
 }
 
 .empty-title {
-  font-size: 32rpx;
+  font-size: var(--font-h3);
   font-weight: 700;
-  color: #FFFFFF;
+  color: var(--text-primary);
   margin-bottom: 16rpx;
 }
 
 .empty-subtitle {
-  font-size: 24rpx;
+  font-size: var(--font-body);
   color: var(--text-muted);
   line-height: 1.6;
   margin-bottom: 60rpx;
@@ -371,53 +431,7 @@ page {
   width: 80% !important;
 }
 
-/* ==========================================================================
-   新增大厂级数据仪表盘与常驻分流服务菜单样式
-   ========================================================================== */
-
-/* 1. 仪表盘 */
-.stats-dashboard {
-  display: flex;
-  justify-content: space-around;
-  align-items: center;
-  padding: 36rpx 20rpx !important;
-  margin-top: -12rpx; /* 与身份卡片产生错落层次 */
-  margin-bottom: 40rpx;
-  background: linear-gradient(135deg, rgba(255, 255, 255, 0.02) 0%, rgba(255, 255, 255, 0.04) 100%) !important;
-  border: 1px solid rgba(255, 255, 255, 0.06) !important;
-}
-
-.stat-box {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  flex: 1;
-}
-
-.stat-val {
-  font-size: 40rpx;
-  font-weight: 900;
-  color: #FFFFFF;
-  background: linear-gradient(135deg, #FFFFFF 30%, var(--primary-purple) 100%);
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-  text-shadow: 0 0 16rpx rgba(168, 85, 247, 0.3);
-}
-
-.stat-lbl {
-  font-size: 20rpx;
-  color: var(--text-muted);
-  font-weight: 500;
-  margin-top: 8rpx;
-}
-
-.stat-divider-vertical {
-  width: 2rpx;
-  height: 50rpx;
-  background: rgba(255, 255, 255, 0.08);
-}
-
-/* 2. 关于/服务网格菜单 */
+/* ── 服务网格菜单（暖色毛玻璃）── */
 .service-grid-group {
   display: flex;
   gap: 24rpx;
@@ -430,15 +444,18 @@ page {
   flex: 1;
   margin-bottom: 0 !important;
   padding: 30rpx !important;
-  background: rgba(15, 23, 42, 0.45) !important;
-  border: 1px solid rgba(255, 255, 255, 0.05) !important;
-  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  background: var(--glass-bg) !important;
+  backdrop-filter: var(--glass-blur);
+  -webkit-backdrop-filter: var(--glass-blur);
+  border: 1rpx solid var(--glass-border) !important;
+  border-radius: var(--radius-md);
+  transition: all 0.2s ease;
 }
 
 .service-grid-item:active {
   transform: scale(0.97);
-  background: rgba(15, 23, 42, 0.6) !important;
-  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3) !important;
+  background: var(--bg-surface-hover) !important;
+  border-color: var(--border-strong) !important;
 }
 
 .service-grid-header {
@@ -453,15 +470,15 @@ page {
 }
 
 .service-grid-title {
-  font-size: 28rpx;
+  font-size: var(--font-body-lg);
   font-weight: 700;
-  color: #FFFFFF;
+  color: var(--text-primary);
   display: block;
   margin-bottom: 6rpx;
 }
 
 .service-grid-desc {
-  font-size: 20rpx;
+  font-size: var(--font-caption);
   color: var(--text-muted);
   display: block;
   line-height: 1.4;
@@ -470,8 +487,12 @@ page {
 .arrow-icon-mini {
   width: 12rpx;
   height: 12rpx;
-  border-top: 3rpx solid rgba(255, 255, 255, 0.3);
-  border-right: 3rpx solid rgba(255, 255, 255, 0.3);
+  border-top: 3rpx solid var(--text-muted);
+  border-right: 3rpx solid var(--text-muted);
   transform: rotate(45deg);
 }
 
+/* 加载更多指示器 */
+.mine-load-more { display: flex; align-items: center; justify-content: center; gap: 12rpx; padding: 32rpx 0; }
+.mine-load-more-text { font-size: 22rpx; color: var(--text-muted); }
+.mine-load-more-end { font-size: 20rpx; color: var(--text-placeholder); letter-spacing: 2rpx; }

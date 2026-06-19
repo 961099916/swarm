@@ -22,6 +22,13 @@ import {
   handleAdminDebugTool,
   handleAdminListAuditLogs,
 } from "./handlers/admin";
+import {
+  handleListModelConfigs,
+  handleUpdateModelConfig,
+  handleListAICallLogs,
+  handleAIStats,
+  handleAdminListKBs,
+} from "./handlers/ai-gateway";
 
 // ─── 环境变量类型 ───
 
@@ -176,6 +183,28 @@ app.post("/api/v1/admin/tools/debug", async (c) => {
 
 app.get("/api/v1/admin/audit-logs", async (c) => {
   return handleAdminListAuditLogs(c.req.raw, c.env.DB, c.get("traceId"));
+});
+
+// ─── AI Gateway 管理 ───
+app.get("/api/v1/admin/ai/models", async (c) => {
+  return handleListModelConfigs(c.env.DB, c.get("traceId"));
+});
+
+app.put("/api/v1/admin/ai/models/update", async (c) => {
+  return handleUpdateModelConfig(c.env.DB, c.req.raw, c.get("traceId"));
+});
+
+app.get("/api/v1/admin/ai/logs", async (c) => {
+  return handleListAICallLogs(c.env.DB, c.req.raw, c.get("traceId"));
+});
+
+app.get("/api/v1/admin/ai/stats", async (c) => {
+  return handleAIStats(c.env.DB, c.get("traceId"));
+});
+
+// ─── 知识库管理 ───
+app.get("/api/v1/admin/knowledge-bases", async (c) => {
+  return handleAdminListKBs(c.env.DB, c.get("traceId"));
 });
 
 // ─── 动态路由（通过 Hono 的 param 提取，替代原生正则匹配）───

@@ -25,10 +25,28 @@ Page({
       return;
     }
 
+    // 角色守卫：非管理员重定向到主页
+    const userInfo = wx.getStorageSync("userInfo") || {};
+    if (userInfo.role !== "ADMIN") {
+      wx.showToast({ title: "仅管理员可访问", icon: "none" });
+      wx.switchTab({ url: "/pages/task/list/index" });
+      return;
+    }
+
     this.loadStats();
   },
 
   loadStats: function () {
+    // 角色前置守卫：非管理员不请求统计数据
+    const app = getApp();
+    const userInfo = app && app.globalData && app.globalData.userInfo;
+    const storedUser = wx.getStorageSync("userInfo");
+    const userRole = (storedUser && storedUser.role) || (userInfo && userInfo.role);
+    if (userRole !== "ADMIN") {
+      console.warn("[Admin Dashboard] 非管理员用户，跳过统计数据加载");
+      return;
+    }
+
     request({ url: "/api/v1/admin/stats" })
       .then((res) => {
         if (res.success && res.data) {
@@ -57,5 +75,9 @@ Page({
   
   goToTools: function () {
     wx.navigateTo({ url: "/packageAdmin/tools/index" });
+  },
+
+  goToKnowledge: function () {
+    wx.navigateTo({ url: "/packageAdmin/knowledge/index" });
   }
 });

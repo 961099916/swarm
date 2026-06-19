@@ -437,7 +437,7 @@ Page({
                 // 3. 绘制赛博流光背景
                 const grad = ctx.createLinearGradient(0, 0, 0, 500);
                 grad.addColorStop(0, '#0F172A'); // 深空深蓝
-                grad.addColorStop(1, '#070913'); // 极深邃宇宙黑
+                grad.addColorStop(1, '#2D2A24'); // 暖暗色底
                 ctx.fillStyle = grad;
                 ctx.fillRect(0, 0, 300, 500);
                 // 画流光霓虹粉装饰斑圈 (极光呼吸感)

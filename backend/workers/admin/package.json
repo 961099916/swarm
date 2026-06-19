@@ -13,7 +13,7 @@
     "@swarm/credits": "*",
     "@swarm/agent": "*",
     "@swarm/ai-gateway": "*",
-    "hono": "^4.0.0",
+    "hono": "^4.12.26",
     "drizzle-orm": "^0.45.2"
   },
   "devDependencies": {

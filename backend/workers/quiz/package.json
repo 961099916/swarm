@@ -12,7 +12,7 @@
     "@swarm/quiz": "*",
     "@swarm/identity": "*",
     "drizzle-orm": "^0.45.2",
-    "hono": "^4.0.0"
+    "hono": "^4.12.26"
   },
   "devDependencies": {
     "@cloudflare/workers-types": "^4.20240923.0",

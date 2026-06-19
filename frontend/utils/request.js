@@ -88,17 +88,30 @@ function request(options) {
         const { statusCode } = res;
         const apiRes = res.data || {};
 
-        // 2xx 成功
-        if (statusCode >= 200 && statusCode < 300) {
-          resolve(apiRes);
+        // 提取消息字段：新格式用 message，旧格式兼容 error
+        const errMsg = apiRes.message || apiRes.error || '';
+
+        // ─── 基于业务状态码判断 ───
+        // code === 0 一律视为成功，`res.success === true` 兼容前端各页面检查
+        if (apiRes.code === 0) {
+          resolve({ ...apiRes, success: true });
           return;
         }
 
-        // 401 未授权
-        if (statusCode === 401) {
+        // ─── 业务错误码处理 ───
+        const bizCode = apiRes.code || 0;
+
+        // 1000-1099: 请求参数错误
+        if (bizCode >= 1000 && bizCode < 1010) {
+          wx.showToast({ title: errMsg || '请求参数错误', icon: 'none' });
+          reject(new Error(errMsg));
+          return;
+        }
+
+        // 1010-1012: 未认证 / Token 过期
+        if (bizCode >= 1010 && bizCode <= 1012) {
           wx.removeStorageSync('authToken');
           wx.removeStorageSync('userInfo');
-
           try {
             const app = getApp();
             if (app && app.globalData) {
@@ -109,7 +122,7 @@ function request(options) {
           } catch (_e) { /* 静默 */ }
 
           wx.showToast({
-            title: apiRes.error || '登录凭证已过期，请重新登录',
+            title: errMsg || '登录凭证已过期，请重新登录',
             icon: 'none',
             duration: 2000,
           });
@@ -118,19 +131,47 @@ function request(options) {
             wx.reLaunch({ url: '/pages/login/login' });
           }, 1500);
 
-          reject(new Error(apiRes.error || '未登录'));
+          reject(new Error(errMsg || '未登录'));
           return;
         }
 
-        // 403 越权
-        if (statusCode === 403) {
+        // 1020: 权限不足
+        if (bizCode === 1020) {
           wx.showModal({
             title: '账号异常提示',
-            content: apiRes.error || '您无权执行此操作，账号可能已被限制',
+            content: errMsg || '您无权执行此操作，账号可能已被限制',
             showCancel: false,
             confirmText: '确定',
           });
-          reject(new Error(apiRes.error || '权限不足'));
+          reject(new Error(errMsg || '权限不足'));
+          return;
+        }
+
+        // 1030: 资源不存在
+        if (bizCode === 1030) {
+          wx.showToast({ title: errMsg || '资源不存在', icon: 'none' });
+          reject(new Error(errMsg));
+          return;
+        }
+
+        // 1040: 资源冲突
+        if (bizCode === 1040) {
+          wx.showToast({ title: errMsg || '操作冲突', icon: 'none' });
+          reject(new Error(errMsg));
+          return;
+        }
+
+        // 1050: 频率限制
+        if (bizCode === 1050) {
+          wx.showToast({ title: errMsg || '操作过于频繁，请稍后重试', icon: 'none', duration: 2000 });
+          reject(new Error(errMsg));
+          return;
+        }
+
+        // 2100: 积分不足
+        if (bizCode === 2100) {
+          wx.showToast({ title: errMsg || '积分不足', icon: 'none' });
+          reject(new Error(errMsg));
           return;
         }
 
@@ -142,16 +183,62 @@ function request(options) {
             showCancel: false,
             confirmText: '确定',
           });
-          reject(new Error(`服务路由错误 (421): 请确认 Worker 已部署且路由配置正确`));
+          reject(new Error('服务路由错误 (421): 请确认 Worker 已部署且路由配置正确'));
+          return;
+        }
+
+        // ─── 兜底：基于 HTTP 状态码兼容旧格式 ───
+        // 旧格式: 2xx 成功
+        if (statusCode >= 200 && statusCode < 300) {
+          resolve(apiRes);
+          return;
+        }
+
+        // 旧格式: 401 未授权（兜底）
+        if (statusCode === 401) {
+          wx.removeStorageSync('authToken');
+          wx.removeStorageSync('userInfo');
+          try {
+            const app = getApp();
+            if (app && app.globalData) {
+              app.globalData.isLoggedIn = false;
+              app.globalData.userCredits = 0;
+              app.globalData.userInfo = null;
+            }
+          } catch (_e) { /* 静默 */ }
+
+          wx.showToast({
+            title: errMsg || '登录凭证已过期，请重新登录',
+            icon: 'none',
+            duration: 2000,
+          });
+
+          setTimeout(() => {
+            wx.reLaunch({ url: '/pages/login/login' });
+          }, 1500);
+
+          reject(new Error(errMsg || '未登录'));
+          return;
+        }
+
+        // 旧格式: 403 越权
+        if (statusCode === 403) {
+          wx.showModal({
+            title: '账号异常提示',
+            content: errMsg || '您无权执行此操作，账号可能已被限制',
+            showCancel: false,
+            confirmText: '确定',
+          });
+          reject(new Error(errMsg || '权限不足'));
           return;
         }
 
         // 其他错误
         wx.showToast({
-          title: apiRes.error || `请求失败 (${statusCode})`,
+          title: errMsg || `请求失败 (${statusCode})`,
           icon: 'none',
         });
-        reject(new Error(apiRes.error || `服务器故障 (状态码: ${statusCode})`));
+        reject(new Error(errMsg || `服务器故障 (状态码: ${statusCode})`));
       },
       fail: (err) => {
         wx.showToast({

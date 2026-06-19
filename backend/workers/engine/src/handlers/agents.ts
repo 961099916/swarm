@@ -1,6 +1,8 @@
+import { AI_MODELS, AgentDTO, CreateAgentReq, UpdateAgentReq, agents } from "@swarm/agent";
+import { CacheService, TraceLogger } from "@swarm/kernel";
+
 // File: /Users/zhangjiahao/IdeaProjects/swarm/backend/workers/engine/src/handlers/agents.ts
 
-import { AgentDTO, CreateAgentReq, UpdateAgentReq, AI_MODELS, TraceLogger, CacheService } from "@swarm/shared";
 import { getDrizzleDb } from "../utils/drizzleInstance";
 import { ResponseBuilder } from "../utils/response";
 import {
@@ -10,7 +12,6 @@ import {
   ValidatorChain
 } from "../utils/validator";
 import { eq, or, isNull, desc, and } from "drizzle-orm";
-import { agents } from "@swarm/shared";
 
 const DEFAULT_MODEL = AI_MODELS.DEFAULT;
 
@@ -67,8 +68,8 @@ export async function handleListAgents(
     await CacheService.set(kv, cacheKey, dtoList, 7200);
 
     return ResponseBuilder.success(dtoList, traceId);
-  } catch (error: any) {
-    TraceLogger.error("ENGINE", "LIST_AGENTS_FAILED", traceId, `获取智能体列表异常: ${error.message || error}`, error, userId);
+  } catch (error: unknown) {
+    TraceLogger.error("ENGINE", "LIST_AGENTS_FAILED", traceId, `获取智能体列表异常: getErrorMessage(error)`, error, userId);
     return ResponseBuilder.internalError("系统查询智能体列表失败", traceId);
   }
 }
@@ -125,8 +126,8 @@ export async function handleCreateAgent(
 
     TraceLogger.info("ENGINE", "CREATE_AGENT_SUCCESS", traceId, `创建自定义智能体成功: agentId=${agentId}`, userId);
     return ResponseBuilder.success({ agentId }, traceId);
-  } catch (error: any) {
-    TraceLogger.error("ENGINE", "CREATE_AGENT_FAILED", traceId, `创建自定义智能体失败: ${error.message || error}`, error, userId);
+  } catch (error: unknown) {
+    TraceLogger.error("ENGINE", "CREATE_AGENT_FAILED", traceId, `创建自定义智能体失败: getErrorMessage(error)`, error, userId);
     return ResponseBuilder.internalError("系统部署自定义智能体失败", traceId);
   }
 }
@@ -186,8 +187,8 @@ export async function handleUpdateAgent(
 
     TraceLogger.info("ENGINE", "UPDATE_AGENT_SUCCESS", traceId, `更新智能体成功: agentId=${body.agentId}`, userId);
     return ResponseBuilder.success({ agentId: body.agentId }, traceId);
-  } catch (error: any) {
-    TraceLogger.error("ENGINE", "UPDATE_AGENT_FAILED", traceId, `更新智能体失败: ${error.message || error}`, error, userId);
+  } catch (error: unknown) {
+    TraceLogger.error("ENGINE", "UPDATE_AGENT_FAILED", traceId, `更新智能体失败: getErrorMessage(error)`, error, userId);
     return ResponseBuilder.internalError("修改自定义智能体失败", traceId);
   }
 }
@@ -224,8 +225,8 @@ export async function handleDeleteAgent(
 
     TraceLogger.info("ENGINE", "DELETE_AGENT_SUCCESS", traceId, `删除智能体成功: agentId=${agentId}`, userId);
     return ResponseBuilder.success({ success: true }, traceId);
-  } catch (error: any) {
-    TraceLogger.error("ENGINE", "DELETE_AGENT_FAILED", traceId, `删除智能体失败: ${error.message || error}`, error, userId);
+  } catch (error: unknown) {
+    TraceLogger.error("ENGINE", "DELETE_AGENT_FAILED", traceId, `删除智能体失败: getErrorMessage(error)`, error, userId);
     return ResponseBuilder.internalError("下线自定义智能体失败", traceId);
   }
 }

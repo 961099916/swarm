@@ -1,11 +1,11 @@
-const { request } = require("../../utils/request.js");
+const { listKnowledgeBases, createKnowledgeBase, deleteKnowledgeBase } = require("../../utils/knowledgeAPI.js");
 const listPage = require("../../utils/listPage.js");
 
 const kbListBehavior = listPage.create({
   pageSize: 20,
-  fetchData(params) {
+  async fetchData(params) {
     const { page, pageSize, searchQuery } = params;
-    return request({ url: `/api/v1/kb/list?page=${page}&pageSize=${pageSize}&search=${encodeURIComponent(searchQuery)}` });
+    return { data: await listKnowledgeBases(page, pageSize, searchQuery) };
   },
   parseList(res) {
     return res.data?.list || [];
@@ -58,17 +58,10 @@ Page({
       wx.showToast({ title: "请输入名称", icon: "none" }); return;
     }
     try {
-      const res = await request({
-        url: "/api/v1/kb/create", method: "POST",
-        data: { name: this.data.newKBName.trim(), description: this.data.newKBDesc.trim() || undefined },
-      });
-      if (res.success) {
-        wx.showToast({ title: "创建成功", icon: "success" });
-        this.setData({ showCreateDialog: false });
-        this.loadFirstPage();
-      } else {
-        wx.showToast({ title: res.error || "创建失败", icon: "none" });
-      }
+      await createKnowledgeBase(this.data.newKBName.trim(), this.data.newKBDesc.trim() || undefined);
+      wx.showToast({ title: "创建成功", icon: "success" });
+      this.setData({ showCreateDialog: false });
+      this.loadFirstPage();
     } catch (err) { wx.showToast({ title: "创建失败", icon: "none" }); }
   },
 

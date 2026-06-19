@@ -1,10 +1,12 @@
+import { AICallLogDTO, AIStatsDTO, ModelConfigDTO } from "@swarm/ai-gateway";
+import { TraceLogger } from "@swarm/kernel";
+
 /**
  * AI Gateway 管理后端 API
  *
  * 提供模型配置管理、AI 调用日志查看、用量统计。
  */
 
-import { ModelConfigDTO, AICallLogDTO, AIStatsDTO, TraceLogger } from "@swarm/shared";
 import { jsonSuccess, jsonError } from "./responseHelper";
 
 // ══════════════════════════════════════════════════
@@ -36,8 +38,8 @@ export async function handleListModelConfigs(db: D1Database, traceId: string): P
     }));
 
     return jsonSuccess(dtoList, traceId);
-  } catch (err: any) {
-    TraceLogger.error("ADMIN", "LIST_MODEL_FAILED", traceId, `获取模型配置列表异常: ${err.message}`, err);
+  } catch (err: unknown) {
+    TraceLogger.error("ADMIN", "LIST_MODEL_FAILED", traceId, `获取模型配置列表异常: getErrorMessage(err)`, err);
     return jsonError("获取模型配置列表失败", 500, traceId);
   }
 }
@@ -80,8 +82,8 @@ export async function handleUpdateModelConfig(db: D1Database, request: Request, 
 
     TraceLogger.info("ADMIN", "UPDATE_MODEL_CONFIG", traceId, `更新模型配置: ${modelId}`);
     return jsonSuccess({ id: modelId }, traceId);
-  } catch (err: any) {
-    TraceLogger.error("ADMIN", "UPDATE_MODEL_FAILED", traceId, `更新模型配置异常: ${err.message}`, err);
+  } catch (err: unknown) {
+    TraceLogger.error("ADMIN", "UPDATE_MODEL_FAILED", traceId, `更新模型配置异常: getErrorMessage(err)`, err);
     return jsonError("更新模型配置失败", 500, traceId);
   }
 }
@@ -145,8 +147,8 @@ export async function handleListAICallLogs(db: D1Database, request: Request, tra
     }));
 
     return jsonSuccess({ logs: dtoList, total, page, limit }, traceId);
-  } catch (err: any) {
-    TraceLogger.error("ADMIN", "LIST_AI_LOGS_FAILED", traceId, `获取 AI 调用日志异常: ${err.message}`, err);
+  } catch (err: unknown) {
+    TraceLogger.error("ADMIN", "LIST_AI_LOGS_FAILED", traceId, `获取 AI 调用日志异常: getErrorMessage(err)`, err);
     return jsonError("获取 AI 调用日志失败", 500, traceId);
   }
 }
@@ -210,16 +212,52 @@ export async function handleAIStats(db: D1Database, traceId: string): Promise<Re
     };
 
     return jsonSuccess(stats, traceId);
-  } catch (err: any) {
-    TraceLogger.error("ADMIN", "AI_STATS_FAILED", traceId, `获取 AI 统计异常: ${err.message}`, err);
+  } catch (err: unknown) {
+    TraceLogger.error("ADMIN", "AI_STATS_FAILED", traceId, `获取 AI 统计异常: getErrorMessage(err)`, err);
     return jsonError("获取 AI 统计失败", 500, traceId);
   }
 }
 
 /**
  * 获取所有知识库列表（管理后台用，不限制用户）
+ *
+ * DDD Anti-Corruption Layer（防腐层）:
+ * 优先通过 Service Binding 调用 RAG Worker 的内部 API，
+ * 避免 Admin SVC 直接查询 knowledge_bases 表。
+ * 若 RAG_SVC 不可用，降级为直接 D1 查询（过渡期兼容）。
  */
-export async function handleAdminListKBs(db: D1Database, traceId: string): Promise<Response> {
+export async function handleAdminListKBs(
+  db: D1Database,
+  traceId: string,
+  ragSvc?: Fetcher,
+  adminId?: string
+): Promise<Response> {
+  // 防腐层：优先通过 RAG Worker 获取数据
+  if (ragSvc) {
+    try {
+      const response = await ragSvc.fetch(
+        new Request("http://internal/rag/admin/knowledge-bases", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "X-User-Id": adminId || "system",
+            "X-User-Role": "ADMIN",
+            "X-Trace-Id": traceId,
+          },
+        })
+      );
+      if (response.ok) {
+        const data = await response.json<any>();
+        TraceLogger.info("ADMIN", "LIST_KB_VIA_ACL", traceId, `通过防腐层获取知识库列表成功`);
+        return jsonSuccess(data?.data || [], traceId);
+      }
+      TraceLogger.warn("ADMIN", "LIST_KB_ACL_FAILED", traceId, `防腐层调用失败，降级到直连查询: ${response.status}`);
+    } catch (err: unknown) {
+      TraceLogger.warn("ADMIN", "LIST_KB_ACL_ERROR", traceId, `防腐层调用异常，降级到直连查询: getErrorMessage(err)`);
+    }
+  }
+
+  // 降级：直接查询（过渡期兼容，后续删除）
   try {
     const { results } = await db
       .prepare(`
@@ -233,8 +271,8 @@ export async function handleAdminListKBs(db: D1Database, traceId: string): Promi
       .all<any>();
 
     return jsonSuccess(results || [], traceId);
-  } catch (err: any) {
-    TraceLogger.error("ADMIN", "LIST_KB_FAILED", traceId, `管理后台获取知识库列表异常: ${err.message}`, err);
+  } catch (err: unknown) {
+    TraceLogger.error("ADMIN", "LIST_KB_FAILED", traceId, `管理后台获取知识库列表异常: getErrorMessage(err)`, err);
     return jsonError("获取知识库列表失败", 500, traceId);
   }
 }

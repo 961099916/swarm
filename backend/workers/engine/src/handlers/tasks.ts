@@ -1,15 +1,9 @@
 // File: /Users/zhangjiahao/IdeaProjects/swarm/backend/workers/engine/src/handlers/tasks.ts
 
-import { 
-  CreateTaskReq, 
-  CreateTaskRes, 
-  tasks, 
-  creditsLedger, 
-  taskLogs, 
-  users, 
-  TASK_COST,
-  TraceLogger
-} from "@swarm/shared";
+import { CreateTaskReq, CreateTaskRes, tasks, taskLogs } from "@swarm/agent";
+import { users } from "@swarm/identity";
+import { creditsLedger, TASK_COST } from "@swarm/credits";
+import { TraceLogger } from "@swarm/kernel";
 import { getDrizzleDb } from "../utils/drizzleInstance";
 import { ResponseBuilder } from "../utils/response";
 import { RequiredFieldsValidator, TaskTypeValidator, ValidatorChain } from "../utils/validator";
@@ -155,8 +149,8 @@ async function handleWfEngineFailureAndRefund(
     ]);
 
     TraceLogger.info("ENGINE", "TASK_REFUND_COMPENSATE", taskId, `由于工作流启动异常，系统成功退款补偿 ${TASK_COST} 积分给用户: userId=${userId}`, userId);
-  } catch (refundErr: any) {
-    TraceLogger.error("ENGINE", "TASK_REFUND_CRITICAL_FAILED", taskId, `严重系统故障：退款补偿事务失败! 异常: ${refundErr.message || refundErr}`, refundErr, userId);
+  } catch (refundErr: unknown) {
+    TraceLogger.error("ENGINE", "TASK_REFUND_CRITICAL_FAILED", taskId, `严重系统故障：退款补偿事务失败! 异常: getErrorMessage(refundErr)`, refundErr, userId);
   }
 }
 
@@ -217,20 +211,20 @@ export async function handleCreateTask(
         traceId,
       });
       TraceLogger.info("ENGINE", "TASK_ENQUEUED", traceId, `任务消息已入队: taskId=${taskId}`, userId);
-    } catch (qErr: any) {
+    } catch (qErr: unknown) {
       // 队列发送失败，走原来的同步路径作为降级
       TraceLogger.warn("ENGINE", "QUEUE_SEND_FAILED", traceId, `队列发送失败，降级为同步触发: ${qErr.message}`, userId);
       try {
         await triggerWorkflowEngine(db, workflow, taskId, body.taskType, body.payload);
-      } catch (wfError: any) {
+      } catch (wfError: unknown) {
         await handleWfEngineFailureAndRefund(db, userId, taskId, wfError.message || "未知异常");
       }
     }
 
     const resData: CreateTaskRes = { taskId };
     return ResponseBuilder.success(resData, traceId);
-  } catch (error: any) {
-    TraceLogger.error("ENGINE", "CREATE_TASK_FAILED", traceId, `创建任务失败: ${error.message || error}`, error, userId);
+  } catch (error: unknown) {
+    TraceLogger.error("ENGINE", "CREATE_TASK_FAILED", traceId, `创建任务失败: getErrorMessage(error)`, error, userId);
     
     if (error.message === "INSUFFICIENT_CREDITS" || (error.message && error.message.includes("constraint failed"))) {
       return ResponseBuilder.badRequest("积分余额不足，创建任务失败", traceId);
@@ -283,8 +277,8 @@ export async function handleListTasks(
     }));
 
     return ResponseBuilder.success(parsedTasks, traceId);
-  } catch (error: any) {
-    TraceLogger.error("ENGINE", "LIST_TASKS_FAILED", traceId, `查询任务列表失败: ${error.message || error}`, error, userId);
+  } catch (error: unknown) {
+    TraceLogger.error("ENGINE", "LIST_TASKS_FAILED", traceId, `查询任务列表失败: getErrorMessage(error)`, error, userId);
     return ResponseBuilder.internalError("系统查询任务列表异常", traceId);
   }
 }
@@ -331,8 +325,8 @@ export async function handleTaskLogs(
       }))
     };
     return ResponseBuilder.success(logsData, traceId);
-  } catch (error: any) {
-    TraceLogger.error("ENGINE", "GET_TASK_LOGS_FAILED", traceId, `查询任务日志失败: ${error.message || error}`, error, userId);
+  } catch (error: unknown) {
+    TraceLogger.error("ENGINE", "GET_TASK_LOGS_FAILED", traceId, `查询任务日志失败: getErrorMessage(error)`, error, userId);
     return ResponseBuilder.internalError("系统查询日志流异常", traceId);
   }
 }

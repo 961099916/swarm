@@ -196,7 +196,7 @@ Page({
                     url: `/api/v1/quiz/test-history?page=${page}&pageSize=${pageSize}`,
                     method: 'GET'
                 });
-                if (res.code === 200) {
+                if (res.code === 0) {
                     const newItems = res.data || [];
                     const formattedList = newItems.map(item => (Object.assign(Object.assign({}, item), { formattedTime: this.formatTime(item.timestamp) })));
                     if (page === 1) {
@@ -361,7 +361,7 @@ Page({
                             method: 'DELETE'
                         });
                         this.setData({ showCyberModal: false });
-                        if (delRes.code === 200) {
+                        if (delRes.code === 0) {
                             wx.showToast({ title: '删除成功' });
                             this.loadHistoryList();
                         }

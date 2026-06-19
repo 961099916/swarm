@@ -1,11 +1,11 @@
+import { type UserRow, users } from "@swarm/identity";
+
 /**
  * Drizzle ORM 工具函数
  *
  * 提供 Drizzle 行数据到传统 UserRow 类型的转换函数，
  * 消除 authMiddleware.ts 和 handlers/auth.ts 之间的重复代码。
  */
-
-import { users, type UserRow } from "@swarm/shared";
 
 /**
  * 将 Drizzle 查询返回的用户行映射为 UserRow (snake_case) 类型

@@ -8,7 +8,11 @@
     "type-check": "tsc --noEmit"
   },
   "dependencies": {
-    "@swarm/shared": "*"
+    "@swarm/kernel": "*",
+    "@swarm/agent": "*",
+    "@swarm/identity": "*",
+    "@swarm/credits": "*",
+    "drizzle-orm": "^0.45.2"
   },
   "devDependencies": {
     "@cloudflare/workers-types": "^4.20250201.0",

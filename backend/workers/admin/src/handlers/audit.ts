@@ -1,8 +1,10 @@
 
-import { adminAuditLogs } from "@swarm/shared";
 import { drizzle } from "drizzle-orm/d1";
 import { eq, and, desc } from "drizzle-orm";
 import { jsonSuccess, jsonError } from "./responseHelper";
+
+import { adminAuditLogs } from "@swarm/agent";
+import { TraceLogger } from "@swarm/kernel";
 
 export async function appendAuditLog(
   db: D1Database,
@@ -21,8 +23,8 @@ export async function appendAuditLog(
       detail: detail ? JSON.stringify(detail) : null,
       createdAt: now
     });
-  } catch (err: any) {
-    console.error(`[ERROR] 写入审计日志失败: action=${action}, target=${targetId}, error=${err.message}`);
+  } catch (err: unknown) {
+    TraceLogger.error("ADMIN", "AUDIT_LOG_WRITE_FAILED", "SYSTEM", `写入审计日志失败: action=${action}, target=${targetId}`, err);
   }
 }
 
@@ -65,8 +67,8 @@ export async function handleAdminListAuditLogs(
     }));
 
     return jsonSuccess(parsedList, traceId);
-  } catch (error: any) {
-    console.error(`[ERROR] [TraceID: ${traceId}] 获取审计日志列表异常: ${error.message}`);
+  } catch (error: unknown) {
+    TraceLogger.error("ADMIN", "LIST_AUDIT_FAILED", traceId, `获取审计日志列表异常: getErrorMessage(error)`, error);
     return jsonError("系统查询审计日志异常", 500, traceId);
   }
 }

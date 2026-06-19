@@ -1,4 +1,6 @@
 const { request } = require("../../utils/request.js");
+const { listAgents } = require("../../utils/agentAPI.js");
+const { createTask } = require("../../utils/taskAPI.js");
 const { lightTap } = require("../../utils/feedback.js");
 const { TOAST_DURATION_MS, ROUTES, API } = require("../../utils/constants.js");
 const { validateAvatar } = require("../../utils/avatar.js");

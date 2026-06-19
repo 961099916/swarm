@@ -8,6 +8,10 @@
 [![TypeScript](https://img.shields.io/badge/TypeScript-5.x-3178C6)](https://www.typescriptlang.org/)
 [![Cloudflare Workers](https://img.shields.io/badge/Cloudflare%20Workers-Latest-F38020)](https://workers.cloudflare.com/)
 [![WeChat Mini Program](https://img.shields.io/badge/WeChat%20Mini%20Program-Latest-07C160)](https://developers.weixin.qq.com/miniprogram/dev/)
+[![CI](https://github.com/jiuxia/swarm/actions/workflows/ci.yml/badge.svg)](https://github.com/jiuxia/swarm/actions/workflows/ci.yml)
+[![Dependabot](https://img.shields.io/badge/Dependabot-enabled-025E8C)](.github/dependabot.yml)
+[![code style](https://img.shields.io/badge/code%20style-prettier-ff69b4)](.prettierrc)
+[![Conventional Commits](https://img.shields.io/badge/Conventional%20Commits-1.0.0-yellow)](CONTRIBUTING.md)
 
 </div>
 

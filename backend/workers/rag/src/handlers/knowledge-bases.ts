@@ -1,6 +1,8 @@
+import { CacheService, TraceLogger } from "@swarm/kernel";
+import { CreateKnowledgeBaseReq, KnowledgeBaseDTO } from "@swarm/knowledge";
+
 // File: /Users/zhangjiahao/IdeaProjects/swarm/backend/workers/rag/src/handlers/knowledge-bases.ts
 
-import { KnowledgeBaseDTO, CreateKnowledgeBaseReq, TraceLogger, CacheService } from "@swarm/shared";
 import { ResponseBuilder } from "../utils/response";
 
 interface KnowledgeBaseRow {
@@ -89,8 +91,8 @@ export async function handleListKBs(
     await CacheService.set(kv, cacheKey, result, 7200);
 
     return ResponseBuilder.success(result, traceId);
-  } catch (error: any) {
-    TraceLogger.error("RAG", "LIST_KB_FAILED", traceId, `获取知识库列表异常: ${error.message}`, error);
+  } catch (error: unknown) {
+    TraceLogger.error("RAG", "LIST_KB_FAILED", traceId, `获取知识库列表异常: getErrorMessage(error)`, error);
     return ResponseBuilder.internalError("获取知识库列表失败", traceId);
   }
 }
@@ -136,8 +138,8 @@ export async function handleCreateKB(
 
     TraceLogger.info("RAG", "CREATE_KB_SUCCESS", traceId, `创建知识库成功: kbId=${id}`, userId);
     return ResponseBuilder.success({ kbId: id }, traceId);
-  } catch (error: any) {
-    TraceLogger.error("RAG", "CREATE_KB_FAILED", traceId, `创建知识库异常: ${error.message}`, error);
+  } catch (error: unknown) {
+    TraceLogger.error("RAG", "CREATE_KB_FAILED", traceId, `创建知识库异常: getErrorMessage(error)`, error);
     return ResponseBuilder.internalError("创建知识库失败", traceId);
   }
 }
@@ -172,8 +174,8 @@ export async function handleGetKB(
     }
 
     return ResponseBuilder.success(mapKBToDTO(results[0], results[0].doc_count || 0), traceId);
-  } catch (error: any) {
-    TraceLogger.error("RAG", "GET_KB_FAILED", traceId, `获取知识库异常: ${error.message}`, error);
+  } catch (error: unknown) {
+    TraceLogger.error("RAG", "GET_KB_FAILED", traceId, `获取知识库异常: getErrorMessage(error)`, error);
     return ResponseBuilder.internalError("获取知识库失败", traceId);
   }
 }
@@ -222,8 +224,8 @@ export async function handleUpdateKB(
     await CacheService.delete(kv, `rag:kbs:list:${userId}`);
     TraceLogger.info("RAG", "UPDATE_KB_SUCCESS", traceId, `更新知识库成功: kbId=${kbId}`, userId);
     return ResponseBuilder.success({ kbId }, traceId);
-  } catch (error: any) {
-    TraceLogger.error("RAG", "UPDATE_KB_FAILED", traceId, `更新知识库异常: ${error.message}`, error);
+  } catch (error: unknown) {
+    TraceLogger.error("RAG", "UPDATE_KB_FAILED", traceId, `更新知识库异常: getErrorMessage(error)`, error);
     return ResponseBuilder.internalError("更新知识库失败", traceId);
   }
 }
@@ -258,8 +260,43 @@ export async function handleDeleteKB(
     await CacheService.delete(kv, `rag:kbs:list:${userId}`);
     TraceLogger.info("RAG", "DELETE_KB_SUCCESS", traceId, `删除知识库成功: kbId=${kbId}`, userId);
     return ResponseBuilder.success({ success: true }, traceId);
-  } catch (error: any) {
-    TraceLogger.error("RAG", "DELETE_KB_FAILED", traceId, `删除知识库异常: ${error.message}`, error);
+  } catch (error: unknown) {
+    TraceLogger.error("RAG", "DELETE_KB_FAILED", traceId, `删除知识库异常: getErrorMessage(error)`, error);
     return ResponseBuilder.internalError("删除知识库失败", traceId);
+  }
+}
+
+// ══════════════════════════════════════════════════
+// Anti-Corruption Layer (防腐层) — Admin SVC 专用
+// ══════════════════════════════════════════════════
+
+/**
+ * 管理后台获取所有知识库列表（不限制用户，含拥有者信息）
+ *
+ * 此接口通过 RAG Worker 暴露，Admin SVC 通过 Service Binding 调用，
+ * 不再直接查询 D1 数据库，实现知识库数据访问的统一归口。
+ *
+ * POST /api/v1/rag/admin/knowledge-bases
+ */
+export async function handleAdminListKBs(
+  db: D1Database,
+  traceId: string
+): Promise<Response> {
+  try {
+    const { results } = await db
+      .prepare(`
+        SELECT kb.*,
+          (SELECT COUNT(*) FROM documents d WHERE d.kb_id = kb.id) as doc_count,
+          u.nickname as owner_name
+        FROM knowledge_bases kb
+        LEFT JOIN users u ON u.id = kb.user_id
+        ORDER BY kb.created_at DESC
+      `)
+      .all<any>();
+
+    return ResponseBuilder.success(results || [], traceId);
+  } catch (error: unknown) {
+    TraceLogger.error("RAG", "ADMIN_LIST_KB_FAILED", traceId, `管理后台获取知识库列表异常: getErrorMessage(error)`, error);
+    return ResponseBuilder.internalError("获取知识库列表失败", traceId);
   }
 }

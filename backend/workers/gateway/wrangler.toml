@@ -37,4 +37,4 @@ service = "swarm-rag"
 
 [vars]
 WX_APP_ID = "wxdebda985cf78a90d"
-ALLOWED_ORIGIN = "*"
+ALLOWED_ORIGIN = "https://swarm-gateway.jiuxia.online"

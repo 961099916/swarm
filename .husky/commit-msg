@@ -1,0 +1,14 @@
+#!/usr/bin/env sh
+. "$(dirname -- "$0")/_/husky.sh"
+
+# 检查 Commit Message 格式：<type>(<scope>): <subject>
+COMMIT_MSG=$(cat "$1")
+if ! echo "$COMMIT_MSG" | grep -qE '^(feat|fix|refactor|style|docs|test|chore|security|perf)\([a-z]+\): .+'; then
+  echo ""
+  echo "❌ Commit Message 格式错误！"
+  echo "   正确格式: <type>(<scope>): <subject>"
+  echo "   例如: feat(gateway): 添加速率限制中间件"
+  echo "         fix(credits): 修复积分原子性问题"
+  echo ""
+  exit 1
+fi

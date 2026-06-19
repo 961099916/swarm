@@ -1,16 +1,9 @@
 // File: /Users/zhangjiahao/IdeaProjects/swarm/backend/workers/quiz/src/db/client.ts
 
-import {
-  quizUsers,
-  testHistory,
-  userStageProgress,
-  systemConfigs,
-  type QuizUserRow,
-  type StageProgressRow,
-  type TestHistoryRow,
-  EXP_PER_LEVEL,
-  QUIZ_PASS_THRESHOLD,
-} from "@swarm/shared";
+import { quizUsers, testHistory, userStageProgress, systemConfigs } from "@swarm/quiz";
+import type { QuizUserRow, StageProgressRow, TestHistoryRow } from "@swarm/quiz";
+import { EXP_PER_LEVEL, QUIZ_PASS_THRESHOLD } from "@swarm/quiz";
+import { TraceLogger } from "@swarm/kernel";
 import { drizzle } from "drizzle-orm/d1";
 import { eq, and, desc, sql } from "drizzle-orm";
 

@@ -1,4 +1,5 @@
 const { request, generateUUID } = require("../../utils/request.js");
+const { getCreditsHistory, rewardAd } = require("../../utils/creditsAPI.js");
 const listPage = require("../../utils/listPage.js");
 
 Page({

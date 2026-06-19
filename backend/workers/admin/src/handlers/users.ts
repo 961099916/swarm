@@ -1,7 +1,10 @@
 
+import { creditsLedger } from "@swarm/credits";
+import { AdjustCreditsReq, BanUserReq, UpdateRoleReq, users } from "@swarm/identity";
+import { CacheService, TraceLogger } from "@swarm/kernel";
+
 // File: /Users/zhangjiahao/IdeaProjects/swarm/backend/workers/admin/src/handlers/users.ts
 
-import { users, creditsLedger, UpdateRoleReq, AdjustCreditsReq, BanUserReq, CacheService, TraceLogger } from "@swarm/shared";
 import { DrizzleD1Database, drizzle } from "drizzle-orm/d1";
 import { eq, and, or, like, desc, sql } from "drizzle-orm";
 import { jsonSuccess, jsonError } from "./responseHelper";
@@ -31,8 +34,8 @@ export async function handleAdminUsers(
       .offset(offset);
 
     return jsonSuccess(results, traceId);
-  } catch (error: any) {
-    TraceLogger.error("ADMIN", "GET_USERS_FAILED", traceId, `获取用户列表失败: ${error.message}`, error);
+  } catch (error: unknown) {
+    TraceLogger.error("ADMIN", "GET_USERS_FAILED", traceId, `获取用户列表失败: getErrorMessage(error)`, error);
     return jsonError("系统查询用户列表异常", 500, traceId);
   }
 }
@@ -83,8 +86,8 @@ export async function handleUpdateUserRole(
     await appendAuditLog(db, adminId, "UPDATE_ROLE", userId, { newRole: role });
     TraceLogger.info("ADMIN", "UPDATE_ROLE_SUCCESS", traceId, `管理员修改用户角色成功: userId=${userId}, newRole=${role}`, adminId);
     return jsonSuccess(null, traceId);
-  } catch (error: any) {
-    TraceLogger.error("ADMIN", "UPDATE_ROLE_FAILED", traceId, `修改用户角色失败: userId=${userId}, error=${error.message}`, error, adminId);
+  } catch (error: unknown) {
+    TraceLogger.error("ADMIN", "UPDATE_ROLE_FAILED", traceId, `修改用户角色失败: userId=${userId}, error=getErrorMessage(error)`, error, adminId);
     return jsonError("系统修改角色异常", 500, traceId);
   }
 }
@@ -114,8 +117,8 @@ export async function handleAdjustUserCredits(
     await appendAuditLog(db, adminId, "ADJUST_CREDITS", userId, { delta, newBalance, reason });
     TraceLogger.info("ADMIN", "ADJUST_CREDITS_SUCCESS", traceId, `管理员调整用户积分成功: userId=${userId}, delta=${delta}, newBalance=${newBalance}`, adminId);
     return jsonSuccess({ newBalance }, traceId);
-  } catch (error: any) {
-    TraceLogger.error("ADMIN", "ADJUST_CREDITS_FAILED", traceId, `调整积分失败: userId=${userId}, error=${error.message}`, error, adminId);
+  } catch (error: unknown) {
+    TraceLogger.error("ADMIN", "ADJUST_CREDITS_FAILED", traceId, `调整积分失败: userId=${userId}, error=getErrorMessage(error)`, error, adminId);
     return jsonError("系统调整积分异常", 500, traceId);
   }
 }
@@ -170,8 +173,8 @@ export async function handleInvalidateUserToken(
     await appendAuditLog(db, adminId, "INVALIDATE_TOKEN", userId, null);
     TraceLogger.info("ADMIN", "INVALIDATE_TOKEN_SUCCESS", traceId, `管理员强制用户下线成功: userId=${userId}`, adminId);
     return jsonSuccess(null, traceId);
-  } catch (error: any) {
-    TraceLogger.error("ADMIN", "INVALIDATE_TOKEN_FAILED", traceId, `强制下线失败: userId=${userId}, error=${error.message}`, error, adminId);
+  } catch (error: unknown) {
+    TraceLogger.error("ADMIN", "INVALIDATE_TOKEN_FAILED", traceId, `强制下线失败: userId=${userId}, error=getErrorMessage(error)`, error, adminId);
     return jsonError("系统下线操作异常", 500, traceId);
   }
 }
@@ -209,8 +212,8 @@ export async function handleBanUser(
     await appendAuditLog(db, adminId, isBanned ? "BAN_USER" : "UNBAN_USER", userId, { reason: bannedReasonVal });
     TraceLogger.info("ADMIN", isBanned ? "BAN_USER_SUCCESS" : "UNBAN_USER_SUCCESS", traceId, `管理员设置封禁状态成功: userId=${userId}, isBanned=${isBanned}`, adminId);
     return jsonSuccess(null, traceId);
-  } catch (error: any) {
-    TraceLogger.error("ADMIN", "BAN_USER_FAILED", traceId, `用户封禁控制操作失败: userId=${userId}, error=${error.message}`, error, adminId);
+  } catch (error: unknown) {
+    TraceLogger.error("ADMIN", "BAN_USER_FAILED", traceId, `用户封禁控制操作失败: userId=${userId}, error=getErrorMessage(error)`, error, adminId);
     return jsonError("系统更新账号封禁状态异常", 500, traceId);
   }
 }

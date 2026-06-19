@@ -1,3 +1,5 @@
+import { TraceLogger, startupSecurityCheck } from "@swarm/kernel";
+
 // File: /Users/zhangjiahao/IdeaProjects/swarm/backend/workers/user/src/index.ts
 
 import { Hono } from "hono";
@@ -5,7 +7,6 @@ import type { Context, Next } from "hono";
 import { handleLogin, handleLogout } from "./handlers/auth";
 import { handleUserProfile, handleUpdateProfile, handleUploadAvatar } from "./handlers/user";
 import { handleBindInvite, handleAdReward, handleCreditsHistory } from "./handlers/credits";
-import { TraceLogger, startupSecurityCheck } from "@swarm/shared";
 import { ResponseBuilder } from "./utils/response";
 
 export interface Env {
@@ -137,7 +138,7 @@ app.get("/avatars/*", async (c) => {
     headers.set("Cache-Control", "public, max-age=31536000, immutable");
     headers.set("ETag", object.httpEtag);
     return new Response(object.body, { headers });
-  } catch (error: any) {
+  } catch (error: unknown) {
     TraceLogger.error("USER", "AVATAR_READ_FAILED", traceId, `头像读取故障: key=${key}`, error);
     return new Response(null, { status: 500 });
   }
@@ -178,6 +179,14 @@ app.get("/api/v1/credits/history", async (c) => {
 });
 
 // ─── 404 ───
+
+// ══════════════════════════════════════════════════
+// 健康检查 — 用于网关 / 负载均衡存活探针
+// ══════════════════════════════════════════════════
+app.get("/health", async (c) => {
+  return c.json({ status: "ok", service: "user", timestamp: new Date().toISOString() });
+});
+
 app.notFound(async (c) => {
   return ResponseBuilder.error("资源不存在", c.get("traceId") || crypto.randomUUID(), 404);
 });
@@ -186,7 +195,7 @@ app.notFound(async (c) => {
 app.onError(async (err, c) => {
   const traceId = c.get("traceId") || crypto.randomUUID();
   const userId = c.get("userId") || undefined;
-  TraceLogger.error("USER", "UNCAUGHT_EXCEPTION", traceId, `服务未捕获异常: ${err.message || err}`, err, userId);
+  TraceLogger.error("USER", "UNCAUGHT_EXCEPTION", traceId, `服务未捕获异常: getErrorMessage(err)`, err, userId);
   return ResponseBuilder.internalError("系统繁忙，请联系系统管理员", traceId);
 });
 

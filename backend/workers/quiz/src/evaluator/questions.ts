@@ -447,7 +447,6 @@ export const localRorschachQuestions = [
   }
 ];
 
-
 export const LOCAL_QUIZZES: Record<string, QuizQuestion[]> = {
   'npc_mbti': localMbtiQuestions,
   'npc_bigfive': localBigFiveQuestions,
@@ -744,7 +743,6 @@ export function calculateLocalQuiz(npcId: string, answers: Array<{ questionId: n
       return { code: 'UNKNOWN', name: '探索家', description: '独立的灵魂，对未来充满期待。', details: [], suggestions: [] };
   }
 }
-
 
 export const QUIZ_META: Record<string, { title: string; type: string; questions: QuizQuestion[] }> = {
   npc_mbti: { title: 'MBTI 性格测试', type: 'personality', questions: LOCAL_QUIZZES['npc_mbti'] || [] },

@@ -1,14 +1,38 @@
+/**
+ * Swarm 微信小程序全局入口
+ *
+ * 职责：
+ *  - 全局主题管理（暗色/亮色）
+ *  - 网络状态监听
+ *  - 全局字体预加载
+ *
+ * @typedef {object} GlobalData
+ * @property {'dark'|'light'} theme - 当前主题
+ * @property {number} userCredits - 用户积分
+ * @property {boolean} isLoggedIn - 登录状态
+ * @property {{ id: string; name: string; avatar: string }|null} userInfo - 用户信息
+ *
+ * @typedef {object} AppInstance
+ * @property {GlobalData} globalData
+ * @property {() => void} onLaunch
+ * @property {() => void} loadIconFont
+ * @property {() => void} monitorNetwork
+ * @property {() => 'dark'|'light'} toggleTheme
+ * @property {(theme: 'dark'|'light') => void} applyTheme
+ */
+
 App({
+  /** @type {GlobalData} */
   globalData: {
     theme: 'dark', // 默认暗色
-    userCredits: 100,
-    isLoggedIn: true,
-    userInfo: { id: "mock_user_1", name: "用户", avatar: "" }
+    userCredits: 0,
+    isLoggedIn: false,
+    userInfo: null
   },
 
   onLaunch: function () {
     console.log("App Launch");
-    const savedTheme = wx.getStorageSync("theme");
+    const savedTheme = /** @type {string|null} */ (wx.getStorageSync("theme"));
     if (savedTheme) {
       this.globalData.theme = savedTheme;
     }
@@ -19,6 +43,37 @@ App({
 
     // 全局网络状态监听
     this.monitorNetwork();
+
+    // 从缓存恢复登录态：如果有 token，尝试获取用户信息
+    this.restoreLogin();
+  },
+
+  /**
+   * 从缓存恢复登录态
+   * 检查 wx.getStorageSync('authToken')，存在则尝试获取用户信息填充 globalData
+   */
+  restoreLogin: function () {
+    const token = wx.getStorageSync('authToken');
+    if (!token) {
+      console.log('[App] No saved token, user needs to login');
+      return;
+    }
+
+    const { request } = require('./utils/request');
+    request({ url: '/api/v1/user/profile' })
+      .then((res) => {
+        if (res.code === 0 && res.data) {
+          this.globalData.isLoggedIn = true;
+          this.globalData.userInfo = res.data.user || res.data;
+          this.globalData.userCredits = res.data.credits || 0;
+          console.log('[App] Login state restored from token');
+        }
+      })
+      .catch(() => {
+        // Token 过期或无效，静默清除
+        console.log('[App] Saved token invalid, clearing');
+        wx.removeStorageSync('authToken');
+      });
   },
 
   /**
@@ -34,7 +89,7 @@ App({
       success: () => {
         console.log('[Font] TDesign icon font loaded successfully');
       },
-      fail: (err) => {
+      fail: (/** @type {{ errMsg: string }} */ err) => {
         console.warn('[Font] TDesign icon font preload failed, will fallback to CDN:', err.errMsg);
       }
     });
@@ -44,8 +99,7 @@ App({
    * 全局网络状态监听 — 断网时全局提示
    */
   monitorNetwork: function () {
-    const that = this;
-    wx.onNetworkStatusChange(function (res) {
+    wx.onNetworkStatusChange(function (/** @type {{ isConnected: boolean }} */ res) {
       if (!res.isConnected) {
         wx.showToast({
           title: '网络已断开，请检查连接',
@@ -62,6 +116,10 @@ App({
     });
   },
 
+  /**
+   * 切换亮色/暗色主题
+   * @returns {'dark'|'light'} 切换后的主题
+   */
   toggleTheme: function () {
     const nextTheme = this.globalData.theme === 'light' ? 'dark' : 'light';
     this.globalData.theme = nextTheme;
@@ -70,16 +128,18 @@ App({
     return nextTheme;
   },
 
+  /**
+   * 应用主题到导航栏、TabBar、页面背景
+   * @param {'dark'|'light'} theme - 目标主题
+   */
   applyTheme: function (theme) {
     const isDark = theme === 'dark';
-    // 1. 导航栏（frontColor 仅支持 #ffffff / #000000）
     wx.setNavigationBarColor({
       frontColor: isDark ? "#ffffff" : "#000000",
       backgroundColor: isDark ? "#2D2A24" : "#FFF8F0",
       animation: { duration: 200, timingFunc: "easeInOut" }
     }).catch(() => {});
 
-    // 2. TabBar
     wx.setTabBarStyle({
       color: isDark ? "#7A726A" : "#9A928A",
       selectedColor: "#FF6B6B",
@@ -87,7 +147,6 @@ App({
       borderStyle: isDark ? "black" : "white"
     }).catch(() => {});
 
-    // 3. 页面背景色
     wx.setBackgroundColor({
       backgroundColor: isDark ? "#2D2A24" : "#FFF8F0",
       backgroundColorTop: isDark ? "#2D2A24" : "#FFF8F0",

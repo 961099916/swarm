@@ -1,3 +1,5 @@
+import { TraceLogger } from "@swarm/kernel";
+
 /**
  * 文档处理工作流 (DocumentProcessWorkflow)
  *
@@ -8,7 +10,6 @@
  */
 
 import { WorkflowEntrypoint, WorkflowStep, WorkflowEvent } from "cloudflare:workers";
-import { TraceLogger } from "@swarm/shared";
 import { splitText } from "./chunker";
 import { generateEmbeddings } from "./embedder";
 import { VectorStore } from "./vector-store";
@@ -241,8 +242,8 @@ export class DocumentProcessWorkflow extends WorkflowEntrypoint<Env, Params> {
         TraceLogger.info("RAG", "DOC_WF_COMPLETE", traceId, `文档处理完成: ${chunkResult.chunks.length} 个块`);
       });
 
-    } catch (err: any) {
-      TraceLogger.error("RAG", "DOC_WF_FAILED", traceId, `文档处理失败: ${err.message}`, err);
+    } catch (err: unknown) {
+      TraceLogger.error("RAG", "DOC_WF_FAILED", traceId, `文档处理失败: getErrorMessage(err)`, err);
       await updateDocStatus(db, docId, "FAILED", { errorMessage: err.message || "未知错误" });
       throw err;
     }
@@ -341,8 +342,8 @@ export async function processDocumentInline(
     await updateDocStatus(db, docId, "READY", { chunkCount: chunks.length, title });
 
     TraceLogger.info("RAG", "DOC_INLINE_COMPLETE", traceId, `同步处理完成: ${chunks.length} 个块`);
-  } catch (err: any) {
-    TraceLogger.error("RAG", "DOC_INLINE_FAILED", traceId, `同步处理失败: ${err.message}`, err);
+  } catch (err: unknown) {
+    TraceLogger.error("RAG", "DOC_INLINE_FAILED", traceId, `同步处理失败: getErrorMessage(err)`, err);
     await updateDocStatus(db, docId, "FAILED", { errorMessage: err.message || "未知错误" });
   }
 }

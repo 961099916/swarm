@@ -8,7 +8,7 @@
  * Consumer 负责耗时的文档处理管道。
  */
 
-import { TraceLogger, RAG_EMBED_PASSAGE_PREFIX } from "@swarm/shared";
+import { TraceLogger } from "@swarm/kernel";
 
 // ══════════════════════════════════════════════════
 // 类型定义
@@ -235,13 +235,13 @@ async function queue(
     try {
       await processDocument(env.DB, env.AI, msg.body, traceId);
       msg.ack();
-    } catch (err: any) {
-      TraceLogger.error("DOC_CONSUMER", "PROCESS_FAILED", traceId, `文档处理失败: ${err.message}`, err);
+    } catch (err: unknown) {
+      TraceLogger.error("DOC_CONSUMER", "PROCESS_FAILED", traceId, `文档处理失败: getErrorMessage(err)`, err);
 
       // 更新数据库状态为失败
       try {
         await updateDocStatus(env.DB, docId, "FAILED", { errorMessage: err.message || "未知错误" });
-      } catch (dbErr: any) {
+      } catch (dbErr: unknown) {
         TraceLogger.error("DOC_CONSUMER", "STATUS_UPDATE_FAILED", traceId, `更新失败状态异常: ${dbErr.message}`, dbErr);
       }
 

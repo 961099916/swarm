@@ -1,7 +1,14 @@
 {
   "description": "Swarm 智能体编排网络控制台 - 原生微信小程序版",
   "packOptions": {
-    "ignore": [],
+    "ignore": [
+      { "type": "file", "value": "tsconfig.json" },
+      { "type": "file", "value": "postcss.config.js" },
+      { "type": "file", "value": "tailwind.config.js" },
+      { "type": "file", "value": ".eslintrc.cjs" },
+      { "type": "folder", "value": "scripts" },
+      { "type": "folder", "value": "src" }
+    ],
     "include": []
   },
   "setting": {

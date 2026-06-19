@@ -1,6 +1,8 @@
+import { users } from "@swarm/identity";
+import { TraceLogger } from "@swarm/kernel";
+
 // File: /Users/zhangjiahao/IdeaProjects/swarm/backend/workers/user/src/handlers/user.ts
 
-import { users, TraceLogger } from "@swarm/shared";
 import { getDrizzleDb } from "../utils/drizzleInstance";
 import { ResponseBuilder } from "../utils/response";
 import { eq } from "drizzle-orm";
@@ -45,8 +47,8 @@ export async function handleUploadAvatar(
 
     const publicUrl = `/avatars/${key}`;
     return ResponseBuilder.success({ url: publicUrl }, traceId);
-  } catch (error: any) {
-    TraceLogger.error("USER", "AVATAR_UPLOAD_FAILED", traceId, `头像上传异常: ${error.message || error}`, error, userId);
+  } catch (error: unknown) {
+    TraceLogger.error("USER", "AVATAR_UPLOAD_FAILED", traceId, `头像上传异常: getErrorMessage(error)`, error, userId);
     return ResponseBuilder.internalError("头像上传异常，请稍后重试", traceId);
   }
 }
@@ -77,8 +79,8 @@ export async function handleUserProfile(
     };
 
     return ResponseBuilder.success(profile, traceId);
-  } catch (error: any) {
-    TraceLogger.error("USER", "GET_PROFILE_FAILED", traceId, `获取个人资料异常: ${error.message || error}`, error, userId);
+  } catch (error: unknown) {
+    TraceLogger.error("USER", "GET_PROFILE_FAILED", traceId, `获取个人资料异常: getErrorMessage(error)`, error, userId);
     return ResponseBuilder.internalError("查询个人资料异常，请稍后重试", traceId);
   }
 }
@@ -128,8 +130,8 @@ export async function handleUpdateProfile(
 
     TraceLogger.info("USER", "UPDATE_PROFILE", traceId, `用户个人资料更新成功`, userId, body);
     return ResponseBuilder.success({ success: true }, traceId);
-  } catch (error: any) {
-    TraceLogger.error("USER", "UPDATE_PROFILE_FAILED", traceId, `更新个人资料异常: ${error.message || error}`, error, userId);
+  } catch (error: unknown) {
+    TraceLogger.error("USER", "UPDATE_PROFILE_FAILED", traceId, `更新个人资料异常: getErrorMessage(error)`, error, userId);
     return ResponseBuilder.internalError("系统更新资料异常，请稍后重试", traceId);
   }
 }

@@ -1,0 +1,28 @@
+{
+  "name": "Swarm — Enterprise Agent Platform",
+  "image": "mcr.microsoft.com/devcontainers/typescript-node:20",
+  "forwardPorts": [8787, 8081],
+  "portsAttributes": {
+    "8787": { "label": "Gateway (Wrangler)", "onAutoForward": "notify" },
+    "8081": { "label": "Swagger UI", "onAutoForward": "notify" }
+  },
+  "postCreateCommand": "cd backend && npm ci && cd ../frontend && npm ci",
+  "customizations": {
+    "vscode": {
+      "extensions": [
+        "dbaeumer.vscode-eslint",
+        "esbenp.prettier-vscode",
+        "bradlc.vscode-tailwindcss",
+        "cloudflare.wrangler",
+        "github.vscode-github-actions"
+      ],
+      "settings": {
+        "typescript.tsdk": "backend/node_modules/typescript/lib",
+        "editor.formatOnSave": true,
+        "editor.codeActionsOnSave": {
+          "source.fixAll.eslint": "explicit"
+        }
+      }
+    }
+  }
+}

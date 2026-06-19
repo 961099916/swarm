@@ -1,5 +1,5 @@
 
-import { AI_MODELS } from "@swarm/shared";
+import { AI_MODELS } from "@swarm/agent";
 
 export interface RequestValidator<T = any> {
   validate(data: T): string | null;

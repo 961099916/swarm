@@ -1,11 +1,11 @@
+import { TraceLogger } from "@swarm/kernel";
+
 /**
  * 向量存储层
  *
  * 封装 Cloudflare Vectorize 的 upsert / query / delete 操作。
  * 当 Vectorize 不可用时降级为 D1-only 模式。
  */
-
-import { TraceLogger } from "@swarm/shared";
 
 export interface VectorRecord {
   id: string;        // 格式: "{kbId}:{chunkId}"
@@ -41,8 +41,8 @@ export class VectorStore {
         })));
         TraceLogger.info("RAG", "VECTORIZE_UPSERT", "SYSTEM", `Vectorize 写入 ${records.length} 条向量`);
         return;
-      } catch (err: any) {
-        TraceLogger.warn("RAG", "VECTORIZE_UPSERT_FAILED", "SYSTEM", `Vectorize 写入失败，降级到 D1: ${err.message}`);
+      } catch (err: unknown) {
+        TraceLogger.warn("RAG", "VECTORIZE_UPSERT_FAILED", "SYSTEM", `Vectorize 写入失败，降级到 D1: getErrorMessage(err)`);
         // 降级：只写入 D1 metadata（向量数据丢失）
       }
     }
@@ -73,8 +73,8 @@ export class VectorStore {
         const matches = result?.matches || [];
         TraceLogger.info("RAG", "VECTORIZE_QUERY", "SYSTEM", `Vectorize 查询返回 ${matches.length} 条结果`);
         return matches.map((m: any) => ({ id: m.id, score: m.score }));
-      } catch (err: any) {
-        TraceLogger.warn("RAG", "VECTORIZE_QUERY_FAILED", "SYSTEM", `Vectorize 查询失败: ${err.message}`);
+      } catch (err: unknown) {
+        TraceLogger.warn("RAG", "VECTORIZE_QUERY_FAILED", "SYSTEM", `Vectorize 查询失败: getErrorMessage(err)`);
       }
     }
 
@@ -92,8 +92,8 @@ export class VectorStore {
       try {
         await this.vectorize.deleteByIds(ids);
         TraceLogger.info("RAG", "VECTORIZE_DELETE", "SYSTEM", `Vectorize 删除 ${ids.length} 条向量`);
-      } catch (err: any) {
-        TraceLogger.warn("RAG", "VECTORIZE_DELETE_FAILED", "SYSTEM", `Vectorize 删除失败: ${err.message}`);
+      } catch (err: unknown) {
+        TraceLogger.warn("RAG", "VECTORIZE_DELETE_FAILED", "SYSTEM", `Vectorize 删除失败: getErrorMessage(err)`);
       }
     }
   }

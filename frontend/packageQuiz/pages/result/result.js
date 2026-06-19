@@ -148,7 +148,7 @@ Page({
                     url: `/api/v1/quiz/test-history/${historyId}`,
                     method: 'GET'
                 });
-                if (res.code === 200) {
+                if (res.code === 0) {
                     this.renderReport(res.data);
                 }
                 else {

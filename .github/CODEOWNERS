@@ -1,0 +1,30 @@
+# CODEOWNERS — 代码审查职责分配
+#
+# 每次 PR 自动指派对应领域的 Reviewer。
+# 语法：路径模式 @用户名/@团队名
+
+# 默认所有代码需要核心维护者审查
+* @jiuxia
+
+# 后端核心基础设施（kernel 包更改影响所有 Worker）
+backend/packages/kernel/ @jiuxia
+
+# API 网关（入口层，影响全局路由和鉴权）
+backend/workers/gateway/ @jiuxia
+
+# 数据库 Schema（DDL 变更需严格审查）
+backend/schema.sql @jiuxia
+backend/migrations/ @jiuxia
+
+# 前端核心逻辑
+frontend/utils/ @jiuxia
+frontend/app.* @jiuxia
+
+# CI/CD 和安全配置
+.github/ @jiuxia
+Makefile @jiuxia
+docker-compose.yml @jiuxia
+
+# 架构决策记录
+docs/design_records/ @jiuxia
+docs/openapi.yaml @jiuxia

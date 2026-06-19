@@ -1,8 +1,9 @@
+import { ApiRes, TraceLogger, startupSecurityCheck } from "@swarm/kernel";
+
 // File: /Users/zhangjiahao/IdeaProjects/swarm/backend/workers/admin/src/index.ts
 
 import { Hono } from "hono";
 import type { Context, Next } from "hono";
-import { type ApiResponse, TraceLogger, startupSecurityCheck } from "@swarm/shared";
 import {
   handleAdminStats,
   handleAdminUsers,
@@ -36,6 +37,12 @@ export interface Env {
   DB: D1Database;
   CACHE_KV: any;
   INTERNAL_SECRET: string;
+  /**
+   * 防腐层 (Anti-Corruption Layer)
+   * 通过 Service Binding 调用其他领域服务的内部 API，
+   * 不再直接查询对方的数据表。
+   */
+  RAG_SVC?: Fetcher;  // 知识库领域 — 通过 RAG Worker 获取数据
 }
 
 // ─── Hono 上下文变量 ───
@@ -65,7 +72,7 @@ app.use("*", async (c: Context, next: Next) => {
   const internalKey = c.req.header("X-Internal-Key");
   if (!internalKey || internalKey !== c.env.INTERNAL_SECRET) {
     TraceLogger.warn("ADMIN", "UNAUTHORIZED_BYPASS", traceId, `越权拦截：检测到非法的 Admin Worker 直连请求`);
-    return c.json({ success: false, error: "无权访问", traceId } as ApiResponse, 401);
+    return c.json(ApiRes.unauthorized("无权访问", traceId), 401);
   }
 
   // 3. 验证管理员角色身份
@@ -73,7 +80,7 @@ app.use("*", async (c: Context, next: Next) => {
   const userRole = c.req.header("X-User-Role");
   if (!userId || userRole !== "ADMIN") {
     TraceLogger.warn("ADMIN", "ROLE_INSUFFICIENT", traceId, `越权拦截：用户角色为 ${userRole} 企图访问 Admin Worker`, userId);
-    return c.json({ success: false, error: "权限不足：非管理员无法访问内网管理服务", traceId } as ApiResponse, 403);
+    return c.json(ApiRes.forbidden("权限不足：非管理员无法访问内网管理服务", traceId), 403);
   }
 
   c.set("adminId", userId);
@@ -204,7 +211,7 @@ app.get("/api/v1/admin/ai/stats", async (c) => {
 
 // ─── 知识库管理 ───
 app.get("/api/v1/admin/knowledge-bases", async (c) => {
-  return handleAdminListKBs(c.env.DB, c.get("traceId"));
+  return handleAdminListKBs(c.env.DB, c.get("traceId"), c.env.RAG_SVC, c.get("adminId"));
 });
 
 // ─── 动态路由（通过 Hono 的 param 提取，替代原生正则匹配）───
@@ -231,25 +238,24 @@ app.put("/api/v1/admin/tasks/:id/cancel", async (c) => {
 
 // ─── 404 ───
 
+// ══════════════════════════════════════════════════
+// 健康检查 — 用于网关 / 负载均衡存活探针
+// ══════════════════════════════════════════════════
+app.get("/health", async (c) => {
+  return c.json({ status: "ok", service: "admin", timestamp: new Date().toISOString() });
+});
+
 app.notFound(async (c) => {
   const traceId = c.get("traceId");
-  return c.json({
-    success: false,
-    error: `管理端未定义该内部路径: ${c.req.method} ${c.req.path}`,
-    traceId,
-  } as ApiResponse, 404);
+  return c.json(ApiRes.notFound(`管理端未定义该内部路径: ${c.req.method} ${c.req.path}`, traceId), 404);
 });
 
 // ─── 全局错误处理 ───
 
 app.onError(async (err, c) => {
   const traceId = c.get("traceId") || crypto.randomUUID();
-  TraceLogger.error("ADMIN", "CORE_CRASH", traceId, `Admin Worker 核心逻辑崩溃: ${err.message || err}`, err);
-  return c.json({
-    success: false,
-    error: "内网管理服务异常，请联系系统管理员",
-    traceId,
-  } as ApiResponse, 500);
+  TraceLogger.error("ADMIN", "CORE_CRASH", traceId, `Admin Worker 核心逻辑崩溃: getErrorMessage(err)`, err);
+  return c.json(ApiRes.internalError("内网管理服务异常，请联系系统管理员", traceId), 500);
 });
 
 export default app;

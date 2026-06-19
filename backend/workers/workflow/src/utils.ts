@@ -1,9 +1,10 @@
 
+import { taskLogs, tasks } from "@swarm/agent";
+import { TraceLogger } from "@swarm/kernel";
+
 // File: /Users/zhangjiahao/IdeaProjects/swarm/backend/workers/workflow/src/utils.ts
 import { drizzle } from "drizzle-orm/d1";
 import { eq } from "drizzle-orm";
-import { tasks, taskLogs, TraceLogger } from "@swarm/shared";
-
 
 // ══════════════════════════════════════════════════
 // 1. 强类型契约与接口定义
@@ -69,9 +70,9 @@ export class D1DatabaseAppender implements LogAppender {
         message,
         createdAt: now
       });
-    } catch (err: any) {
+    } catch (err: unknown) {
       // 容错处理：不因日志持久化失败破坏核心业务生命周期
-      console.error(`[ERROR] [TaskId: ${taskId}] D1 日志信道写入失败: ${err.message || err}`);
+      TraceLogger.error("WORKFLOW", "LOG_WRITE_FAILED", taskId, `D1 日志信道写入失败: getErrorMessage(err)`, err);
     }
   }
 }
@@ -90,7 +91,7 @@ export class TaskLogger {
   public static async log(taskId: string, level: LogLevel, message: string): Promise<void> {
     const promises = this.appenders.map((appender) =>
       appender.append(taskId, level, message).catch((err) => {
-        console.error(`[CRITICAL] Log Appender 写入失败: ${err.message || err}`);
+        TraceLogger.error("WORKFLOW", "LOG_APPENDER_FAILED", "SYSTEM", `Log Appender 写入失败: getErrorMessage(err)`, err);
       })
     );
     await Promise.all(promises);
@@ -199,8 +200,8 @@ export async function updateTaskStatus(
     
     const statusLabel = STATE_LABELS[validatedStatus];
     await TaskLogger.log(taskId, LogLevel.INFO, `[系统] 任务状态变更: ${statusLabel}`);
-  } catch (err: any) {
-    console.error(`[ERROR] [TaskId: ${taskId}] 更新任务状态失败: ${err.message || err}`);
+  } catch (err: unknown) {
+    TraceLogger.error("WORKFLOW", "TASK_STATUS_UPDATE_FAILED", taskId, `更新任务状态失败: getErrorMessage(err)`, err);
   }
 }
 

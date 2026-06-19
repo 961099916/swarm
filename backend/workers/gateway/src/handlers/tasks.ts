@@ -6,8 +6,11 @@
  * @module handlers/tasks
  */
 
-import { CreateTaskReq, CreateTaskRes, UserRow, tasks, creditsLedger, taskLogs, users, TASK_COST } from "@swarm/shared";
-import { ResponseBuilder } from "../utils/response";
+import { CreateTaskReq, CreateTaskRes, tasks, taskLogs } from "@swarm/agent";
+import { creditsLedger, TASK_COST } from "@swarm/credits";
+import { UserRow, users } from "@swarm/identity";
+import { TraceLogger } from "@swarm/kernel";
+import { ApiRes, getErrorMessage } from "/kernel";
 import { RequiredFieldsValidator, TaskTypeValidator, ValidatorChain } from "../utils/validator";
 import { drizzle } from "drizzle-orm/d1";
 import { eq, sql, and, desc } from "drizzle-orm";
@@ -92,7 +95,7 @@ async function triggerWorkflowEngine(
       createdAt: now
     });
   } else {
-    console.warn(`[WARN] 未检测到绑定的 TASK_WORKFLOW 实例，工作流未触发`);
+        TraceLogger.warn("GATEWAY", "WORKFLOW_BINDING_MISSING", "SYSTEM", `未检测到绑定的 TASK_WORKFLOW 实例，工作流未触发`);
     await drizzleDb.insert(taskLogs).values({
       taskId,
       level: "WARN",
@@ -124,10 +127,10 @@ export async function handleCreateTask(
   try {
     const body = (await request.json()) as CreateTaskReq;
     const validationError = buildCreateTaskValidatorChain().validate(body);
-    if (validationError) return ResponseBuilder.badRequest(validationError, traceId);
+    if (validationError) return ApiRes.badRequest(validationError, traceId);
 
     if (user.credits < TASK_COST) {
-      return ResponseBuilder.badRequest(`账户积分不足。启动任务需要 ${TASK_COST} 点，当前仅有 ${user.credits} 点`, traceId);
+      return ApiRes.badRequest(`账户积分不足。启动任务需要 ${TASK_COST} 点，当前仅有 ${user.credits} 点`, traceId);
     }
 
     const taskId = crypto.randomUUID();
@@ -136,20 +139,20 @@ export async function handleCreateTask(
 
     try {
       await triggerWorkflowEngine(db, workflow, taskId, body.taskType, body.payload);
-    } catch (wfError: any) {
-      console.error(`[ERROR] [TraceID: ${traceId}] 启动 CF Workflow 失败: ${wfError.message || wfError}`);
+    } catch (wfError: unknown) {
+          TraceLogger.error("GATEWAY", "WORKFLOW_START_FAILED", traceId, `启动 CF Workflow 失败: getErrorMessage(wfError)`, wfError);
       await handleWfEngineFailure(db, taskId, wfError.message || "未知异常");
     }
 
     const resData: CreateTaskRes = { taskId };
-    return ResponseBuilder.success(resData, traceId);
-  } catch (error: any) {
-    console.error(`[ERROR] [TraceID: ${traceId}] 创建任务失败: ${error.message || error}`);
+    return ApiRes.success(resData, traceId);
+  } catch (error: unknown) {
+        TraceLogger.error("GATEWAY", "CREATE_TASK_FAILED", traceId, `创建任务失败: getErrorMessage(error)`, error);
     if (error.message && error.message.includes("constraint failed")) {
       const isCreditsErr = error.message.includes("credits");
-      return ResponseBuilder.badRequest(isCreditsErr ? "积分余额不足，创建任务失败" : "系统异常，请稍后重试", traceId);
+      return ApiRes.badRequest(isCreditsErr ? "积分余额不足，创建任务失败" : "系统异常，请稍后重试", traceId);
     }
-    return ResponseBuilder.internalError("系统部署任务异常，请稍后再试", traceId);
+    return ApiRes.internalError("系统部署任务异常，请稍后再试", traceId);
   }
 }
 
@@ -193,10 +196,10 @@ export async function handleListTasks(
       updated_at: row.updatedAt
     }));
 
-    return ResponseBuilder.success(parsedTasks, traceId);
-  } catch (error: any) {
-    console.error(`[ERROR] [TraceID: ${traceId}] 查询任务列表失败: ${error.message || error}`);
-    return ResponseBuilder.internalError("系统查询任务列表异常", traceId);
+    return ApiRes.success(parsedTasks, traceId);
+  } catch (error: unknown) {
+        TraceLogger.error("GATEWAY", "LIST_TASKS_FAILED", traceId, `查询任务列表失败: getErrorMessage(error)`, error);
+    return ApiRes.internalError("系统查询任务列表异常", traceId);
   }
 }
 
@@ -209,13 +212,13 @@ export async function handleTaskLogs(
   try {
     const url = new URL(request.url);
     const taskId = url.searchParams.get("taskId");
-    if (!taskId) return ResponseBuilder.badRequest("缺少 taskId 参数", traceId);
+    if (!taskId) return ApiRes.badRequest("缺少 taskId 参数", traceId);
 
     const drizzleDb = drizzle(db);
     const taskResult = await drizzleDb.select({ userId: tasks.userId }).from(tasks).where(eq(tasks.id, taskId));
-    if (!taskResult || taskResult.length === 0) return ResponseBuilder.error("未找到该任务，查看日志失败", traceId, 404);
+    if (!taskResult || taskResult.length === 0) return ApiRes.notFound("未找到该任务，查看日志失败", traceId, );
     if (taskResult[0].userId !== user.id && user.role !== "ADMIN") {
-      return ResponseBuilder.forbidden("无权查看该任务日志", traceId);
+      return ApiRes.forbidden("无权查看该任务日志", traceId);
     }
 
     const results = await drizzleDb
@@ -231,9 +234,9 @@ export async function handleTaskLogs(
         createdAt: row.createdAt
       }))
     };
-    return ResponseBuilder.success(logsData, traceId);
-  } catch (error: any) {
-    console.error(`[ERROR] [TraceID: ${traceId}] 查询任务日志失败: ${error.message || error}`);
-    return ResponseBuilder.internalError("系统查询日志流异常", traceId);
+    return ApiRes.success(logsData, traceId);
+  } catch (error: unknown) {
+        TraceLogger.error("GATEWAY", "TASK_LOGS_FAILED", traceId, `查询任务日志失败: getErrorMessage(error)`, error);
+    return ApiRes.internalError("系统查询日志流异常", traceId);
   }
 }

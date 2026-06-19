@@ -9,4 +9,3 @@ export { ToolRegistry } from "./tools/registry";
 export async function ensureDbToolsLoaded(db: any): Promise<void> {
   await ToolRegistry.loadAllFromDb(db);
 }
-

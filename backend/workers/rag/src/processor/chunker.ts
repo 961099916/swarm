@@ -1,10 +1,10 @@
+import { RAG_DEFAULT_CHUNK_OVERLAP, RAG_DEFAULT_CHUNK_SIZE } from "@swarm/knowledge";
+
 /**
  * 智能中文分块器 (Recursive Character Text Splitter)
  *
  * 按 段落 → 句子 → 固定长度 递归分割，兼顾语义完整性和 Token 预算。
  */
-
-import { RAG_DEFAULT_CHUNK_SIZE, RAG_DEFAULT_CHUNK_OVERLAP } from "@swarm/shared";
 
 export interface ChunkResult {
   index: number;

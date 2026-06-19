@@ -1,46 +1,34 @@
-// File: /Users/zhangjiahao/IdeaProjects/swarm/backend/workers/user/src/utils/response.ts
+import { ApiRes } from "@swarm/kernel";
 
-import { ApiResponse } from "@swarm/shared";
-
+/**
+ * ResponseBuilder — 统一响应构建器
+ *
+ * @deprecated 请直接使用 @swarm/kernel 中的 ApiRes。
+ */
 export class ResponseBuilder {
-  private static readonly JSON_HEADER = { "Content-Type": "application/json" };
-
-  public static success<T>(data: T, traceId: string, status = 200): Response {
-    const body: ApiResponse<T> = {
-      success: true,
-      data,
-      traceId
-    };
-    return new Response(JSON.stringify(body), {
-      status,
-      headers: this.JSON_HEADER
-    });
+  /** @deprecated 使用 ApiRes.success() */
+  public static success<T>(data: T, traceId: string, _status = 200): Response {
+    return ApiRes.success(data, traceId);
   }
 
+  /** @deprecated 使用 ApiRes.error(code, message, traceId) */
   public static error(errorMsg: string, traceId: string, status = 400): Response {
-    const body: ApiResponse<null> = {
-      success: false,
-      error: errorMsg,
-      traceId
-    };
-    return new Response(JSON.stringify(body), {
-      status,
-      headers: this.JSON_HEADER
-    });
+    const code = status === 403 ? 1020 : status === 404 ? 1030 : 1000;
+    return ApiRes.error(code, errorMsg, traceId);
   }
 
+  /** @deprecated 使用 ApiRes.badRequest() */
   public static badRequest(errorMsg: string, traceId: string): Response {
-    const badRequestStatus = 400;
-    return this.error(errorMsg, traceId, badRequestStatus);
+    return ApiRes.badRequest(errorMsg, traceId);
   }
 
+  /** @deprecated 使用 ApiRes.forbidden() */
   public static forbidden(errorMsg: string, traceId: string): Response {
-    const forbiddenStatus = 403;
-    return this.error(errorMsg, traceId, forbiddenStatus);
+    return ApiRes.forbidden(errorMsg, traceId);
   }
 
+  /** @deprecated 使用 ApiRes.internalError() */
   public static internalError(errorMsg: string, traceId: string): Response {
-    const internalStatus = 500;
-    return this.error(errorMsg, traceId, internalStatus);
+    return ApiRes.internalError(errorMsg, traceId);
   }
 }

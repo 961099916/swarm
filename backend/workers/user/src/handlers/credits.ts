@@ -1,16 +1,8 @@
 // File: /Users/zhangjiahao/IdeaProjects/swarm/backend/workers/user/src/handlers/credits.ts
 
-import { 
-  BindInviteReq, 
-  AdRewardReq, 
-  users, 
-  userInvitations, 
-  creditsLedger, 
-  adRewardLogs, 
-  INVITE_REWARD, 
-  AD_REWARD,
-  TraceLogger
-} from "@swarm/shared";
+import { BindInviteReq, AdRewardReq, creditsLedger, userInvitations, adRewardLogs, INVITE_REWARD, AD_REWARD } from "@swarm/credits";
+import { users } from "@swarm/identity";
+import { TraceLogger } from "@swarm/kernel";
 import { getDrizzleDb } from "../utils/drizzleInstance";
 import { ResponseBuilder } from "../utils/response";
 import { RequiredFieldsValidator, ValidatorChain } from "../utils/validator";
@@ -139,8 +131,8 @@ export async function handleBindInvite(
     
     TraceLogger.info("USER", "BIND_INVITE_SUCCESS", traceId, `邀请关系绑定成功: 邀请人=${inviterId}`, userId);
     return ResponseBuilder.success({ success: true }, traceId);
-  } catch (error: any) {
-    TraceLogger.error("USER", "BIND_INVITE_FAILED", traceId, `绑定邀请失败: ${error.message || error}`, error, userId);
+  } catch (error: unknown) {
+    TraceLogger.error("USER", "BIND_INVITE_FAILED", traceId, `绑定邀请失败: getErrorMessage(error)`, error, userId);
     
     if (error.message === "ALREADY_BOUND_OR_USER_MISSING") {
       return ResponseBuilder.badRequest("您已绑定过邀请人，请勿重复操作", traceId);
@@ -240,8 +232,8 @@ export async function handleAdReward(
 
     TraceLogger.info("USER", "AD_REWARD_CLAIM_SUCCESS", traceId, `观看广告得积分成功: 用户=${userId}, 积分+=${AD_REWARD}, 新余额=${newBalance}`, userId);
     return ResponseBuilder.success({ addedCredits: AD_REWARD, newBalance }, traceId);
-  } catch (error: any) {
-    TraceLogger.error("USER", "AD_REWARD_CLAIM_FAILED", traceId, `领广告积分失败: ${error.message || error}`, error, userId);
+  } catch (error: unknown) {
+    TraceLogger.error("USER", "AD_REWARD_CLAIM_FAILED", traceId, `领广告积分失败: getErrorMessage(error)`, error, userId);
     
     if (error.message === "AD_REWARD_CLAIMED") {
       return ResponseBuilder.badRequest("该广告奖励已被领用，请勿重复领取", traceId);
@@ -283,8 +275,8 @@ export async function handleCreditsHistory(
       .offset(offset);
 
     return ResponseBuilder.success(results, traceId);
-  } catch (error: any) {
-    TraceLogger.error("USER", "CREDITS_HISTORY_FAILED", traceId, `查询积分流水失败: ${error.message || error}`, error, userId);
+  } catch (error: unknown) {
+    TraceLogger.error("USER", "CREDITS_HISTORY_FAILED", traceId, `查询积分流水失败: getErrorMessage(error)`, error, userId);
     return ResponseBuilder.internalError("系统查询积分记录异常", traceId);
   }
 }

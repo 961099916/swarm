@@ -1,9 +1,11 @@
 
-import { agents } from "@swarm/shared";
 import { drizzle } from "drizzle-orm/d1";
 import { eq, and, desc } from "drizzle-orm";
 import { jsonSuccess, jsonError } from "./responseHelper";
 import { appendAuditLog } from "./audit";
+
+import { agents } from "@swarm/agent";
+import { TraceLogger } from "@swarm/kernel";
 
 export async function handleAdminListAgents(
   request: Request,
@@ -38,8 +40,8 @@ export async function handleAdminListAgents(
     }));
 
     return jsonSuccess(parsedList, traceId);
-  } catch (error: any) {
-    console.error(`[ERROR] [TraceID: ${traceId}] 获取智能体列表失败: ${error.message}`);
+  } catch (error: unknown) {
+    TraceLogger.error("ADMIN", "LIST_AGENTS_FAILED", traceId, `获取智能体列表失败: getErrorMessage(error)`, error);
     return jsonError("系统查询全局智能体异常", 500, traceId);
   }
 }
@@ -75,8 +77,8 @@ export async function handleAdminUpdateAgent(
 
     await appendAuditLog(db, adminId, "UPDATE_AGENT", agentId, { name, role });
     return jsonSuccess({ agentId }, traceId);
-  } catch (error: any) {
-    console.error(`[ERROR] [TraceID: ${traceId}] 修改智能体失败: ${error.message}`);
+  } catch (error: unknown) {
+    TraceLogger.error("ADMIN", "UPDATE_AGENT_FAILED", traceId, `修改智能体失败: getErrorMessage(error)`, error);
     return jsonError("系统修改智能体异常", 500, traceId);
   }
 }
@@ -103,8 +105,8 @@ export async function handleAdminDeleteAgent(
 
     await appendAuditLog(db, adminId, "DELETE_AGENT", agentId, null);
     return jsonSuccess({ success: true }, traceId);
-  } catch (error: any) {
-    console.error(`[ERROR] [TraceID: ${traceId}] 下线智能体失败: ${error.message}`);
+  } catch (error: unknown) {
+    TraceLogger.error("ADMIN", "DELETE_AGENT_FAILED", traceId, `下线智能体失败: getErrorMessage(error)`, error);
     return jsonError("系统下线智能体异常", 500, traceId);
   }
 }

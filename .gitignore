@@ -30,6 +30,9 @@ npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
 
+# Frontend build artifacts
+frontend/static/styles/tailwind-test.wxss
+
 # Cache
 .cache/
 .parcel-cache/
@@ -42,8 +45,6 @@ yarn-error.log*
 .codegraph/
 .mimocode/
 
-# Optional npm dependencies
-package-lock.json
-
+# Agent / IDE config
 agent.md
 reasonix.toml

@@ -1,7 +1,10 @@
+import { AI_MODELS, AgentRow, DEFAULT_MAX_LOOPS, MEMORY_AGENT_COUNT, MEMORY_RECENT_COUNT } from "@swarm/agent";
+import { AIClient, AIClientEnv } from "@swarm/ai-gateway";
+import { TraceLogger } from "@swarm/kernel";
+
 // File: /Users/zhangjiahao/IdeaProjects/swarm/backend/workers/workflow/src/workflow.ts
 
 import { WorkflowEntrypoint, WorkflowStep, WorkflowEvent } from "cloudflare:workers";
-import { AgentRow, AI_MODELS, DEFAULT_MAX_LOOPS, MEMORY_RECENT_COUNT, MEMORY_AGENT_COUNT, TraceLogger, AIClient, AIClientEnv } from "@swarm/shared";
 import { appendTaskLog, updateTaskStatus, safeParseJSON, TaskStatus } from "./utils";
 import {
   ToolRegistry,
@@ -74,7 +77,7 @@ async function callLlmChatAndLog(
         agentId,
       });
       responseText = result.content;
-    } catch (aiClientErr: any) {
+    } catch (aiClientErr: unknown) {
       // AIClient 失败时降级到原生 Workers AI 调用
       TraceLogger.warn("WORKFLOW", "AI_CLIENT_FALLBACK", taskId, `AIClient 调用失败，降级到原生 AI: ${aiClientErr.message}`);
       const res = await ai.run(mappedModel, { messages });
@@ -85,7 +88,7 @@ async function callLlmChatAndLog(
       throw new Error("大模型响应内容为空");
     }
     return responseText;
-  } catch (err: any) {
+  } catch (err: unknown) {
     success = false;
     errorMsg = err.message || JSON.stringify(err);
     throw err;
@@ -123,8 +126,8 @@ async function callLlmChatAndLog(
           latencyMs
         }
       );
-    } catch (dbErr: any) {
-      TraceLogger.error("WORKFLOW", "LOG_WRITE_FAILED", taskId, `写入 AI 交互日志失败: ${dbErr.message || dbErr}`, dbErr);
+    } catch (dbErr: unknown) {
+      TraceLogger.error("WORKFLOW", "LOG_WRITE_FAILED", taskId, `写入 AI 交互日志失败: getErrorMessage(dbErr)`, dbErr);
     }
   }
 }
@@ -327,10 +330,10 @@ export class TaskOrchestrator extends WorkflowEntrypoint<Env, Params> {
         await appendTaskLog(db, taskId, "INFO", `[主控] 工作流执行完毕，任务已归档`);
       });
 
-    } catch (err: any) {
-      console.error(`[ERROR] Workflow failed: ${err.message}`);
-      await updateTaskStatus(db, taskId, "FAILED", `执行异常: ${err.message}`);
-      await appendTaskLog(db, taskId, "ERROR", `[主控] 工作流异常终止: ${err.message}`);
+    } catch (err: unknown) {
+      TraceLogger.error("WORKFLOW", "WORKFLOW_FAILED", "SYSTEM", `Workflow failed: getErrorMessage(err)`, err);
+      await updateTaskStatus(db, taskId, "FAILED", `执行异常: getErrorMessage(err)`);
+      await appendTaskLog(db, taskId, "ERROR", `[主控] 工作流异常终止: getErrorMessage(err)`);
     }
   }
 
@@ -439,9 +442,9 @@ ${toolListText}
         }
       }
       return decision;
-    } catch (e: any) {
-      console.warn("Supervisor 推理发生异常，触发规则链条兜底:", e.message);
-      await appendTaskLog(db, taskId, "WARN", `[主控] AI 决策异常: ${e.message}，使用本地规则兜底`);
+    } catch (e: unknown) {
+      TraceLogger.warn("WORKFLOW", "SUPERVISOR_FALLBACK", "SYSTEM", `Supervisor 推理发生异常，触发规则链条兜底: getErrorMessage(e)`);
+      await appendTaskLog(db, taskId, "WARN", `[主控] AI 决策异常: getErrorMessage(e)，使用本地规则兜底`);
       return this.mockSupervisorDecision(memory, agents);
     }
   }
@@ -490,9 +493,9 @@ ${toolListText}
       const result = await callLlmChatAndLog(this.env.AI, db, taskId, agent.name, messages, agent.model);
       await appendTaskLog(db, taskId, "INFO", `[${agent.name}] 推理完成，输出长度 ${result.length} 字符`);
       return result;
-    } catch (e: any) {
-      await appendTaskLog(db, taskId, "ERROR", `[${agent.name}] 推理失败: ${e.message}`);
-      return `[ERROR] 智能体 ${agent.name} 推理过程抛出异常: ${e.message}`;
+    } catch (e: unknown) {
+      await appendTaskLog(db, taskId, "ERROR", `[${agent.name}] 推理失败: getErrorMessage(e)`);
+      return `[ERROR] 智能体 ${agent.name} 推理过程抛出异常: getErrorMessage(e)`;
     }
   }
 
@@ -601,6 +604,10 @@ ${toolListText}
 // 默认导出
 export default {
   async fetch(request: Request, env: Env, ctx: any): Promise<Response> {
+    const url = new URL(request.url);
+    if (url.pathname === "/health") {
+      return Response.json({ status: "ok", service: "workflow", timestamp: new Date().toISOString() });
+    }
     return new Response("Workflow Engine Active", { status: 200 });
   }
 };

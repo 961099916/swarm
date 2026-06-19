@@ -1,7 +1,10 @@
 
-import { users, tasks, ApiResponse, AdminStatsRes } from "@swarm/shared";
 import { drizzle } from "drizzle-orm/d1";
 import { count, eq, gte } from "drizzle-orm";
+
+import { AdminStatsRes, tasks } from "@swarm/agent";
+import { users } from "@swarm/identity";
+import { ApiRes, TraceLogger } from "@swarm/kernel";
 
 export async function handleAdminStats(db: D1Database, traceId: string): Promise<Response> {
   try {
@@ -18,22 +21,16 @@ export async function handleAdminStats(db: D1Database, traceId: string): Promise
       drizzleDb.select({ count: count() }).from(tasks).where(gte(tasks.createdAt, todayStr))
     ]);
 
-    const stats: AdminStatsRes = {
+    const stats = {
       totalUsers: totalUsersRes[0].count,
       runningTasks: runningTasksRes[0].count,
       totalTasks: totalTasksRes[0].count,
       todayNewTasks: todayNewTasksRes[0].count
     };
 
-    return new Response(JSON.stringify({ success: true, data: stats, traceId } as ApiResponse), {
-      status: 200,
-      headers: { "Content-Type": "application/json" }
-    });
-  } catch (error: any) {
-    console.error(`[ERROR] [TraceID: ${traceId}] 获取管理员面板数据失败: ${error.message}`);
-    return new Response(
-      JSON.stringify({ success: false, error: "系统查询统计看板数据异常", traceId } as ApiResponse),
-      { status: 500, headers: { "Content-Type": "application/json" } }
-    );
+    return ApiRes.success(stats, traceId);
+  } catch (error: unknown) {
+    TraceLogger.error("ADMIN", "STATS_FAILED", traceId, `获取管理员面板数据失败: getErrorMessage(error)`, error);
+    return ApiRes.internalError("系统查询统计看板数据异常", traceId);
   }
 }

@@ -1,9 +1,12 @@
 
-import { tasks, users, taskLogs } from "@swarm/shared";
 import { drizzle } from "drizzle-orm/d1";
 import { eq, and, desc, sql } from "drizzle-orm";
 import { jsonSuccess, jsonError } from "./responseHelper";
 import { appendAuditLog } from "./audit";
+
+import { taskLogs, tasks } from "@swarm/agent";
+import { users } from "@swarm/identity";
+import { TraceLogger } from "@swarm/kernel";
 
 export async function handleAdminTasks(
   request: Request,
@@ -46,8 +49,8 @@ export async function handleAdminTasks(
     }));
 
     return jsonSuccess(parsedTasks, traceId);
-  } catch (error: any) {
-    console.error(`[ERROR] [TraceID: ${traceId}] 获取任务列表失败: ${error.message}`);
+  } catch (error: unknown) {
+    TraceLogger.error("ADMIN", "LIST_TASKS_FAILED", traceId, `获取任务列表失败: getErrorMessage(error)`, error);
     return jsonError("系统查询全局任务异常", 500, traceId);
   }
 }
@@ -93,8 +96,8 @@ export async function handleCancelTask(
 
     await appendAuditLog(db, adminId, "CANCEL_TASK", taskId, null);
     return jsonSuccess(null, traceId);
-  } catch (error: any) {
-    console.error(`[ERROR] [TraceID: ${traceId}] 取消任务失败: ${error.message}`);
+  } catch (error: unknown) {
+    TraceLogger.error("ADMIN", "CANCEL_TASK_FAILED", traceId, `取消任务失败: getErrorMessage(error)`, error);
     return jsonError("系统执行取消任务异常", 500, traceId);
   }
 }

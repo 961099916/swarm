@@ -8,7 +8,9 @@
     "type-check": "tsc --noEmit"
   },
   "dependencies": {
-    "@swarm/shared": "*",
+    "@swarm/kernel": "*",
+    "@swarm/quiz": "*",
+    "@swarm/identity": "*",
     "drizzle-orm": "^0.45.2",
     "hono": "^4.0.0"
   },

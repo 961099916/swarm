@@ -1,3 +1,6 @@
+import { TraceLogger } from "@swarm/kernel";
+import { RAG_DEFAULT_MIN_SCORE, RAG_DEFAULT_TOP_K, RAG_MAX_CONTEXT_LENGTH } from "@swarm/knowledge";
+
 /**
  * RAG 上下文注入器
  *
@@ -7,8 +10,6 @@
  *
  * 通过 Service Binding 调用 RAG Worker，保持松耦合。
  */
-
-import { TraceLogger, RAG_DEFAULT_TOP_K, RAG_DEFAULT_MIN_SCORE, RAG_MAX_CONTEXT_LENGTH } from "@swarm/shared";
 
 export interface RAGChunk {
   chunkId: string;
@@ -64,8 +65,8 @@ export async function fetchRAGContext(
     }
 
     return emptyResult;
-  } catch (err: any) {
-    TraceLogger.warn("RAG", "INJECTOR_FAILED", "WORKFLOW", `RAG 上下文注入调用失败: ${err.message}`);
+  } catch (err: unknown) {
+    TraceLogger.warn("RAG", "INJECTOR_FAILED", "WORKFLOW", `RAG 上下文注入调用失败: getErrorMessage(err)`);
     return emptyResult;
   }
 }

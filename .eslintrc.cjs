@@ -58,6 +58,17 @@ module.exports = {
     "no-useless-rename": "error",
     "require-atomic-updates": "warn",
     "yoda": "error",
+    // ─── 禁止直接使用已弃用的 ResponseBuilder ───
+    "no-restricted-imports": ["warn", {
+      paths: [{
+        name: "../utils/response",
+        message: "ResponseBuilder 已弃用，请使用 @swarm/kernel 中的 ApiRes"
+      }],
+      patterns: [{
+        group: ["*/utils/response"],
+        message: "ResponseBuilder 已弃用，请使用 @swarm/kernel 中的 ApiRes"
+      }]
+    }],
   },
   overrides: [
     // ─── TypeScript 文件 ───

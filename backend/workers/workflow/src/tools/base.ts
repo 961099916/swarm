@@ -1,32 +1,27 @@
 
 import { WorkflowTool, ToolContext, InputField } from "./types";
+import { TraceLogger } from "@swarm/kernel";
 
-export abstract class BaseWorkflowTool<TInput = any> implements WorkflowTool<TInput> {
+export abstract class BaseWorkflowTool<TInput = unknown> implements WorkflowTool<TInput> {
   abstract readonly name: string;
   abstract readonly description: string;
   abstract readonly inputSchema: InputField[];
 
-  protected abstract run(input: TInput, ctx: ToolContext): Promise<string>;
-  protected abstract validate(input: TInput): void;
-
   public async execute(input: TInput, ctx: ToolContext): Promise<string> {
     const startTime = Date.now();
     const traceId = ctx.traceId || "N/A";
-    console.debug(`[${traceId}] [Tool - ${this.name}] 开始执行...`);
 
     try {
       this.validate(input);
       const result = await this.run(input, ctx);
       const duration = Date.now() - startTime;
-      console.info(`[${traceId}] [Tool - ${this.name}] 执行成功，耗时 ${duration}ms`);
+      TraceLogger.info("WORKFLOW", "TOOL_EXEC_SUCCESS", traceId, `[Tool - ${this.name}] 执行成功`, undefined, { durationMs: duration });
       return result;
-    } catch (error: any) {
+    } catch (error: unknown) {
       const duration = Date.now() - startTime;
-      console.error(
-        `[${traceId}] [Tool - ${this.name}] 执行失败，耗时 ${duration}ms，错误: ${error.message || error}`
-      );
+      TraceLogger.error("WORKFLOW", "TOOL_EXEC_FAILED", traceId, `[Tool - ${this.name}] 执行失败`, error, undefined, { durationMs: duration });
       // 统一返回以 [ERROR] 开头的错误提示，不阻断工作流主控制器的 ReAct 决策链
-      return `[ERROR] 工具 ${this.name} 执行失败: ${error.message || error}`;
+      return `[ERROR] 工具 ${this.name} 执行失败: getErrorMessage(error)`;
     }
   }
 }

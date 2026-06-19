@@ -5,7 +5,10 @@
  * 与 Engine Worker 解耦，Engine 只负责写 D1 + 发 Queue，
  * Consumer 负责耗时的工作流启动。
  */
-import { tasks, taskLogs, users, creditsLedger, TASK_COST, TraceLogger } from "@swarm/shared";
+import { tasks, taskLogs } from "@swarm/agent";
+import { users } from "@swarm/identity";
+import { creditsLedger, TASK_COST } from "@swarm/credits";
+import { TraceLogger } from "@swarm/kernel";
 import { drizzle } from "drizzle-orm/d1";
 import { eq, sql } from "drizzle-orm";
 
@@ -122,7 +125,7 @@ async function handleFailureAndRefund(
     });
 
     TraceLogger.info("CONSUMER", "REFUND_COMPENSATE", traceId, `工作流启动失败，退款成功: taskId=${taskId}, userId=${userId}`, userId);
-  } catch (refundErr: any) {
+  } catch (refundErr: unknown) {
     TraceLogger.error("CONSUMER", "REFUND_CRITICAL_FAILED", traceId, `退款补偿事务失败! taskId=${taskId}, error=${refundErr.message}`, refundErr, userId);
   }
 }
@@ -143,8 +146,8 @@ async function queue(
       const wf = env.TASK_WORKFLOW as unknown as WorkflowInstance;
       await triggerWorkflow(env.DB, wf, taskId, taskType, payload, traceId);
       msg.ack();
-    } catch (err: any) {
-      TraceLogger.error("CONSUMER", "WORKFLOW_TRIGGER_FAILED", traceId, `工作流触发失败: taskId=${taskId}, error=${err.message}`, err, userId);
+    } catch (err: unknown) {
+      TraceLogger.error("CONSUMER", "WORKFLOW_TRIGGER_FAILED", traceId, `工作流触发失败: taskId=${taskId}, error=getErrorMessage(err)`, err, userId);
 
       // 尝试退款补偿
       await handleFailureAndRefund(env.DB, userId, taskId, err.message || "未知异常", traceId);

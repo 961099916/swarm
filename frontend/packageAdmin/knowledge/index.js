@@ -1,4 +1,4 @@
-const { request } = require("../../utils/request.js");
+const { listKnowledgeBases, createKnowledgeBase, deleteKnowledgeBase } = require("../../utils/knowledgeAPI.js");
 
 Page({
   data: {
@@ -20,10 +20,9 @@ Page({
   async fetchKBList() {
     this.setData({ loading: true });
     try {
-      const res = await request({ url: "/api/v1/admin/knowledge-bases" });
-      if (res.success) {
-        this.setData({ kbList: res.data || [] });
-      }
+      const res = await listKnowledgeBases();
+      // listKnowledgeBases 标准格式返回 { list, total }
+      this.setData({ kbList: res.list || [], loading: false });
     } catch (err) {
       console.error("获取知识库列表失败", err);
       wx.showToast({ title: "获取列表失败", icon: "none" });
@@ -55,21 +54,10 @@ Page({
       return;
     }
     try {
-      const res = await request({
-        url: "/api/v1/kb/create",
-        method: "POST",
-        data: {
-          name: this.data.newKBName.trim(),
-          description: this.data.newKBDesc.trim() || undefined,
-        },
-      });
-      if (res.success) {
-        wx.showToast({ title: "创建成功", icon: "success" });
-        this.setData({ showCreateDialog: false });
-        this.fetchKBList();
-      } else {
-        wx.showToast({ title: res.error || "创建失败", icon: "none" });
-      }
+      await createKnowledgeBase(this.data.newKBName.trim(), this.data.newKBDesc.trim() || undefined);
+      wx.showToast({ title: "创建成功", icon: "success" });
+      this.setData({ showCreateDialog: false });
+      this.fetchKBList();
     } catch (err) {
       wx.showToast({ title: "创建失败", icon: "none" });
     }
@@ -90,16 +78,9 @@ Page({
       success: async (res) => {
         if (res.confirm) {
           try {
-            const result = await request({
-              url: `/api/v1/kb/delete?kbId=${kb.id}`,
-              method: "DELETE",
-            });
-            if (result.success) {
-              wx.showToast({ title: "删除成功", icon: "success" });
-              this.fetchKBList();
-            } else {
-              wx.showToast({ title: result.error || "删除失败", icon: "none" });
-            }
+            await deleteKnowledgeBase(kb.id);
+            wx.showToast({ title: "删除成功", icon: "success" });
+            this.fetchKBList();
           } catch (err) {
             wx.showToast({ title: "删除失败", icon: "none" });
           }

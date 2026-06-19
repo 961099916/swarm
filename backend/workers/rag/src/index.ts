@@ -1,10 +1,12 @@
+import { AIClient, AIClientEnv } from "@swarm/ai-gateway";
+import { TraceLogger } from "@swarm/kernel";
+
 // File: /Users/zhangjiahao/IdeaProjects/swarm/backend/workers/rag/src/index.ts
 
 import { Hono } from "hono";
 import type { Context, Next } from "hono";
-import { TraceLogger, AIClient, AIClientEnv } from "@swarm/shared";
 import { ResponseBuilder } from "./utils/response";
-import { handleListKBs, handleCreateKB, handleGetKB, handleDeleteKB, handleUpdateKB } from "./handlers/knowledge-bases";
+import { handleListKBs, handleCreateKB, handleGetKB, handleDeleteKB, handleUpdateKB, handleAdminListKBs } from "./handlers/knowledge-bases";
 import { handleAddDocument, handleListDocuments, handleDeleteDocument, handleAddDocumentManual } from "./handlers/documents";
 
 import { handleSearchKnowledge } from "./handlers/search";
@@ -112,9 +114,21 @@ app.post("/api/v1/rag/inject", async (c) => {
   return await handleRAGContextInject(c.req.raw, c.env, c.get("traceId"));
 });
 
+// 管理后台知识库列表（防腐层，Admin SVC 通过 Service Binding 调用）
+app.post("/api/v1/rag/admin/knowledge-bases", async (c) => {
+  return await handleAdminListKBs(c.env.DB, c.get("traceId"));
+});
+
 // ══════════════════════════════════════════════════
 // 404 & Error
 // ══════════════════════════════════════════════════
+
+// ══════════════════════════════════════════════════
+// 健康检查 — 用于网关 / 负载均衡存活探针
+// ══════════════════════════════════════════════════
+app.get("/health", async (c) => {
+  return c.json({ status: "ok", service: "rag", timestamp: new Date().toISOString() });
+});
 
 app.notFound(async (c) => {
   return ResponseBuilder.error("资源不存在", c.get("traceId") || crypto.randomUUID(), 404);
@@ -122,7 +136,7 @@ app.notFound(async (c) => {
 
 app.onError(async (err, c) => {
   const traceId = c.get("traceId") || crypto.randomUUID();
-  TraceLogger.error("RAG", "UNCAUGHT_EXCEPTION", traceId, `RAG 服务未捕获异常: ${err.message || err}`, err);
+  TraceLogger.error("RAG", "UNCAUGHT_EXCEPTION", traceId, `RAG 服务未捕获异常: getErrorMessage(err)`, err);
   return ResponseBuilder.internalError("系统繁忙，请联系系统管理员", traceId);
 });
 

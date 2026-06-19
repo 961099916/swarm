@@ -1,18 +1,9 @@
 // File: /Users/zhangjiahao/IdeaProjects/swarm/backend/workers/user/src/handlers/auth.ts
 
-import { 
-  LoginReq, 
-  LoginRes, 
-  users, 
-  creditsLedger, 
-  userInvitations, 
-  INITIAL_CREDITS, 
-  INVITE_REWARD, 
-  TOKEN_EXPIRY_SECONDS,
-  TraceLogger,
-  CacheService,
-  UserRow
-} from "@swarm/shared";
+import { LoginReq, LoginRes, UserRow } from "@swarm/identity";
+import { users, TOKEN_EXPIRY_SECONDS } from "@swarm/identity";
+import { creditsLedger, userInvitations, INITIAL_CREDITS, INVITE_REWARD } from "@swarm/credits";
+import { TraceLogger, CacheService } from "@swarm/kernel";
 import { signJWT } from "../utils/jwtHelper";
 import { getDrizzleDb } from "../utils/drizzleInstance";
 import { ResponseBuilder } from "../utils/response";
@@ -232,8 +223,8 @@ export async function handleLogin(
 
     TraceLogger.info("USER", "USER_LOGIN", traceId, `用户登录成功: userId=${user.id}`, user.id);
     return ResponseBuilder.success(loginRes, traceId);
-  } catch (error: any) {
-    TraceLogger.error("USER", "USER_LOGIN_FAILED", traceId, `微信登录失败: ${error.message || error}`, error);
+  } catch (error: unknown) {
+    TraceLogger.error("USER", "USER_LOGIN_FAILED", traceId, `微信登录失败: getErrorMessage(error)`, error);
     return ResponseBuilder.internalError("系统登录异常，请稍后再试", traceId);
   }
 }
@@ -263,8 +254,8 @@ export async function handleLogout(
 
     TraceLogger.info("USER", "USER_LOGOUT", traceId, `用户退出登录成功，Token 已强制失效`, userId);
     return ResponseBuilder.success({ success: true }, traceId);
-  } catch (error: any) {
-    TraceLogger.error("USER", "USER_LOGOUT_FAILED", traceId, `用户退出登录失败: ${error.message || error}`, error, userId);
+  } catch (error: unknown) {
+    TraceLogger.error("USER", "USER_LOGOUT_FAILED", traceId, `用户退出登录失败: getErrorMessage(error)`, error, userId);
     return ResponseBuilder.internalError("系统退出登录异常", traceId);
   }
 }

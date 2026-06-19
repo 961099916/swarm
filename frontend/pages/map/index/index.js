@@ -1,4 +1,13 @@
 "use strict";
+// ╔══════════════════════════════════════════════════════════════╗
+// ║  注意：此文件由 TypeScript 编译生成，体积达 110KB ║
+// ║  远超"单文件不超过 40 行"的规范。                           ║
+// ║  建议重构方向：                                              ║
+// ║    1. 拆分为独立的模块文件（mapRenderer, npcSystem,        ║
+// ║       playerController, collisionEngine, questSystem...）    ║
+// ║    2. 将编译前的 TypeScript 源码纳入版本控制                 ║
+// ║    3. 引入小程序分包机制                                      ║
+// ╚══════════════════════════════════════════════════════════════╝
 var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, generator) {
     function adopt(value) { return value instanceof P ? value : new P(function (resolve) { resolve(value); }); }
     return new (P || (P = Promise))(function (resolve, reject) {
@@ -306,7 +315,7 @@ Page({
                     url: '/api/v1/quiz/stages/status',
                     method: 'GET'
                 });
-                if (res.code === 200 && res.data) {
+                if (res.code === 0 && res.data) {
                     this.setData({
                         userStageProgress: res.data
                     });
@@ -328,7 +337,7 @@ Page({
                     url: `/api/v1/quiz/map-config?stageId=${stageId}`,
                     method: 'GET'
                 });
-                if (res.code === 200 && res.data) {
+                if (res.code === 0 && res.data) {
                     const { width, height, playerSpawnX, playerSpawnY, obstacles, npcList } = res.data;
                     logger_1.Logger.info(`[${traceId}] 场景 [${stageId}] 配置加载成功: 尺寸 ${width}x${height}`);
                     const spawnX = playerSpawnX !== null && playerSpawnX !== void 0 ? playerSpawnX : 180;
@@ -375,7 +384,7 @@ Page({
                     url: `/api/v1/quiz/map-config?stageId=${targetStageId}`,
                     method: 'GET'
                 });
-                if (res.code === 200 && res.data) {
+                if (res.code === 0 && res.data) {
                     const npcList = res.data.npcList || {};
                     logger_1.Logger.info(`[${traceId}] 副本 [${targetStageId}] NPC 数据加载成功，共 ${Object.keys(npcList).length} 个实体`);
                     // 仅更新 npcList，保留外部已配置的大地图尺寸与玩家坐标
@@ -995,7 +1004,7 @@ Page({
                     url: `/api/v1/quiz/stages/${currentInteractNpc.stageId}/npcs/${currentInteractNpc.id}/questions`,
                     method: 'GET'
                 });
-                if (res.code === 200 && ((_a = res.data) === null || _a === void 0 ? void 0 : _a.length) > 0) {
+                if (res.code === 0 && ((_a = res.data) === null || _a === void 0 ? void 0 : _a.length) > 0) {
                     logger_1.Logger.info(`[${TRACE_ID}] 成功从云端拉取题库数据，数量: ${res.data.length}`);
                     this.setData({
                         testQuestions: res.data,
@@ -1167,7 +1176,7 @@ Page({
                     data: { answers }
                 });
                 this.setData({ showCyberModal: false });
-                if (res.code === 200) {
+                if (res.code === 0) {
                     this.handleCloudAssessmentSuccess(res.data);
                 }
                 else {
@@ -1580,7 +1589,7 @@ Page({
                     url: '/api/v1/quiz/test-history',
                     method: 'GET'
                 });
-                if (res.code === 200) {
+                if (res.code === 0) {
                     const cloudList = res.data || [];
                     const localList = localHistory_1.LocalHistoryService.getHistoryList();
                     const mergedMap = new Map();
@@ -1708,7 +1717,7 @@ Page({
                     method: 'GET'
                 });
                 this.setData({ showCyberModal: false });
-                if (res.code === 200) {
+                if (res.code === 0) {
                     this.setData({
                         testReport: res.data,
                         showResultModal: true
@@ -1805,7 +1814,7 @@ Page({
                             method: 'DELETE'
                         });
                         this.setData({ showCyberModal: false });
-                        if (delRes.code === 200) {
+                        if (delRes.code === 0) {
                             wx.showToast({ title: '抹除成功', icon: 'success' });
                             this.loadHistoryList(`T-DEL-${Date.now()}`);
                         }

@@ -1,0 +1,47 @@
+# Swarm 本地开发环境
+#
+# 启动方式：
+#   docker compose up -d
+#
+# 微信小程序开发：
+#   在微信开发者工具中打开 frontend/ 目录，
+#   utils/request.js 中的 BASE_URL 指向 http://localhost:8787
+#
+# 数据库初始化：
+#   cd backend && npm run db:migrate
+#
+version: "3.9"
+
+services:
+  # ─── Cloudflare Workers 开发模拟 ───
+  # 使用 wrangler dev 分别启动各 Worker
+  # 实际本地运行需在宿主机安装 node + wrangler
+
+  # ─── 数据库管理（可选）───
+  # Cloudflare D1 是基于 SQLite 的远程数据库。
+  # 开发环境下 wrangler 自动使用本地 SQLite 文件。
+  # 若需要可视化浏览本地 D1 数据，可使用：
+  sqlite-web:
+    image: coleifer/sqlite-web
+    profiles:
+      - db-tools
+    ports:
+      - "8080:8080"
+    volumes:
+      - ./.wrangler/state/v3/d1:/data
+    environment:
+      - SQLITE_DATABASE=/data/*.sqlite
+    restart: unless-stopped
+
+  # ─── 本地 API 文档浏览 ───
+  swagger-ui:
+    image: swaggerapi/swagger-ui
+    profiles:
+      - docs
+    ports:
+      - "8081:8080"
+    environment:
+      - SWAGGER_JSON=/docs/openapi.yaml
+    volumes:
+      - ./docs:/docs
+    restart: unless-stopped

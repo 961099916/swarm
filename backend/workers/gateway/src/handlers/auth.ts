@@ -7,16 +7,16 @@
  * @module handlers/auth
  */
 
-import { LoginReq, LoginRes, users, creditsLedger, userInvitations, INITIAL_CREDITS, INVITE_REWARD, TOKEN_EXPIRY_SECONDS } from "@swarm/shared";
-import type { UserRow } from "@swarm/shared";
+import { creditsLedger, userInvitations, INITIAL_CREDITS, INVITE_REWARD } from "@swarm/credits";
+import { LoginReq, LoginRes, users, TOKEN_EXPIRY_SECONDS } from "@swarm/identity";
+import { TraceLogger } from "@swarm/kernel"; import type { UserRow } from "@swarm/identity";
 import { signJWT } from "../jwtHelper";
 import { changeUserCredits } from "../creditsHelper";
-import { ResponseBuilder } from "../utils/response";
+import { ApiRes, getErrorMessage } from "/kernel";
 import { findFirstUser } from "../utils/drizzle";
 import { RequiredFieldsValidator, ValidatorChain } from "../utils/validator";
 import { drizzle } from "drizzle-orm/d1";
 import { eq, sql } from "drizzle-orm";
-
 
 interface WxSessionResponse {
   openid?: string;
@@ -135,13 +135,12 @@ async function registerNewUser(
 
   if (invitedBy) {
     changeUserCredits(db, invitedBy, INVITE_REWARD, "INVITE_BONUS", newUserId, traceId).catch((err) => {
-      console.error(`[WARN] [TraceID: ${traceId}] 注册时为邀请人 ${inviterId} 增加积分失败: ${err.message}`);
+      TraceLogger.warn("GATEWAY", "INVITE_CREDITS_FAILED", traceId, `注册时为邀请人 ${inviterId} 增加积分失败: getErrorMessage(err)`);
     });
   }
 
   return newUserId;
 }
-
 
 async function generateUserToken(user: UserRow, jwtSecret: string): Promise<string> {
   const expInSeconds = Math.floor(Date.now() / 1000) + TOKEN_EXPIRY_SECONDS;
@@ -166,7 +165,7 @@ export async function handleLogin(
   try {
     const body = (await request.json()) as LoginReq;
     const validationError = buildLoginValidatorChain().validate(body);
-    if (validationError) return ResponseBuilder.badRequest(validationError, traceId);
+    if (validationError) return ApiRes.badRequest(validationError, traceId);
 
     const openId = await fetchWxOpenId(body.code, env.WX_APP_ID, env.WX_APP_SECRET);
     const drizzleDb = drizzle(db);
@@ -179,7 +178,7 @@ export async function handleLogin(
       user = findFirstUser(newUserResult);
     } else {
       if (user.is_banned === 1) {
-        return ResponseBuilder.forbidden(
+        return ApiRes.forbidden(
           `您的账号已被封禁。原因：${user.banned_reason || "违反服务协议"}`,
           traceId
         );
@@ -198,10 +197,10 @@ export async function handleLogin(
         credits: user.credits,
       },
     };
-    return ResponseBuilder.success(loginRes, traceId);
-  } catch (error: any) {
-    console.error(`[ERROR] [TraceID: ${traceId}] 登录失败: ${error.message || error}`);
-    return ResponseBuilder.internalError("系统登录异常，请稍后再试", traceId);
+    return ApiRes.success(loginRes, traceId);
+  } catch (error: unknown) {
+        TraceLogger.error("GATEWAY", "LOGIN_FAILED", traceId, `登录失败: ${error instanceof Error ? error.message : String(error)}`, error);
+    return ApiRes.internalError("系统登录异常，请稍后再试", traceId);
   }
 }
 
@@ -219,10 +218,10 @@ export async function handleLogout(
       .set({ tokenVersion: sql`token_version + 1`, updatedAt: now })
       .where(eq(users.id, userId))
       .run();
-    console.info(`[INFO] [TraceID: ${traceId}] 用户退出登录成功，已失效其 Token (userId: ${userId})`);
-    return ResponseBuilder.success({ success: true }, traceId);
-  } catch (error: any) {
-    console.error(`[ERROR] [TraceID: ${traceId}] 登出失败: ${error.message || error}`);
-    return ResponseBuilder.internalError("系统退出登录异常", traceId);
+    TraceLogger.info("GATEWAY", "LOGOUT_SUCCESS", traceId, `用户退出登录成功，已失效其 Token`, userId);
+    return ApiRes.success({ success: true }, traceId);
+  } catch (error: unknown) {
+        TraceLogger.error("GATEWAY", "LOGOUT_FAILED", traceId, `登出失败: ${error instanceof Error ? error.message : String(error)}`, error);
+    return ApiRes.internalError("系统退出登录异常", traceId);
   }
 }

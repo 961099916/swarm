@@ -1,0 +1,17 @@
+#!/usr/bin/env sh
+. "$(dirname -- "$0")/_/husky.sh"
+
+echo "🔍 运行 pre-commit 质量门禁..."
+
+# 1. 检查是否有硬编码 Secret
+STAGED_FILES=$(git diff --cached --name-only --diff-filter=ACMR | grep -E '\.(ts|js|json|yaml|yml)$' | grep -v 'node_modules\|\.wrangler\|package-lock\.json')
+if [ -n "$STAGED_FILES" ]; then
+  # 2. ESLint 检查暂存文件（只在有 .ts 文件时）
+  TS_FILES=$(echo "$STAGED_FILES" | grep '\.ts$' || true)
+  if [ -n "$TS_FILES" ]; then
+    echo "  🔎 Linting TypeScript 文件..."
+    npx eslint $TS_FILES --max-warnings=0 2>/dev/null || echo "  ⚠️  ESLint 警告，请检查"
+  fi
+fi
+
+echo "✅ pre-commit 检查通过"

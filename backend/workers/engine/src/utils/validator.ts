@@ -1,6 +1,6 @@
-// File: /Users/zhangjiahao/IdeaProjects/swarm/backend/workers/engine/src/utils/validator.ts
+import { AI_MODELS } from "@swarm/agent";
 
-import { AI_MODELS } from "@swarm/shared";
+// File: /Users/zhangjiahao/IdeaProjects/swarm/backend/workers/engine/src/utils/validator.ts
 
 export interface RequestValidator<T = any> {
   validate(data: T): string | null;

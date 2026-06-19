@@ -1,11 +1,26 @@
 {
   "name": "swarm-backend",
+  "version": "1.0.0",
   "private": true,
+  "engines": {
+    "node": ">=18",
+    "npm": ">=9"
+  },
   "workspaces": [
     "packages/*",
     "workers/*"
   ],
   "scripts": {
-    "type-check": "npm run type-check --workspaces --if-present"
+    "test": "npm run test --workspaces --if-present",
+    "test:kernel": "cd packages/kernel && npx vitest run",
+    "type-check": "npm run type-check --workspaces --if-present",
+    "lint": "eslint packages/ workers/ --ext .ts --max-warnings 50",
+    "security-audit": "npm audit --audit-level=high",
+    "clean": "find . -name 'dist' -type d -exec rm -rf {} + 2>/dev/null; find . -name '*.tsbuildinfo' -delete"
+  },
+  "devDependencies": {
+    "eslint": "^8.0.0",
+    "@typescript-eslint/parser": "^7.0.0",
+    "@typescript-eslint/eslint-plugin": "^7.0.0"
   }
 }

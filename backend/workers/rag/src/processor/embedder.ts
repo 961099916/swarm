@@ -1,11 +1,11 @@
+import { TraceLogger } from "@swarm/kernel";
+import { RAG_EMBED_PASSAGE_PREFIX, RAG_MAX_CONCURRENT_EMBEDDINGS } from "@swarm/knowledge";
+
 /**
  * 嵌入生成器
  *
  * 通过 Workers AI 生成文本嵌入向量，支持批量并发和 e5 模型前缀处理。
  */
-
-import { RAG_EMBED_PASSAGE_PREFIX, RAG_MAX_CONCURRENT_EMBEDDINGS } from "@swarm/shared";
-import { TraceLogger } from "@swarm/shared";
 
 const DEFAULT_EMBED_MODEL = "@cf/baai/bge-small-en-v1.5";
 

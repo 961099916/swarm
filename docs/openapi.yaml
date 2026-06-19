@@ -1,0 +1,307 @@
+openapi: "3.1.0"
+info:
+  title: Swarm API
+  version: "1.0.0"
+  description: |
+    Swarm — 企业级智能体编排平台 API 文档
+
+    架构：
+    - Gateway: `swarm-gateway.<domain>` (入口，负责鉴权/路由)
+    - User/Credits: `CORE_SVC` (用户与资产)
+    - Engine: `ENGINE_SVC` (Agent 与任务)
+    - Quiz: `QUIZ_SVC` (闯关评测)
+    - RAG: `RAG_SVC` (知识库)
+    - Admin: `ADMIN_SVC` (管理后台)
+
+    认证方式：`Authorization: Bearer <JWT>`
+
+  contact:
+    name: Swarm Team
+  license:
+    name: MIT
+servers:
+  - url: https://swarm-gateway.jiuxia.online
+    description: 生产环境
+  - url: http://localhost:8787
+    description: 本地开发
+
+paths:
+  # ─── 认证 ───
+  /api/v1/auth/login:
+    post:
+      summary: 微信登录
+      tags: [认证]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [code]
+              properties:
+                code:
+                  type: string
+                  description: 微信小程序 wx.login() 返回的 code
+                nickname:
+                  type: string
+                  description: 用户昵称
+                avatarUrl:
+                  type: string
+                  description: 头像 URL
+                inviterId:
+                  type: string
+                  description: 邀请人 ID（可选）
+      responses:
+        "200":
+          description: 登录成功
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  code: { type: integer, example: 0 }
+                  data:
+                    type: object
+                    properties:
+                      token: { type: string }
+                      user:
+                        type: object
+                        properties:
+                          id: { type: string }
+                          nickname: { type: string }
+                          avatarUrl: { type: string }
+                          role: { type: string, enum: [FREE_USER, VIP, ADMIN] }
+                          credits: { type: integer }
+        "400":
+          $ref: "#/components/responses/BadRequest"
+
+  /api/v1/auth/logout:
+    post:
+      summary: 退出登录（使当前 Token 失效）
+      tags: [认证]
+      security: [{ bearerAuth: [] }]
+      responses:
+        "200": { description: 登出成功 }
+
+  # ─── 智能体 ───
+  /api/v1/agents:
+    get:
+      summary: 获取可用智能体列表
+      tags: [智能体]
+      security: [{ bearerAuth: [] }]
+      responses:
+        "200": { description: 智能体列表 }
+    post:
+      summary: 创建自定义智能体
+      tags: [智能体]
+      security: [{ bearerAuth: [] }]
+      responses:
+        "200": { description: 创建成功 }
+
+  # ─── 任务 ───
+  /api/v1/tasks:
+    get:
+      summary: 获取任务列表
+      tags: [任务]
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - name: page
+          in: query
+          schema: { type: integer, default: 1 }
+        - name: pageSize
+          in: query
+          schema: { type: integer, default: 20 }
+      responses:
+        "200": { description: 任务列表 }
+    post:
+      summary: 创建新任务
+      tags: [任务]
+      security: [{ bearerAuth: [] }]
+      responses:
+        "200": { description: 任务创建成功 }
+
+  # ─── 积分 ───
+  /api/v1/credits/history:
+    get:
+      summary: 积分流水
+      tags: [积分]
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - name: type
+          in: query
+          schema: { type: string, enum: [ALL, INCOME, OUTCOME], default: ALL }
+        - name: limit
+          in: query
+          schema: { type: integer, default: 20 }
+      responses:
+        "200": { description: 流水列表 }
+
+  /api/v1/credits/bind-invite:
+    post:
+      summary: 绑定邀请关系
+      tags: [积分]
+      security: [{ bearerAuth: [] }]
+      responses:
+        "200": { description: 绑定成功 }
+
+  /api/v1/credits/reward:
+    post:
+      summary: 广告奖励领取
+      tags: [积分]
+      security: [{ bearerAuth: [] }]
+      responses:
+        "200": { description: 发放成功 }
+
+  # ─── 知识库 ───
+  /api/v1/kb/list:
+    get:
+      summary: 知识库列表
+      tags: [知识库]
+      security: [{ bearerAuth: [] }]
+      responses:
+        "200": { description: 知识库列表 }
+
+  /api/v1/kb/create:
+    post:
+      summary: 创建知识库
+      tags: [知识库]
+      security: [{ bearerAuth: [] }]
+      responses:
+        "200": { description: 创建成功 }
+
+  /api/v1/kb/detail:
+    get:
+      summary: 知识库详情
+      tags: [知识库]
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - name: kbId
+          in: query
+          required: true
+          schema: { type: string }
+      responses:
+        "200": { description: 知识库详情 }
+
+  # ─── 管理后台 ───
+  /api/v1/admin/users:
+    get:
+      summary: 用户列表（管理员）
+      tags: [管理后台]
+      security: [{ bearerAuth: [] }]
+      responses:
+        "200": { description: 用户列表 }
+    post:
+      summary: 修改用户角色
+      tags: [管理后台]
+      security: [{ bearerAuth: [] }]
+
+  /api/v1/admin/tasks:
+    get:
+      summary: 任务列表（管理员）
+      tags: [管理后台]
+      security: [{ bearerAuth: [] }]
+
+  # ─── 测评 ───
+  /api/v1/quiz/submit:
+    post:
+      summary: 提交测评答案
+      tags: [测评]
+      security: [{ bearerAuth: [] }]
+      responses:
+        "200": { description: 评分结果 }
+
+  # ─── 健康检查 ───
+  /health:
+    get:
+      summary: 健康检查
+      tags: [基础设施]
+      responses:
+        "200":
+          description: 服务正常
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status: { type: string, example: "ok" }
+                  service: { type: string, example: "gateway" }
+                  timestamp: { type: string }
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: 通过登录接口获取 JWT Token
+
+  responses:
+    BadRequest:
+      description: 请求参数错误
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              code: { type: integer, example: 1000 }
+              message: { type: string }
+              traceId: { type: string }
+    Unauthorized:
+      description: 未认证或 Token 已过期
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              code: { type: integer, example: 1010 }
+              message: { type: string }
+    Forbidden:
+      description: 权限不足
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              code: { type: integer, example: 1020 }
+              message: { type: string }
+    NotFound:
+      description: 资源不存在
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              code: { type: integer, example: 1030 }
+    RateLimited:
+      description: 请求频率超限
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              code: { type: integer, example: 1050 }
+              message: { type: string }
+
+  schemas:
+    ApiResponse:
+      type: object
+      properties:
+        code:
+          type: integer
+          description: 业务状态码（0=成功）
+        message:
+          type: string
+        data:
+          type: object
+        traceId:
+          type: string
+        timestamp:
+          type: string
+          format: date-time
+        pagination:
+          type: object
+          properties:
+            page: { type: integer }
+            pageSize: { type: integer }
+            total: { type: integer }
+            totalPages: { type: integer }

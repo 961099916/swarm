@@ -1,0 +1,69 @@
+# Dependabot 版本自动更新
+#
+# 企业级项目必须开启自动化依赖更新，避免累积技术债务和安全漏洞。
+# 更新频率：weekly（每周一检查），减少 CI 干扰。
+
+version: 2
+updates:
+  # ─── 后端核心依赖 ───
+  - package-ecosystem: "npm"
+    directory: "/backend"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+      time: "09:00"
+      timezone: "Asia/Shanghai"
+    open-pull-requests-limit: 10
+    labels:
+      - "dependencies"
+      - "backend"
+    # 为每个依赖分组，减少 PR 数量
+    groups:
+      cloudflare:
+        patterns:
+          - "wrangler"
+          - "@cloudflare/*"
+          - "cloudflare:*"
+      hono:
+        patterns:
+          - "hono"
+      drizzle:
+        patterns:
+          - "drizzle-orm"
+          - "drizzle-kit"
+      typescript:
+        patterns:
+          - "typescript"
+          - "@typescript-eslint/*"
+
+  # ─── 前端依赖 ───
+  - package-ecosystem: "npm"
+    directory: "/frontend"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+      time: "09:00"
+      timezone: "Asia/Shanghai"
+    open-pull-requests-limit: 5
+    labels:
+      - "dependencies"
+      - "frontend"
+    groups:
+      tdesign:
+        patterns:
+          - "tdesign-miniprogram"
+      build:
+        patterns:
+          - "tailwindcss"
+          - "postcss*"
+          - "autoprefixer"
+
+  # ─── GitHub Actions ───
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+    labels:
+      - "dependencies"
+      - "ci"

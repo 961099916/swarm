@@ -1,10 +1,11 @@
 
-import { BindInviteReq, AdRewardReq, UserRow, users, userInvitations, creditsLedger, adRewardLogs, INVITE_REWARD, AD_REWARD } from "@swarm/shared";
-import { ResponseBuilder } from "../utils/response";
+import { BindInviteReq, AdRewardReq, userInvitations, creditsLedger, adRewardLogs, INVITE_REWARD, AD_REWARD } from "@swarm/credits";
+import { UserRow, users } from "@swarm/identity";
+import { TraceLogger } from "@swarm/kernel";
+import { ApiRes, getErrorMessage } from "/kernel";
 import { RequiredFieldsValidator, ValidatorChain } from "../utils/validator";
 import { drizzle } from "drizzle-orm/d1";
 import { eq, sql, and, desc, gt, lt } from "drizzle-orm";
-
 
 async function sha256(message: string): Promise<string> {
   const msgBuffer = new TextEncoder().encode(message);
@@ -87,27 +88,27 @@ export async function handleBindInvite(
   try {
     const body = (await request.json()) as BindInviteReq;
     const validationError = buildBindInviteValidatorChain().validate(body);
-    if (validationError) return ResponseBuilder.badRequest(validationError, traceId);
+    if (validationError) return ApiRes.badRequest(validationError, traceId);
 
     const { inviterId } = body;
-    if (inviterId === user.id) return ResponseBuilder.badRequest("不能邀请自己哦", traceId);
-    if (user.invited_by) return ResponseBuilder.badRequest("已绑定过邀请人", traceId);
+    if (inviterId === user.id) return ApiRes.badRequest("不能邀请自己哦", traceId);
+    if (user.invited_by) return ApiRes.badRequest("已绑定过邀请人", traceId);
 
     const drizzleDb = drizzle(db);
     const inviterResult = await drizzleDb.select({ id: users.id, credits: users.credits }).from(users).where(eq(users.id, inviterId));
-    if (!inviterResult || inviterResult.length === 0) return ResponseBuilder.badRequest("邀请码无效，请检查邀请码后重试", traceId);
+    if (!inviterResult || inviterResult.length === 0) return ApiRes.badRequest("邀请码无效，请检查邀请码后重试", traceId);
 
     const actualInviterId = inviterResult[0].id;
     await executeBindInvite(db, user, actualInviterId, inviterResult[0].credits);
-    console.info(`[INFO] [TraceID: ${traceId}] 邀请关系绑定成功: 邀请人=${actualInviterId}, 被邀请人=${user.id}`);
+    TraceLogger.info("GATEWAY", "BIND_INVITE_SUCCESS", traceId, `邀请关系绑定成功`, user.id, { inviterId: actualInviterId });
     
-    return ResponseBuilder.success({ success: true }, traceId);
-  } catch (error: any) {
-    console.error(`[ERROR] [TraceID: ${traceId}] 绑定邀请失败: ${error.message || error}`);
+    return ApiRes.success({ success: true }, traceId);
+  } catch (error: unknown) {
+        TraceLogger.error("GATEWAY", "BIND_INVITE_FAILED", traceId, `绑定邀请失败`, error, user.id);
     if (error.message && error.message.includes("UNIQUE constraint")) {
-      return ResponseBuilder.error("邀请关系已被绑定，请勿重复操作", traceId, 409);
+      return ApiRes.conflict("邀请关系已被绑定，请勿重复操作", traceId, );
     }
-    return ResponseBuilder.internalError("系统绑定邀请异常，请稍后再试", traceId);
+    return ApiRes.internalError("系统绑定邀请异常，请稍后再试", traceId);
   }
 }
 
@@ -151,22 +152,22 @@ export async function handleAdReward(
   try {
     const body = (await request.json()) as AdRewardReq;
     const validationError = buildAdRewardValidatorChain().validate(body);
-    if (validationError) return ResponseBuilder.badRequest(validationError, traceId);
+    if (validationError) return ApiRes.badRequest(validationError, traceId);
 
     const { adToken } = body;
     const tokenHash = await sha256(adToken);
     const drizzleDb = drizzle(db);
     const exists = await drizzleDb.select({ id: adRewardLogs.id }).from(adRewardLogs).where(eq(adRewardLogs.adTokenHash, tokenHash));
-    if (exists && exists.length > 0) return ResponseBuilder.error("广告奖励已被领取过，请勿重复领取", traceId, 409);
+    if (exists && exists.length > 0) return ApiRes.conflict("广告奖励已被领取过，请勿重复领取", traceId, );
 
     const newBalance = user.credits + AD_REWARD;
     await executeAdReward(db, user, tokenHash, newBalance);
-    console.info(`[INFO] [TraceID: ${traceId}] 广告激励发分成功: 用户=${user.id}, 积分+=${AD_REWARD}, 新余额=${newBalance}`);
+    TraceLogger.info("GATEWAY", "AD_REWARD_SUCCESS", traceId, `广告激励发分成功`, user.id, { addedCredits: AD_REWARD, newBalance });
 
-    return ResponseBuilder.success({ addedCredits: AD_REWARD, newBalance }, traceId);
-  } catch (error: any) {
-    console.error(`[ERROR] [TraceID: ${traceId}] 广告发分失败: ${error.message || error}`);
-    return ResponseBuilder.internalError("系统领取广告奖励异常，请稍后再试", traceId);
+    return ApiRes.success({ addedCredits: AD_REWARD, newBalance }, traceId);
+  } catch (error: unknown) {
+        TraceLogger.error("GATEWAY", "AD_REWARD_FAILED", traceId, `广告发分失败`, error, user.id);
+    return ApiRes.internalError("系统领取广告奖励异常，请稍后再试", traceId);
   }
 }
 
@@ -202,9 +203,9 @@ export async function handleCreditsHistory(
       .limit(limit)
       .offset(offset);
 
-    return ResponseBuilder.success(results, traceId);
-  } catch (error: any) {
-    console.error(`[ERROR] [TraceID: ${traceId}] 查询流水失败: ${error.message || error}`);
-    return ResponseBuilder.internalError("系统查询积分记录异常", traceId);
+    return ApiRes.success(results, traceId);
+  } catch (error: unknown) {
+        TraceLogger.error("GATEWAY", "CREDITS_HISTORY_FAILED", traceId, `查询流水失败`, error, userId);
+    return ApiRes.internalError("系统查询积分记录异常", traceId);
   }
 }

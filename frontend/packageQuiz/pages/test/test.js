@@ -82,7 +82,7 @@ Page({
                     url: `/api/v1/quiz/stages/fun_lobby/npcs/${testId}/questions`,
                     method: 'GET'
                 });
-                if (res.code === 200 && ((_a = res.data) === null || _a === void 0 ? void 0 : _a.length) > 0) {
+                if (res.code === 0 && ((_a = res.data) === null || _a === void 0 ? void 0 : _a.length) > 0) {
                     this.initQuestions(res.data);
                 }
                 else {
@@ -318,7 +318,7 @@ Page({
                     data: { testId, answers }
                 });
                 this.setData({ showCyberModal: false });
-                if (res.code === 200) {
+                if (res.code === 0) {
                     logger_1.Logger.info('[Submit] 测评报告在线计算入库成功');
                     // 清理当前草稿会话
                     wx.removeStorageSync(sessionKey);

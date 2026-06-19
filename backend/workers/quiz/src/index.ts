@@ -8,19 +8,15 @@ import {
 } from './evaluator/mapConfigs';
 import { STAGE_CONFIGS } from './evaluator/stageConfigs';
 import { calculateLocalQuiz, QUIZ_META } from './evaluator/questions';
-import type { QuizVariables, AnswerSubmit } from './types';
-import type { NPCChallengeConfig } from './types';
-import type { StageProgressRow } from '@swarm/shared';
+import type { QuizVariables, AnswerSubmit, NPCChallengeConfig } from './types';
 import {
   QUIZ_PASS_THRESHOLD,
   EXP_STAGE_PASS,
   EXP_QUIZ_COMPLETE,
   EXP_QUIZ_CALCULATE,
   TEST_HISTORY_MAX_LIMIT,
-  TraceLogger,
-  CacheService,
-  startupSecurityCheck
-} from '@swarm/shared';
+} from '@swarm/quiz';
+import { TraceLogger, CacheService, startupSecurityCheck } from '@swarm/kernel';
 
 export interface Env {
   DB: D1Database;

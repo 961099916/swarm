@@ -1,6 +1,7 @@
-// File: /Users/zhangjiahao/IdeaProjects/swarm/backend/workers/user/src/utils/security.ts
+import { AdRewardReq } from "@swarm/credits";
+import { TraceLogger } from "@swarm/kernel";
 
-import { AdRewardReq, TraceLogger } from "@swarm/shared";
+// File: /Users/zhangjiahao/IdeaProjects/swarm/backend/workers/user/src/utils/security.ts
 
 /**
  * 将字符串编码为 Uint8Array
@@ -82,8 +83,8 @@ export async function verifyAdToken(
     }
 
     return { success: true };
-  } catch (err: any) {
-    TraceLogger.error("USER", "AD_TOKEN_SECURITY", traceId, `解析广告令牌抛出异常: ${err.message || err}`, err, currentUserId);
+  } catch (err: unknown) {
+    TraceLogger.error("USER", "AD_TOKEN_SECURITY", traceId, `解析广告令牌抛出异常: getErrorMessage(err)`, err, currentUserId);
     return { success: false, errorMsg: "令牌解析异常" };
   }
 }

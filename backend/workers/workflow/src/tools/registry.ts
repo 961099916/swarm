@@ -1,6 +1,6 @@
 
-import { WorkflowTool, ToolDefinition } from "./types";
-import { DynamicToolRow } from "@swarm/shared";
+import { DynamicToolRow } from "@swarm/agent";
+import { TraceLogger } from "@swarm/kernel";
 import { DynamicWorkflowTool } from "./dynamic-tool";
 
 export class ToolRegistry {
@@ -33,10 +33,10 @@ export class ToolRegistry {
 
       const dynamicTool = new DynamicWorkflowTool(row);
       this.register(dynamicTool);
-      console.info(`[INFO] [TraceID: DB_LOAD] 成功按需装载数据库动态工具: ${row.name}`);
+      TraceLogger.info("WORKFLOW", "TOOL_LOADED", "DB_LOAD", `成功按需装载数据库动态工具: ${row.name}`);
       return dynamicTool;
-    } catch (e: any) {
-      console.error(`[ERROR] [TraceID: DB_LOAD] 动态按需装载工具 ${name} 异常: ${e.message}`);
+    } catch (e: unknown) {
+      TraceLogger.error("WORKFLOW", "TOOL_LOAD_FAILED", "DB_LOAD", `动态按需装载工具 ${name} 异常`, e);
       return undefined;
     }
   }
@@ -61,11 +61,11 @@ export class ToolRegistry {
           }
         }
         if (loadCount > 0) {
-          console.info(`[INFO] [TraceID: DB_LOAD] 从数据库成功批量装载 ${loadCount} 个动态工具`);
+          TraceLogger.info("WORKFLOW", "TOOLS_BATCH_LOADED", "DB_LOAD", `从数据库成功批量装载 ${loadCount} 个动态工具`);
         }
       }
-    } catch (e: any) {
-      console.error(`[ERROR] [TraceID: DB_LOAD] 批量加载数据库动态工具失败: ${e.message}`);
+    } catch (e: unknown) {
+      TraceLogger.error("WORKFLOW", "TOOLS_BATCH_LOAD_FAILED", "DB_LOAD", `批量加载数据库动态工具失败`, e);
     }
   }
 
@@ -85,4 +85,3 @@ export class ToolRegistry {
     }));
   }
 }
-

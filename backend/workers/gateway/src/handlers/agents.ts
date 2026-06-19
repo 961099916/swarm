@@ -1,6 +1,7 @@
 
-import { AgentDTO, CreateAgentReq, UpdateAgentReq, AI_MODELS } from "@swarm/shared";
-import { ResponseBuilder } from "../utils/response";
+import { AgentDTO, CreateAgentReq, UpdateAgentReq, AI_MODELS, agents } from "@swarm/agent";
+import { TraceLogger } from "@swarm/kernel";
+import { ApiRes, getErrorMessage } from "/kernel";
 import {
   RequiredFieldsValidator,
   ModelWhitelistValidator,
@@ -9,7 +10,6 @@ import {
 } from "../utils/validator";
 import { drizzle } from "drizzle-orm/d1";
 import { eq, or, isNull, desc, and } from "drizzle-orm";
-import { agents } from "@swarm/shared";
 
 const DEFAULT_MODEL = AI_MODELS.DEFAULT;
 
@@ -50,10 +50,10 @@ export async function handleListAgents(
       .orderBy(desc(agents.isPreset), desc(agents.createdAt));
 
     const dtoList = (results || []).map(mapAgentToDTO);
-    return ResponseBuilder.success(dtoList, traceId);
-  } catch (error: any) {
-    console.error(`[ERROR] [TraceID: ${traceId}] 获取智能体列表异常: ${error.message || error}`);
-    return ResponseBuilder.internalError("系统查询智能体列表失败", traceId);
+    return ApiRes.success(dtoList, traceId);
+  } catch (error: unknown) {
+        TraceLogger.error("GATEWAY", "LIST_AGENTS_FAILED", traceId, `获取智能体列表异常: getErrorMessage(error)`, error);
+    return ApiRes.internalError("系统查询智能体列表失败", traceId);
   }
 }
 
@@ -103,16 +103,16 @@ export async function handleCreateAgent(
     const validationError = buildCreateValidatorChain().validate(body);
     
     if (validationError) {
-      return ResponseBuilder.badRequest(validationError, traceId);
+      return ApiRes.badRequest(validationError, traceId);
     }
 
     const agentId = crypto.randomUUID();
     await executeInsertAgent(db, agentId, userId, body);
 
-    return ResponseBuilder.success({ agentId }, traceId);
-  } catch (error: any) {
-    console.error(`[ERROR] [TraceID: ${traceId}] 创建自定义智能体异常: ${error.message || error}`);
-    return ResponseBuilder.internalError("系统部署自定义智能体失败", traceId);
+    return ApiRes.success({ agentId }, traceId);
+  } catch (error: unknown) {
+        TraceLogger.error("GATEWAY", "CREATE_AGENT_FAILED", traceId, `创建自定义智能体异常: getErrorMessage(error)`, error);
+    return ApiRes.internalError("系统部署自定义智能体失败", traceId);
   }
 }
 
@@ -144,7 +144,7 @@ async function executeUpdateAgent(db: D1Database, userId: string, body: UpdateAg
       tools: toolsStr,
       updatedAt: now
     })
-    .where(and(eq(agents.id, body.agentId), eq(agents.userId, userId), eq(agents.isPreset, 0)))
+    .where(and(eq(agents.id, body.id), eq(agents.userId, userId), eq(agents.isPreset, 0)))
     .run();
   return result.meta.changes;
 }
@@ -163,18 +163,18 @@ export async function handleUpdateAgent(
     const validationError = buildUpdateValidatorChain().validate(body);
 
     if (validationError) {
-      return ResponseBuilder.badRequest(validationError, traceId);
+      return ApiRes.badRequest(validationError, traceId);
     }
 
     const changes = await executeUpdateAgent(db, userId, body);
     if (!changes) {
-      return ResponseBuilder.forbidden("智能体不存在或您无权修改此内置智能体", traceId);
+      return ApiRes.forbidden("智能体不存在或您无权修改此内置智能体", traceId);
     }
 
-    return ResponseBuilder.success({ agentId: body.agentId }, traceId);
-  } catch (error: any) {
-    console.error(`[ERROR] [TraceID: ${traceId}] 修改智能体异常: ${error.message || error}`);
-    return ResponseBuilder.internalError("修改自定义智能体失败", traceId);
+    return ApiRes.success({ agentId: body.id }, traceId);
+  } catch (error: unknown) {
+        TraceLogger.error("GATEWAY", "UPDATE_AGENT_FAILED", traceId, `修改智能体异常: getErrorMessage(error)`, error);
+    return ApiRes.internalError("修改自定义智能体失败", traceId);
   }
 }
 
@@ -192,7 +192,7 @@ export async function handleDeleteAgent(
     const agentId = url.searchParams.get("agentId");
 
     if (!agentId) {
-      return ResponseBuilder.badRequest("缺少待删除的 agentId 参数", traceId);
+      return ApiRes.badRequest("缺少待删除的 agentId 参数", traceId);
     }
 
     const drizzleDb = drizzle(db);
@@ -202,12 +202,12 @@ export async function handleDeleteAgent(
       .run();
 
     if (!result.meta.changes) {
-      return ResponseBuilder.forbidden("智能体不存在或您无权删除此内置智能体", traceId);
+      return ApiRes.forbidden("智能体不存在或您无权删除此内置智能体", traceId);
     }
 
-    return ResponseBuilder.success({ success: true }, traceId);
-  } catch (error: any) {
-    console.error(`[ERROR] [TraceID: ${traceId}] 删除智能体异常: ${error.message || error}`);
-    return ResponseBuilder.internalError("下线自定义智能体失败", traceId);
+    return ApiRes.success({ success: true }, traceId);
+  } catch (error: unknown) {
+        TraceLogger.error("GATEWAY", "DELETE_AGENT_FAILED", traceId, `删除智能体异常: getErrorMessage(error)`, error);
+    return ApiRes.internalError("下线自定义智能体失败", traceId);
   }
 }

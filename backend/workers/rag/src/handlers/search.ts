@@ -1,6 +1,8 @@
+import { TraceLogger } from "@swarm/kernel";
+import { RAG_DEFAULT_MIN_SCORE, RAG_DEFAULT_TOP_K, RAG_MAX_CONTEXT_LENGTH } from "@swarm/knowledge";
+
 // File: /Users/zhangjiahao/IdeaProjects/swarm/backend/workers/rag/src/handlers/search.ts
 
-import { TraceLogger, RAG_DEFAULT_TOP_K, RAG_DEFAULT_MIN_SCORE, RAG_MAX_CONTEXT_LENGTH } from "@swarm/shared";
 import { ResponseBuilder } from "../utils/response";
 
 /**
@@ -36,8 +38,8 @@ export async function handleSearchKnowledge(
       results,
       totalChunks: results.length,
     }, traceId);
-  } catch (error: any) {
-    TraceLogger.error("RAG", "SEARCH_FAILED", traceId, `知识库搜索异常: ${error.message}`, error);
+  } catch (error: unknown) {
+    TraceLogger.error("RAG", "SEARCH_FAILED", traceId, `知识库搜索异常: getErrorMessage(error)`, error);
     return ResponseBuilder.internalError("知识检索失败", traceId);
   }
 }
@@ -108,8 +110,8 @@ export async function handleRAGContextInject(
       context,
       chunks: topChunks,
     }, traceId);
-  } catch (error: any) {
-    TraceLogger.error("RAG", "CONTEXT_INJECT_FAILED", traceId, `RAG 上下文注入异常: ${error.message}`, error);
+  } catch (error: unknown) {
+    TraceLogger.error("RAG", "CONTEXT_INJECT_FAILED", traceId, `RAG 上下文注入异常: getErrorMessage(error)`, error);
     // 注入失败时返回空 context，不影响 Agent 主流程
     return ResponseBuilder.success({ context: "", chunks: [] }, traceId);
   }

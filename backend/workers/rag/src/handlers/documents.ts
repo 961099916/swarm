@@ -1,6 +1,8 @@
+import { CacheService, TraceLogger } from "@swarm/kernel";
+import { AddDocumentByUrlReq, AddDocumentManualReq, DocumentDTO, RAG_MAX_FILE_SIZE } from "@swarm/knowledge";
+
 // File: /Users/zhangjiahao/IdeaProjects/swarm/backend/workers/rag/src/handlers/documents.ts
 
-import { TraceLogger, CacheService, AddDocumentByUrlReq, AddDocumentManualReq, DocumentDTO, RAG_MAX_FILE_SIZE } from "@swarm/shared";
 import { ResponseBuilder } from "../utils/response";
 
 interface DocumentRow {
@@ -105,7 +107,7 @@ export async function handleAddDocument(
       } else {
         TraceLogger.warn("RAG", "DOC_QUEUE_NOT_BOUND", traceId, `DOC_QUEUE 未绑定，文档 ${docId} 停留在 PENDING`);
       }
-    } catch (qErr: any) {
+    } catch (qErr: unknown) {
       TraceLogger.error("RAG", "DOC_ENQUEUE_FAILED", traceId, `文档入队失败: ${qErr.message}`, qErr);
     }
 
@@ -113,8 +115,8 @@ export async function handleAddDocument(
       docId,
       message: "文档已提交，后台正在处理中",
     }, traceId);
-  } catch (error: any) {
-    TraceLogger.error("RAG", "ADD_DOCUMENT_FAILED", traceId, `添加文档异常: ${error.message}`, error);
+  } catch (error: unknown) {
+    TraceLogger.error("RAG", "ADD_DOCUMENT_FAILED", traceId, `添加文档异常: getErrorMessage(error)`, error);
     return ResponseBuilder.internalError("添加文档失败", traceId);
   }
 }
@@ -165,15 +167,15 @@ export async function handleAddDocumentManual(
       } else {
         TraceLogger.warn("RAG", "DOC_QUEUE_NOT_BOUND", traceId, `DOC_QUEUE 未绑定`);
       }
-    } catch (qErr: any) {
+    } catch (qErr: unknown) {
       TraceLogger.error("RAG", "MANUAL_DOC_ENQUEUE_FAILED", traceId, `手动文档入队失败: ${qErr.message}`, qErr);
     }
 
     TraceLogger.info("RAG", "MANUAL_DOC_PENDING", traceId, `手动文档已提交: docId=${docId}`, userId);
 
     return ResponseBuilder.success({ docId, message: "文档已提交，后台正在处理中" }, traceId);
-  } catch (error: any) {
-    TraceLogger.error("RAG", "ADD_MANUAL_DOC_FAILED", traceId, `手动录入文档异常: ${error.message}`, error);
+  } catch (error: unknown) {
+    TraceLogger.error("RAG", "ADD_MANUAL_DOC_FAILED", traceId, `手动录入文档异常: getErrorMessage(error)`, error);
     return ResponseBuilder.internalError("添加文档失败", traceId);
   }
 }
@@ -218,8 +220,8 @@ export async function handleListDocuments(
       page,
       pageSize,
     }, traceId);
-  } catch (error: any) {
-    TraceLogger.error("RAG", "LIST_DOCS_FAILED", traceId, `获取文档列表异常: ${error.message}`, error);
+  } catch (error: unknown) {
+    TraceLogger.error("RAG", "LIST_DOCS_FAILED", traceId, `获取文档列表异常: getErrorMessage(error)`, error);
     return ResponseBuilder.internalError("获取文档列表失败", traceId);
   }
 }
@@ -263,8 +265,8 @@ export async function handleDeleteDocument(
 
     TraceLogger.info("RAG", "DELETE_DOC_SUCCESS", traceId, `删除文档成功: docId=${docId}`, userId);
     return ResponseBuilder.success({ success: true }, traceId);
-  } catch (error: any) {
-    TraceLogger.error("RAG", "DELETE_DOC_FAILED", traceId, `删除文档异常: ${error.message}`, error);
+  } catch (error: unknown) {
+    TraceLogger.error("RAG", "DELETE_DOC_FAILED", traceId, `删除文档异常: getErrorMessage(error)`, error);
     return ResponseBuilder.internalError("删除文档失败", traceId);
   }
 }

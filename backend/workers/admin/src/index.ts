@@ -12,6 +12,7 @@ export interface Env {
   CACHE_KV: any;
   INTERNAL_SECRET: string;
   RAG_SVC?: Fetcher;
+  QUIZ_SVC?: Fetcher;
 }
 
 interface AdminVariables {
@@ -192,6 +193,34 @@ app.post("/api/v1/admin/users/:id/ban", async (c) => {
 
 app.put("/api/v1/admin/tasks/:id/cancel", async (c) => {
   return await getController(c).cancelTask(c.get("adminId"), c.req.param("id"), c.get("traceId"));
+});
+
+app.get("/api/v1/admin/credits/ad-logs", async (c) => {
+  return await getController(c).listAdRewardLogs(c.req.raw, c.get("traceId"));
+});
+
+app.get("/api/v1/admin/credits/invitations", async (c) => {
+  return await getController(c).listUserInvitations(c.req.raw, c.get("traceId"));
+});
+
+app.get("/api/v1/admin/knowledge/documents", async (c) => {
+  return await getController(c).getGlobalDocuments(c.req.raw, c.env.RAG_SVC, c.get("adminId"), c.get("traceId"));
+});
+
+app.delete("/api/v1/admin/knowledge/documents/delete", async (c) => {
+  return await getController(c).deleteGlobalDocument(c.req.raw, c.env.RAG_SVC, c.get("adminId"), c.get("traceId"));
+});
+
+app.post("/api/v1/admin/quiz/users/reset", async (c) => {
+  return await getController(c).resetUserQuizProgress(c.req.raw, c.env.QUIZ_SVC, c.get("adminId"), c.get("traceId"));
+});
+
+app.get("/api/v1/admin/quiz/configs", async (c) => {
+  return await getController(c).getQuizConfigs(c.env.QUIZ_SVC, c.get("adminId"), c.get("traceId"));
+});
+
+app.put("/api/v1/admin/quiz/configs", async (c) => {
+  return await getController(c).updateQuizConfigs(c.req.raw, c.env.QUIZ_SVC, c.get("adminId"), c.get("traceId"));
 });
 
 app.get("/health", async (c) => {

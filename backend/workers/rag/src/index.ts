@@ -160,6 +160,20 @@ app.post("/api/v1/rag/admin/knowledge-bases", async (c) => {
   return await getController(c).getKBsDirect(c.get("traceId"));
 });
 
+// ══════════════════════════════════════════════════
+// 内网管理专用接口 (受 INTERNAL_SECRET & X-User-Role 保护)
+// ══════════════════════════════════════════════════
+
+app.get("/api/v1/internal/admin/documents", async (c) => {
+  return await getController(c).getGlobalDocuments(c.req.raw, c.get("traceId"));
+});
+
+app.delete("/api/v1/internal/admin/documents", async (c) => {
+  const url = new URL(c.req.url);
+  const docId = url.searchParams.get("docId") || "";
+  return await getController(c).deleteDocument(docId, "system", "ADMIN", c.get("traceId"));
+});
+
 app.get("/health", async (c) => {
   return c.json({ status: "ok", service: "rag", timestamp: new Date().toISOString() });
 });

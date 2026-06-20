@@ -115,7 +115,7 @@ app.get("/api/v1/quiz/stages/status", async (c) => {
 });
 
 app.get("/api/v1/quiz/stages/:stageId/npcs/:npcId/questions", async (c) => {
-  return await getController(c).getQuestions(c.req.raw, c.req.param("stageId"), c.req.param("npcId"), c.get("traceId"));
+  return await getController(c).getQuestions(c.req.raw, c.req.param("stageId"), c.req.param("npcId"), c.env.CACHE_KV, c.get("traceId"));
 });
 
 app.post("/api/v1/quiz/stages/:stageId/npcs/:npcId/submit", async (c) => {
@@ -136,6 +136,22 @@ app.delete("/api/v1/quiz/test-history/:id", async (c) => {
 
 app.post("/api/v1/quiz/calculate", async (c) => {
   return await getController(c).calculateQuiz(c.req.raw, c.env.CACHE_KV, c.get("userId"), c.get("traceId"));
+});
+
+// ══════════════════════════════════════════════════
+// 内网管理专用接口 (受 INTERNAL_SECRET & X-User-Role 保护)
+// ══════════════════════════════════════════════════
+
+app.post("/api/v1/internal/admin/users/reset-progress", async (c) => {
+  return await getController(c).resetUserProgress(c.req.raw, c.env.CACHE_KV, c.get("traceId"));
+});
+
+app.get("/api/v1/internal/admin/quiz-configs", async (c) => {
+  return await getController(c).getQuizConfigs(c.get("traceId"));
+});
+
+app.put("/api/v1/internal/admin/quiz-configs", async (c) => {
+  return await getController(c).updateQuizConfigs(c.req.raw, c.env.CACHE_KV, c.get("traceId"));
 });
 
 app.get("/health", async (c) => {

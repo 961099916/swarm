@@ -15,5 +15,13 @@ database_id = "4f360bda-ea4b-4fde-b3a0-d759f4180295"
 binding = "CACHE_KV"
 id = "ac5430ca9d234186862f6b4300d50b5a"
 
+[[services]]
+binding = "RAG_SVC"
+service = "swarm-rag"
+
+[[services]]
+binding = "QUIZ_SVC"
+service = "swarm-quiz"
+
 [vars]
 ALLOWED_ORIGIN = "*"

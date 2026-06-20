@@ -1,11 +1,11 @@
-import { type UserRow, users } from "@swarm/identity";
-import { CacheService, TraceLogger, ApiRes } from "@swarm/kernel";
-
 // File: /Users/zhangjiahao/IdeaProjects/swarm/backend/workers/gateway/src/authMiddleware.ts
 
-import { verifyJWT, type JWTPayload } from "./jwtHelper";
+import { users } from "@swarm/identity";
+import { CacheService, TraceLogger, ApiRes } from "@swarm/kernel";
+import { verifyJWT } from "./jwtHelper";
 import { drizzle } from "drizzle-orm/d1";
 import { eq } from "drizzle-orm";
+import { GatewayConstants } from "./constants/gateway.constant";
 
 const drizzleCache = new WeakMap<D1Database, ReturnType<typeof drizzle>>();
 
@@ -31,11 +31,10 @@ interface UserCachePayload {
 }
 
 function extractBearerToken(authHeader: string | null): string | undefined {
-  const bearerPrefix = "Bearer ";
-  if (!authHeader || !authHeader.startsWith(bearerPrefix)) {
+  if (!authHeader || !authHeader.startsWith(GatewayConstants.BEARER_PREFIX)) {
     return undefined;
   }
-  return authHeader.substring(bearerPrefix.length);
+  return authHeader.substring(GatewayConstants.BEARER_PREFIX.length);
 }
 
 /**
@@ -48,7 +47,7 @@ export async function authenticateRequest(
   jwtSecret: string,
   traceId: string
 ): Promise<AuthResult> {
-  const authHeader = request.headers.get("Authorization");
+  const authHeader = request.headers.get(GatewayConstants.HEADER_AUTHORIZATION);
   const token = extractBearerToken(authHeader);
   if (!token) {
     return { response: ApiRes.unauthorized("请先登录", traceId) };
@@ -63,7 +62,7 @@ export async function authenticateRequest(
   const userId = payload.userId;
 
   try {
-    const cacheKey = `user:auth:${userId}`;
+    const cacheKey = `${GatewayConstants.AUTH_CACHE_PREFIX}${userId}`;
     let authInfo: UserCachePayload | null | undefined;
 
     // 2. 优先从 CACHE_KV 读取用户鉴权快照
@@ -85,7 +84,7 @@ export async function authenticateRequest(
 
       if (!results || results.length === 0) {
         // 缓存占位防穿透，阻止恶意撞库
-        await CacheService.set(kv, cacheKey, null, 300).catch(() => {});
+        await CacheService.set(kv, cacheKey, null, GatewayConstants.AUTH_CACHE_EMPTY_TTL_SEC).catch(() => {});
         return { response: ApiRes.unauthorized("用户不存在，请重新登录", traceId) };
       }
 
@@ -97,7 +96,7 @@ export async function authenticateRequest(
       };
 
       // 4. 回写 KV 缓存 (TTL: 1 小时，CacheService 会自动添加 Jitter 偏移)
-      await CacheService.set(kv, cacheKey, authInfo, 3600).catch(() => {});
+      await CacheService.set(kv, cacheKey, authInfo, GatewayConstants.AUTH_CACHE_NORMAL_TTL_SEC).catch(() => {});
     } else if (authInfo === null) {
       // 占位命中，直接拦截
       return { response: ApiRes.unauthorized("用户凭证无效，请重新登录", traceId) };
@@ -120,7 +119,7 @@ export async function authenticateRequest(
       const dbUser = results[0];
       authInfo = { tokenVersion: dbUser.tokenVersion, isBanned: dbUser.isBanned, role: dbUser.role };
       // 以新格式回写缓存，后续请求直接命中完整快照
-      await CacheService.set(kv, cacheKey, authInfo, 3600).catch(() => {});
+      await CacheService.set(kv, cacheKey, authInfo, GatewayConstants.AUTH_CACHE_NORMAL_TTL_SEC).catch(() => {});
     }
 
     // 6. 校验快照状态
@@ -129,7 +128,7 @@ export async function authenticateRequest(
       return { response: ApiRes.unauthorized("登录凭证已失效，已被强制下线", traceId) };
     }
 
-    if (authInfo.isBanned === 1) {
+    if (authInfo.isBanned === GatewayConstants.BANNED_STATUS_FLAG) {
       TraceLogger.warn("GATEWAY", "USER_BANNED_BLOCK", traceId, `封禁用户 API 访问拦截`, userId);
       return { response: ApiRes.forbidden("您的账号已被封禁，无权执行此操作", traceId) };
     }

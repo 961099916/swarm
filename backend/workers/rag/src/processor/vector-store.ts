@@ -1,4 +1,4 @@
-import { TraceLogger } from "@swarm/kernel";
+import { TraceLogger, getErrorMessage } from "@swarm/kernel";
 
 /**
  * 向量存储层
@@ -42,7 +42,7 @@ export class VectorStore {
         TraceLogger.info("RAG", "VECTORIZE_UPSERT", "SYSTEM", `Vectorize 写入 ${records.length} 条向量`);
         return;
       } catch (err: unknown) {
-        TraceLogger.warn("RAG", "VECTORIZE_UPSERT_FAILED", "SYSTEM", `Vectorize 写入失败，降级到 D1: getErrorMessage(err)`);
+        TraceLogger.warn("RAG", "VECTORIZE_UPSERT_FAILED", "SYSTEM", `Vectorize 写入失败，降级到 D1: ${getErrorMessage(err)}`);
         // 降级：只写入 D1 metadata（向量数据丢失）
       }
     }
@@ -74,7 +74,7 @@ export class VectorStore {
         TraceLogger.info("RAG", "VECTORIZE_QUERY", "SYSTEM", `Vectorize 查询返回 ${matches.length} 条结果`);
         return matches.map((m: any) => ({ id: m.id, score: m.score }));
       } catch (err: unknown) {
-        TraceLogger.warn("RAG", "VECTORIZE_QUERY_FAILED", "SYSTEM", `Vectorize 查询失败: getErrorMessage(err)`);
+        TraceLogger.warn("RAG", "VECTORIZE_QUERY_FAILED", "SYSTEM", `Vectorize 查询失败: ${getErrorMessage(err)}`);
       }
     }
 
@@ -93,7 +93,7 @@ export class VectorStore {
         await this.vectorize.deleteByIds(ids);
         TraceLogger.info("RAG", "VECTORIZE_DELETE", "SYSTEM", `Vectorize 删除 ${ids.length} 条向量`);
       } catch (err: unknown) {
-        TraceLogger.warn("RAG", "VECTORIZE_DELETE_FAILED", "SYSTEM", `Vectorize 删除失败: getErrorMessage(err)`);
+        TraceLogger.warn("RAG", "VECTORIZE_DELETE_FAILED", "SYSTEM", `Vectorize 删除失败: ${getErrorMessage(err)}`);
       }
     }
   }

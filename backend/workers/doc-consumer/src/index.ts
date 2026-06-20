@@ -1,18 +1,14 @@
+// File: /Users/zhangjiahao/IdeaProjects/swarm/backend/workers/doc-consumer/src/index.ts
+
 /**
  * swarm-doc-consumer — 文档处理异步队列消费者
  *
  * 从 Queue 接收文档处理消息，异步执行：
  *   获取内容 → 分块 → 嵌入 → 存储 → 标记就绪
- *
- * 与 RAG Worker 解耦，RAG 只负责写 D1 + 发 Queue，
- * Consumer 负责耗时的文档处理管道。
  */
 
-import { TraceLogger } from "@swarm/kernel";
-
-// ══════════════════════════════════════════════════
-// 类型定义
-// ══════════════════════════════════════════════════
+import { TraceLogger, getErrorMessage } from "@swarm/kernel";
+import { DocConsumerConstants } from "./constants/doc-consumer.constant";
 
 export interface Env {
   DB: D1Database;
@@ -22,7 +18,7 @@ export interface Env {
 export interface DocQueueMessage {
   docId: string;
   kbId: string;
-  sourceType: 'WEB_SCRAPE' | 'MANUAL';
+  sourceType: "WEB_SCRAPE" | "MANUAL";
   sourceUrl?: string;
   rawContent?: string;
 }
@@ -57,7 +53,7 @@ async function updateDocStatus(
 function estimateTokens(text: string): number {
   let tokens = 0;
   for (const ch of text) {
-    if (ch >= '\u4e00' && ch <= '\u9fff') tokens += 1.5;
+    if (ch >= "\u4e00" && ch <= "\u9fff") tokens += 1.5;
     else tokens += 0.25;
   }
   return Math.ceil(tokens);
@@ -84,7 +80,6 @@ function splitText(text: string, chunkSize = 500, chunkOverlap = 100): ChunkResu
   for (const para of paragraphs) {
     if (estimateTokens(para) > chunkSize) {
       if (currentChunk) { flush(); currentChunk = ""; }
-      // 按句分割
       const sentences = para.split(/(?<=[。！？.!?\n])/g).map(s => s.trim()).filter(s => s.length > 0);
       let buf = "";
       for (const s of sentences) {
@@ -115,9 +110,9 @@ function splitText(text: string, chunkSize = 500, chunkOverlap = 100): ChunkResu
 async function generateEmbeddings(
   ai: any,
   texts: string[],
-  model = "@cf/baai/bge-small-en-v1.5"
+  model = DocConsumerConstants.DEFAULT_EMBEDDING_MODEL
 ): Promise<number[][]> {
-  const batchSize = 10;
+  const batchSize = DocConsumerConstants.EMBEDDING_BATCH_SIZE;
   const allVectors: number[][] = [];
 
   for (let i = 0; i < texts.length; i += batchSize) {
@@ -130,26 +125,17 @@ async function generateEmbeddings(
 }
 
 // ══════════════════════════════════════════════════
-// 核心文档处理
+// 核心文档处理与辅助拆分方法
 // ══════════════════════════════════════════════════
 
-async function processDocument(
+async function extractDocumentContent(
   db: D1Database,
-  ai: any,
   msg: DocQueueMessage,
   traceId: string
-): Promise<void> {
-  const { docId, kbId, sourceType, sourceUrl, rawContent } = msg;
+): Promise<{ title: string; content: string }> {
+  const { docId, sourceType, sourceUrl, rawContent } = msg;
 
-  // 1. 标记处理中
-  await updateDocStatus(db, docId, "PROCESSING");
-  TraceLogger.info("DOC_CONSUMER", "PROCESSING", traceId, `开始处理文档: docId=${docId}`);
-
-  // 2. 获取/提取内容
-  let title: string;
-  let content: string;
-
-  if (sourceType === 'WEB_SCRAPE' && sourceUrl) {
+  if (sourceType === "WEB_SCRAPE" && sourceUrl) {
     TraceLogger.info("DOC_CONSUMER", "FETCHING", traceId, `抓取网页: ${sourceUrl}`);
     const res = await fetch(sourceUrl, {
       headers: { "User-Agent": "Mozilla/5.0 (compatible; SwarmDocBot/1.0)" },
@@ -158,9 +144,9 @@ async function processDocument(
 
     const html = await res.text();
     const titleMatch = html.match(/<title[^>]*>([^<]+)<\/title>/i);
-    title = titleMatch ? titleMatch[1].trim() : sourceUrl;
+    const title = titleMatch ? titleMatch[1].trim() : sourceUrl;
 
-    content = html
+    const content = html
       .replace(/<script[^>]*>[\s\S]*?<\/script>/gi, "")
       .replace(/<style[^>]*>[\s\S]*?<\/style>/gi, "")
       .replace(/<nav[^>]*>[\s\S]*?<\/nav>/gi, "")
@@ -170,33 +156,42 @@ async function processDocument(
       .replace(/&nbsp;/g, " ")
       .replace(/\s+/g, " ")
       .trim();
-  } else if (sourceType === 'MANUAL' && rawContent) {
+    return { title, content };
+  } else if (sourceType === "MANUAL" && rawContent) {
     const doc = await db.prepare("SELECT title FROM documents WHERE id = ?").bind(docId).first<any>();
-    title = doc?.title || "手动录入文档";
-    content = rawContent;
+    const title = doc?.title || "手动录入文档";
+    return { title, content: rawContent };
   } else {
     throw new Error(`不支持的文档类型: ${sourceType}`);
   }
+}
 
+async function processDocument(
+  db: D1Database,
+  ai: any,
+  msg: DocQueueMessage,
+  traceId: string
+): Promise<void> {
+  const { docId, kbId, sourceType } = msg;
+
+  await updateDocStatus(db, docId, "PROCESSING");
+  TraceLogger.info("DOC_CONSUMER", "PROCESSING", traceId, `开始处理文档: docId=${docId}`);
+
+  const { title, content } = await extractDocumentContent(db, msg, traceId);
   if (!content || content.length < 20) throw new Error("文档内容为空或过短");
 
-  // 3. 读取知识库分块配置
   const kb = await db.prepare("SELECT chunk_size, chunk_overlap FROM knowledge_bases WHERE id = ?").bind(kbId).first<any>();
   const chunkSize = kb?.chunk_size || 500;
   const chunkOverlap = kb?.chunk_overlap || 100;
 
-  // 4. 分块
   const chunks = splitText(content, chunkSize, chunkOverlap);
   TraceLogger.info("DOC_CONSUMER", "CHUNKED", traceId, `分块完成: ${chunks.length} 个块`);
-
   if (chunks.length === 0) throw new Error("分块后内容为空");
 
-  // 5. 生成嵌入
   const texts = chunks.map(c => c.text);
   const vectors = await generateEmbeddings(ai, texts);
   TraceLogger.info("DOC_CONSUMER", "EMBEDDED", traceId, `嵌入生成完成: ${vectors.length} 个向量`);
 
-  // 6. 写入 D1
   const now = new Date().toISOString();
   for (let i = 0; i < chunks.length; i++) {
     const chunk = chunks[i];
@@ -210,8 +205,7 @@ async function processDocument(
       .run();
   }
 
-  // 7. 更新内容 + 标记就绪
-  if (sourceType === 'WEB_SCRAPE') {
+  if (sourceType === "WEB_SCRAPE") {
     await db.prepare("UPDATE documents SET raw_content = ?, title = ? WHERE id = ?").bind(content, title, docId).run();
   }
   await updateDocStatus(db, docId, "READY", { chunkCount: chunks.length, title });
@@ -227,7 +221,7 @@ async function queue(
   env: Env
 ): Promise<void> {
   for (const msg of batch.messages) {
-    const { docId, kbId } = msg.body;
+    const { docId } = msg.body;
     const traceId = `doc-consumer-${docId}`;
 
     TraceLogger.info("DOC_CONSUMER", "QUEUE_RECEIVED", traceId, `消费文档处理消息: docId=${docId}`);
@@ -236,28 +230,24 @@ async function queue(
       await processDocument(env.DB, env.AI, msg.body, traceId);
       msg.ack();
     } catch (err: unknown) {
-      TraceLogger.error("DOC_CONSUMER", "PROCESS_FAILED", traceId, `文档处理失败: getErrorMessage(err)`, err);
+      const errMsg = getErrorMessage(err);
+      TraceLogger.error("DOC_CONSUMER", "PROCESS_FAILED", traceId, `文档处理失败: ${errMsg}`, err);
 
-      // 更新数据库状态为失败
       try {
-        await updateDocStatus(env.DB, docId, "FAILED", { errorMessage: err.message || "未知错误" });
+        await updateDocStatus(env.DB, docId, "FAILED", { errorMessage: errMsg });
       } catch (dbErr: unknown) {
-        TraceLogger.error("DOC_CONSUMER", "STATUS_UPDATE_FAILED", traceId, `更新失败状态异常: ${dbErr.message}`, dbErr);
+        TraceLogger.error("DOC_CONSUMER", "STATUS_UPDATE_FAILED", traceId, `更新失败状态异常: ${getErrorMessage(dbErr)}`, dbErr);
       }
 
-      if (msg.attempts >= 3) {
+      if (msg.attempts >= DocConsumerConstants.DEFAULT_MAX_RETRIES) {
         TraceLogger.warn("DOC_CONSUMER", "MAX_RETRIES", traceId, `消息已达最大重试次数: docId=${docId}`);
         msg.ack();
       } else {
-        msg.retry({ delaySeconds: 10 });
+        msg.retry({ delaySeconds: DocConsumerConstants.RETRY_DELAY_SECONDS });
       }
     }
   }
 }
-
-// ══════════════════════════════════════════════════
-// Health check 与导出
-// ══════════════════════════════════════════════════
 
 export default {
   async fetch(request: Request): Promise<Response> {

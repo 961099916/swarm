@@ -8,6 +8,8 @@
     "outDir": "./dist",
     "rootDir": "./src",
     "types": ["@cloudflare/workers-types"],
+    "lib": ["ES2022"],
+    "skipLibCheck": true,
     "paths": {
       "@swarm/shared": ["../../packages/shared/src"]
     }

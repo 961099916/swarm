@@ -1,4 +1,4 @@
-import { sqliteTable, text, integer } from "drizzle-orm/sqlite-core";
+import { sqliteTable, text, integer, real } from "drizzle-orm/sqlite-core";
 
 /**
  * agents — 智能体定义表
@@ -29,6 +29,7 @@ export const tasks = sqliteTable("tasks", {
   payload: text("payload").notNull(),
   workflowRunId: text("workflow_run_id"),
   creditsCost: integer("credits_cost").default(0).notNull(),
+  costUsd: real("cost_usd").default(0).notNull(),
   resultSummary: text("result_summary"),
   createdAt: text("created_at").notNull(),
   updatedAt: text("updated_at").notNull(),

@@ -2,6 +2,7 @@
 import { DynamicToolRow } from "@swarm/agent";
 import { TraceLogger } from "@swarm/kernel";
 import { DynamicWorkflowTool } from "./dynamic-tool";
+import { WorkflowTool, ToolDefinition } from "./types";
 
 export class ToolRegistry {
   private static tools: Map<string, WorkflowTool> = new Map();

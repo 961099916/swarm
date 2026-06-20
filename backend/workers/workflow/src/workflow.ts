@@ -1,613 +1,129 @@
-import { AI_MODELS, AgentRow, DEFAULT_MAX_LOOPS, MEMORY_AGENT_COUNT, MEMORY_RECENT_COUNT } from "@swarm/agent";
-import { AIClient, AIClientEnv } from "@swarm/ai-gateway";
+// File: /Users/zhangjiahao/IdeaProjects/swarm/backend/workers/workflow/src/workflow.ts
+
+import { drizzle } from "drizzle-orm/d1";
+import { eq, sql } from "drizzle-orm";
+import { taskLogs, tasks } from "@swarm/agent";
+import { aiCallLogs } from "@swarm/ai-gateway";
 import { TraceLogger } from "@swarm/kernel";
+import { Env } from "./orchestrator";
 
-// File: /Users/zhangjiahao/IdeaProjects/swarm/backend/workers/workflow/src/workflow.ts
+// 重新导出状态机核心，供 Cloudflare Workflows 引擎宿主识别拉起
+export { TaskOrchestrator } from "./orchestrator";
 
-import { WorkflowEntrypoint, WorkflowStep, WorkflowEvent } from "cloudflare:workers";
-import { appendTaskLog, updateTaskStatus, safeParseJSON, TaskStatus } from "./utils";
-import {
-  ToolRegistry,
-  ToolContext,
-} from "./tools";
-import { ensureDbToolsLoaded } from "./tools";
-
-const DEFAULT_MODEL = AI_MODELS.DEFAULT;
-
-export interface Env {
-  DB: D1Database;
-  AI: any;
-  EMAIL_FROM?: string;
-  RAG?: Fetcher;  // RAG Worker Service Binding
-}
-
-export interface Params {
-  taskId: string;
-  taskType: "PRICE_MONITOR" | "CONTENT_DAILY" | "AGENT_ORCHESTRATION";
-  payload: Record<string, any>;
-}
-
-// ══════════════════════════════════════════════════
-// 3. AI 调用与 JSON 清洗解析器
-// ══════════════════════════════════════════════════
-// File: /Users/zhangjiahao/IdeaProjects/swarm/backend/workers/workflow/src/workflow.ts
-function getSupportedModel(model: string | undefined): string {
-  const m = model ? model.trim() : "";
-  if (!m || m.includes("llama-3.2-3b") || m.includes("llama-3-8b") || m.includes("llama-3.1-8b-instruct")) {
-    return "@cf/meta/llama-3.1-8b-instruct-fp8";
-  }
-  return m;
-}
-
-function truncateContent(content: string, maxLen = 1000): string {
-  if (!content) return "";
-  if (content.length <= maxLen) return content;
-  return content.slice(0, maxLen) + "\n... [由于该节点返回内容过长，已由工作流系统自动截断，以节省大模型 Token 资源]";
-}
-
-async function callLlmChatAndLog(
-  ai: any,
-  db: D1Database,
-  taskId: string,
-  agentName: string,
-  messages: Array<{ role: string; content: string }>,
-  model: string | undefined,
-  agentModelConfigId?: string,
-  agentId?: string
-): Promise<string> {
-  if (!ai) throw new Error("Cloudflare AI 实例未绑定");
-  const rawModel = model || DEFAULT_MODEL;
-  const mappedModel = getSupportedModel(rawModel);
-  
-  const startTime = Date.now();
-  let responseText = "";
-  let errorMsg: string | undefined = undefined;
-  let success = true;
-  
-  try {
-    // 优先使用 AIClient（支持 AI Gateway 路由、速率限制、日志、成本追踪）
-    try {
-      const aiClient = new AIClient({ AI: ai, DB: db });
-      const result = await aiClient.chat({
-        modelConfigId: agentModelConfigId,
-        systemPrompt: messages[0]?.content || "",
-        messages: messages.slice(1),
-        traceId: taskId,
-        taskId,
-        agentId,
-      });
-      responseText = result.content;
-    } catch (aiClientErr: unknown) {
-      // AIClient 失败时降级到原生 Workers AI 调用
-      TraceLogger.warn("WORKFLOW", "AI_CLIENT_FALLBACK", taskId, `AIClient 调用失败，降级到原生 AI: ${aiClientErr.message}`);
-      const res = await ai.run(mappedModel, { messages });
-      responseText = res.response || "";
-    }
-
-    if (!responseText) {
-      throw new Error("大模型响应内容为空");
-    }
-    return responseText;
-  } catch (err: unknown) {
-    success = false;
-    errorMsg = err.message || JSON.stringify(err);
-    throw err;
-  } finally {
-    const latencyMs = Date.now() - startTime;
-    
-    // 异步安全地记录 AI 日志 (保持与原有 task_logs 的兼容)
-    const logPayload = {
-      type: "AI_CHAT_LOG",
-      agentName,
-      model: mappedModel,
-      messages,
-      response: responseText,
-      success,
-      error: errorMsg,
-      latencyMs
-    };
-
-    try {
-      await appendTaskLog(db, taskId, "INFO", `[AI_CHAT] ${JSON.stringify(logPayload)}`);
-      
-      TraceLogger.write(
-        success ? "INFO" : "ERROR",
-        "WORKFLOW",
-        "AI_CHAT_CALL",
-        taskId,
-        `智能体 ${agentName} 调用大模型 ${success ? '成功' : '失败'}，耗时 ${latencyMs}ms`,
-        undefined,
-        messages,
-        errorMsg ? new Error(errorMsg) : undefined,
-        {
-          model: mappedModel,
-          promptTokens: -1,
-          completionTokens: -1,
-          latencyMs
-        }
-      );
-    } catch (dbErr: unknown) {
-      TraceLogger.error("WORKFLOW", "LOG_WRITE_FAILED", taskId, `写入 AI 交互日志失败: getErrorMessage(dbErr)`, dbErr);
-    }
-  }
-}
-
-// ══════════════════════════════════════════════════
-// 4. 多智能体协作核心引擎
-// ══════════════════════════════════════════════════
-
-export class TaskOrchestrator extends WorkflowEntrypoint<Env, Params> {
-  declare env: Env;
-
-  async run(event: WorkflowEvent<Params>, step: WorkflowStep) {
-    const { taskId, taskType, payload } = event.payload;
-    const db = this.env.DB;
-
-    try {
-      if (taskType !== "AGENT_ORCHESTRATION") {
-        // 兼容保留旧版 PRICE_MONITOR 和 CONTENT_DAILY 的基础执行，略过
-        await this.runLegacyWorkflow(taskId, taskType, payload, step);
-        return;
-      }
-
-      await appendTaskLog(db, taskId, "INFO", `[主控] 启动智能体协同工作流: ${payload.workflowName || "未命名工作流"}`);
-      await appendTaskLog(db, taskId, "INFO", `[主控] 任务目标: ${payload.goal || "未设定目标"}`);
-      await appendTaskLog(db, taskId, "INFO", `[主控] 最大执行轮数: ${payload.maxLoops || 5} 轮`);
-
-      // 1. 获取选定智能体的配置
-      const agentConfigs = await step.do("load-agents-config", async () => {
-        const queryIds = (payload.agents || []).map((a: any) => a.agentId);
-        if (queryIds.length === 0) return [];
-
-        const placeholders = queryIds.map(() => "?").join(",");
-        const { results } = await db
-          .prepare(`SELECT * FROM agents WHERE id IN (${placeholders})`)
-          .bind(...queryIds)
-          .all<AgentRow>();
-        
-        return results || [];
-      });
-
-      if (agentConfigs.length === 0) {
-        throw new Error("任务中未配置任何有效的协同智能体");
-      }
-
-      // 1.1 加载动态工具注册表
-      await step.do("load-tools-registry", async () => {
-        await ensureDbToolsLoaded(db);
-      });
-
-      // 记录每个 Agent 的工具配置信息
-      for (const agent of agentConfigs) {
-        if (agent.tools && agent.tools !== "[]") {
-          await appendTaskLog(db, taskId, "INFO", `[配置] 智能体 ${agent.name} 配置了工具: ${agent.tools}（注意：这些工具只能由主控通过 CALL_TOOL 调用，Agent 本身无法执行）`);
-        }
-      }
-      const agentNames = agentConfigs.map(a => `${a.name}(${a.role})`).join(", ");
-      await appendTaskLog(db, taskId, "INFO", `[主控] 已加载 ${agentConfigs.length} 个智能体: ${agentNames}`);
-
-      // 2. 初始化 ReAct 循环上下文
-      let conversationMemory: Array<{ role: string; content: string }> = [];
-      const maxLoops = payload.maxLoops || 5;
-      let workflowFinished = false;
-      let finalSummary = "任务执行超时未完成";
-
-      // 3. 进入 ReAct 编排主循环
-      for (let loop = 1; loop <= maxLoops; loop++) {
-        if (workflowFinished) break;
-
-        const currentLoop = loop;
-        await appendTaskLog(db, taskId, "INFO", `[主控] ───────── 启动第 ${currentLoop}/${maxLoops} 轮协同决策 ─────────`);
-        await appendTaskLog(db, taskId, "INFO", `[主控] 当前对话记忆大小: ${conversationMemory.length} 条`);
-
-        // 执行 Supervisor 推理决定下一步
-        const decision = await step.do(`supervisor-decide-loop-${currentLoop}`, async () => {
-          return await this.getSupervisorDecision(db, taskId, payload.goal, agentConfigs, conversationMemory);
-        });
-
-        await appendTaskLog(db, taskId, "INFO", `[主控] 规划思路: "${decision.thought}"`);
-        await appendTaskLog(db, taskId, "INFO", `[主控] 决策动作: ${decision.action}${decision.action === "ROUTE_TO_AGENT" ? ` → 目标: ${decision.target_agent_id}` : ""}${decision.action === "CALL_TOOL" ? ` → 工具: ${decision.tool_name}` : ""}`);
-
-        if (decision.action === "ROUTE_TO_AGENT") {
-          const targetAgent = agentConfigs.find((a) => a.id === decision.target_agent_id);
-          if (!targetAgent) {
-            const errLog = `未找到指定智能体 ID: ${decision.target_agent_id}，本轮跳过`;
-            await appendTaskLog(db, taskId, "WARN", `[主控] ${errLog}`);
-            conversationMemory.push({ role: "system", content: errLog });
-            continue;
-          }
-          if (targetAgent.tools && targetAgent.tools !== "[]") {
-            await appendTaskLog(db, taskId, "WARN", `[主控] ⚠️ Agent ${targetAgent.name} 配置了工具 ${targetAgent.tools} 但本轮直接路由给它（未提前 CALL_TOOL），Agent 无法获取真实数据，只能根据已有知识回复`);
-          }
-
-          await appendTaskLog(db, taskId, "INFO", `[主控] 派发任务给智能体: ${targetAgent.name}`);
-          await appendTaskLog(db, taskId, "INFO", `[主控] 指派内容: ${typeof decision.input === "string" ? decision.input : JSON.stringify(decision.input)}`);
-
-          // 运行子智能体
-          const agentOutput = await step.do(`agent-run-${targetAgent.id}-loop-${currentLoop}`, async () => {
-            return await this.runWorkerAgent(db, taskId, targetAgent, decision.input, conversationMemory);
-          });
-
-          await appendTaskLog(db, taskId, "INFO", `[${targetAgent.name}] 执行完成`);
-          await appendTaskLog(db, taskId, "INFO", `[${targetAgent.name}] 输出结果: ${(agentOutput || "").slice(0, 500)}${(agentOutput || "").length > 500 ? "..." : ""}`);
-          conversationMemory.push({
-            role: "user",
-            content: `【${targetAgent.name} (${targetAgent.role})】的发信与回复:\n${agentOutput}`
-          });
-          await appendTaskLog(db, taskId, "INFO", `[主控] 对话记忆已追加，当前共 ${conversationMemory.length} 条`);
-
-        } else if (decision.action === "CALL_TOOL" && decision.tool_name) {
-          const toolName = decision.tool_name;
-          const toolInputStr = typeof decision.input === "string" ? decision.input : JSON.stringify(decision.input);
-          await appendTaskLog(db, taskId, "INFO", `[主控] 调度工具: ${toolName}，输入: ${toolInputStr.slice(0, 300)}`);
-
-          const toolResult = await step.do(`tool-run-${toolName}-loop-${currentLoop}`, async () => {
-            return await this.runEdgeTool(toolName, decision.input, payload.email, taskId);
-          });
-
-          const isToolError = toolResult.startsWith("[ERROR]");
-          const toolLogLevel = isToolError ? "ERROR" : "INFO";
-          await appendTaskLog(db, taskId, toolLogLevel, `[工具 - ${toolName}] 返回结果: ${(toolResult || "").slice(0, 500)}${(toolResult || "").length > 500 ? "..." : ""}`);
-          if (isToolError) {
-            await appendTaskLog(db, taskId, "ERROR", `[工具 - ${toolName}] 执行失败，将在下一轮决策中感知到该错误`);
-          } else {
-            await appendTaskLog(db, taskId, "INFO", `[工具 - ${toolName}] 执行成功，真实数据已获取`);
-          }
-          conversationMemory.push({
-            role: "user",
-            content: `【系统工具 - ${toolName}】的执行返回内容:\n${truncateContent(toolResult)}`
-          });
-          await appendTaskLog(db, taskId, "INFO", `[主控] 对话记忆已追加工具结果，当前共 ${conversationMemory.length} 条`);
-
-        } else if (decision.action === "QUERY_KNOWLEDGE") {
-          const kbIds = decision.kb_ids || payload.knowledgeBaseIds || [];
-          const queryText = decision.query || payload.goal || "";
-          await appendTaskLog(db, taskId, "INFO", `[主控] 查询知识库: ${kbIds.join(", ")}，查询内容: "${queryText.slice(0, 100)}"`);
-
-          const knowledgeResult = await step.do(`query-knowledge-loop-${currentLoop}`, {
-            retries: { limit: 2, delay: 1000 },
-          }, async () => {
-            if (!this.env.RAG) {
-              return { context: "", chunks: [] };
-            }
-            const response = await this.env.RAG.fetch("http://internal/rag/inject", {
-              method: "POST",
-              headers: { "Content-Type": "application/json" },
-              body: JSON.stringify({ kbIds, query: queryText, maxChunks: 5, minScore: 0.4 }),
-            });
-            if (!response.ok) return { context: "", chunks: [] };
-            const result = await response.json() as any;
-            return result?.data || { context: "", chunks: [] };
-          });
-
-          if (knowledgeResult.context) {
-            await appendTaskLog(db, taskId, "INFO", `[主控] 知识库查询成功，获取到 ${knowledgeResult.chunks?.length || 0} 条相关片段`);
-            conversationMemory.push({
-              role: "user",
-              content: `【知识库检索】根据查询"${queryText.slice(0, 100)}"从知识库中找到以下参考信息:\n${truncateContent(knowledgeResult.context, 1500)}`
-            });
-          } else {
-            await appendTaskLog(db, taskId, "INFO", `[主控] 知识库未找到相关内容，继续下一步决策`);
-            conversationMemory.push({
-              role: "system",
-              content: `知识库查询（"${queryText.slice(0, 100)}"）未返回结果，请基于现有知识回答。`
-            });
-          }
-          await appendTaskLog(db, taskId, "INFO", `[主控] 对话记忆已追加知识库结果，当前共 ${conversationMemory.length} 条`);
-
-        } else if (decision.action === "FINISH") {
-          finalSummary = decision.summary || "所有智能体协同动作完成";
-          workflowFinished = true;
-          await appendTaskLog(db, taskId, "INFO", `[主控] 任务完成: ${finalSummary}`);
-          break;
-        } else {
-          // 未识别指令，降级为 Mock 流程
-          await appendTaskLog(db, taskId, "WARN", `[主控] 未识别行动指令: ${decision.action}，启动兜底流程`);
-          workflowFinished = true;
-          finalSummary = "大模型决策指令无法识别，已按兜底规则完成任务";
-          break;
-        }
-      }
-
-      // 4. 收尾归档
-      await step.do("finalize-orchestration", async () => {
-        // 从对话记忆中提取最后一条有意义的输出（Agent回复或工具结果），作为结果详情
-        let resultDetail = "";
-        for (let i = conversationMemory.length - 1; i >= 0; i--) {
-          const entry = conversationMemory[i].content;
-          if (entry.includes("【") && entry.includes("】的发信与回复:")) {
-            resultDetail = entry.replace(/【[^】]+】的发信与回复:\n?/, "").slice(0, 1000);
-            break;
-          }
-          if (entry.includes("【系统工具")) {
-            resultDetail = entry.replace(/【[^】]+】的执行返回内容:\n?/, "").slice(0, 1000);
-            break;
-          }
-        }
-        const hasValidSummary = finalSummary && finalSummary !== "所有智能体协同动作完成";
-        const enrichedSummary = hasValidSummary ? finalSummary : (resultDetail || finalSummary);
-        await updateTaskStatus(db, taskId, "SUCCESS", enrichedSummary);
-        await appendTaskLog(db, taskId, "INFO", `[主控] 工作流执行完毕，任务已归档`);
-      });
-
-    } catch (err: unknown) {
-      TraceLogger.error("WORKFLOW", "WORKFLOW_FAILED", "SYSTEM", `Workflow failed: getErrorMessage(err)`, err);
-      await updateTaskStatus(db, taskId, "FAILED", `执行异常: getErrorMessage(err)`);
-      await appendTaskLog(db, taskId, "ERROR", `[主控] 工作流异常终止: getErrorMessage(err)`);
-    }
-  }
-
-  /**
-   * 让 Supervisor (主控) 做出下一步路由规划决策
-   */
-  private async getSupervisorDecision(
-    db: D1Database,
-    taskId: string,
-    goal: string,
-    agents: AgentRow[],
-    memory: Array<{ role: string; content: string }>
-  ): Promise<{ thought: string; action: string; target_agent_id?: string; tool_name?: string; input: any; summary?: string; kb_ids?: string[]; query?: string }> {
-    const agentsListText = agents.map(a => `- 智能体ID: "${a.id}", 角色: "${a.role}", 名称: "${a.name}", 系统提示词: "${a.system_prompt.slice(0, 100)}..."`).join("\n");
-    const toolDefs = ToolRegistry.getToolDefinitions();
-
-    // 只显示与当前智能体工具配置相关的工具 + 最多额外显示 5 个
-    const agentToolNames = new Set<string>();
-    agents.forEach(a => {
-      try {
-        const tools = JSON.parse(a.tools);
-        if (Array.isArray(tools)) tools.forEach((t: string) => agentToolNames.add(t));
-      } catch {}
-    });
-
-    const prioritizedDefs = toolDefs.filter(t => agentToolNames.has(t.name));
-    const otherDefs = toolDefs.filter(t => !agentToolNames.has(t.name)).slice(0, 5);
-    const displayDefs = [...prioritizedDefs, ...otherDefs];
-
-    const toolListText = displayDefs.length > 0
-      ? displayDefs.map(t => {
-          // 截断描述到第一句（第一个句号或换行前），最多 80 字符
-          const shortDesc = t.description.split(/[。\n]/).filter(s => s.trim())[0]?.trim().slice(0, 80) || t.description.slice(0, 80);
-          return `- "${t.name}" (${shortDesc}${shortDesc.length >= 80 ? "..." : ""})\n` +
-          t.parameters.map(p =>
-            `  - "${p.name}" (${p.type}${p.required ? ", 必填" : ", 可选"}): ${p.description.split(/[。\n]/)[0]?.trim().slice(0, 60) || p.description.slice(0, 60)}`
-          ).join("\n");
-        }).join("\n\n")
-      : "(当前无可用系统工具)";
-    const systemPrompt = `你是一个多智能体协同系统的“主控协调官 (Supervisor)”。你的目标是协同多个子智能体共同完成用户输入的目标。
-用户目标: "${goal}"
-
-参与协作的智能体列表:
-${agentsListText}
-
-## ⚠️ 重要规则（必须严格遵守）
-1. **Agent 没有任何调用工具的能力** — 所有 Agent 都只是文本对话机器人，只能处理文本数据。它们无法执行任何系统工具。
-2. **获取实时数据必须使用 CALL_TOOL** — 如果任务需要获取实时数据（天气查询、网页抓取、搜索、邮件发送等），必须在当前轮次使用 CALL_TOOL 动作直接调用系统工具。不能依赖 Agent 去调用工具。
-3. **Agent 的"配置工具"字段仅供参考** — 该字段表示该 Agent 的任务通常需要配合某个工具使用，但 Agent 本身无法执行。你必须通过 CALL_TOOL 来执行工具，获取数据后再通过 ROUTE_TO_AGENT 让 Agent 分析/格式化。
-
-你可以采取以下动作之一（且必须严格输出以下 JSON 格式，不要包含 Markdown 标记或多余解释）：
-1. 派发给子智能体分析 (action = "ROUTE_TO_AGENT")
-{
-  "thought": "我需要先派网页采集专家去获取网页内容...",
-  "action": "ROUTE_TO_AGENT",
-  "target_agent_id": "具体智能体ID",
-  "input": "指派给它的具体用户输入提示"
-}
-2. 查询企业内部知识库 (action = "QUERY_KNOWLEDGE")
-当用户问题涉及企业内部知识、规章制度、流程文档时，使用此动作查询知识库。
-{
-  "thought": "用户问的是内部报销流程，需要先查询知识库",
-  "action": "QUERY_KNOWLEDGE",
-  "kb_ids": ["知识库ID列表"],
-  "query": "报销流程"
-}
-3. 调度执行系统工具 (action = "CALL_TOOL")
-可用工具列表:
-${toolListText}
-{
-  "thought": "用户想查询北京的天气，我需要调用天气查询工具获取实时数据",
-  "action": "CALL_TOOL",
-  "tool_name": "weather_query",
-  "input": { "city": "北京" }
-}
-4. 完成任务 (action = "FINISH")
-{
-  "thought": "目标内容已完美产出并归档，任务结束。",
-  "action": "FINISH",
-  "summary": "最终给用户的协同简要报告"
-}
-
-请注意：你必须返回纯 JSON 对象，不能使用 \`\`\`json 等任何格式标记包围。`;
-
-    const messages = [
-      { role: "system", content: systemPrompt },
-      ...memory.slice(-6), // 仅保留最近的 6 轮历史会话防溢出
-      { role: "user", content: "请根据当前执行进度做出决策。" }
-    ];
-
-    if (!this.env.AI) {
-      await appendTaskLog(db, taskId, "WARN", "[主控] AI 模型未绑定，切换为本地规则模式");
-      return this.mockSupervisorDecision(memory, agents);
-    }
-
-    await appendTaskLog(db, taskId, "INFO", `[主控] 正在进行 AI 决策推理...`);
-    try {
-      const responseText = await callLlmChatAndLog(this.env.AI, db, taskId, "主控协调官", messages, DEFAULT_MODEL);
-      await appendTaskLog(db, taskId, "INFO", `[主控] AI 原始响应: ${responseText.slice(0, 500)}`);
-      const decision = safeParseJSON(responseText);
-      await appendTaskLog(db, taskId, "INFO", `[主控] AI 决策完成，动作: ${decision.action}`);
-      if (decision.action === "ROUTE_TO_AGENT") {
-        const routeAgent = agents.find((a) => a.id === decision.target_agent_id);
-        if (routeAgent && routeAgent.tools && routeAgent.tools !== "[]") {
-          await appendTaskLog(db, taskId, "WARN", `[主控] ⚠️ ${routeAgent.name} 配置了工具 ${routeAgent.tools} 但本轮直接路由给它（未提前 CALL_TOOL），Agent 将无法获取真实数据`);
-        }
-      }
-      return decision;
-    } catch (e: unknown) {
-      TraceLogger.warn("WORKFLOW", "SUPERVISOR_FALLBACK", "SYSTEM", `Supervisor 推理发生异常，触发规则链条兜底: getErrorMessage(e)`);
-      await appendTaskLog(db, taskId, "WARN", `[主控] AI 决策异常: getErrorMessage(e)，使用本地规则兜底`);
-      return this.mockSupervisorDecision(memory, agents);
-    }
-  }
-
-  /**
-   * 运行子智能体进行业务推理
-   */
-  private async runWorkerAgent(
-    db: D1Database,
-    taskId: string,
-    agent: AgentRow,
-    input: string,
-    memory: Array<{ role: string; content: string }>
-  ): Promise<string> {
-    if (!this.env.AI) {
-      await appendTaskLog(db, taskId, "WARN", `[${agent.name}] AI 模型未绑定，跳过执行`);
-      return `[跳过] 智能体 ${agent.name} 运行环境未绑定 AI，本轮跳过。`;
-    }
-
-    const model = agent.model || DEFAULT_MODEL;
-    await appendTaskLog(db, taskId, "INFO", `[${agent.name}] 开始执行，使用模型: ${model}`);
-    await appendTaskLog(db, taskId, "INFO", `[${agent.name}] 上下文包含 ${Math.min(memory.length, MEMORY_AGENT_COUNT)} 条历史记忆`);
-
-    // 对传入记忆中的文本进行截断保护，防止大模型 Context Window 被超长返回撑爆
-    const safeMemory = memory.slice(-4).map(m => ({
-      role: m.role,
-      content: truncateContent(m.content)
-    }));
-
-    const messages = [
-      { role: "system", content: agent.system_prompt },
-      ...safeMemory,
-      { role: "user", content: input }
-    ];
-
-    try {
-      // Auto-inject RAG context if available (non-blocking)
-      let agentPrompt = agent.system_prompt;
-      if (this.env.RAG) {
-        try {
-          const kbIds = []; // TODO: 从 payload 或知识库配置读取
-          // RAG context injection is handled in broader scope
-        } catch {}
-      }
-
-      const result = await callLlmChatAndLog(this.env.AI, db, taskId, agent.name, messages, agent.model);
-      await appendTaskLog(db, taskId, "INFO", `[${agent.name}] 推理完成，输出长度 ${result.length} 字符`);
-      return result;
-    } catch (e: unknown) {
-      await appendTaskLog(db, taskId, "ERROR", `[${agent.name}] 推理失败: getErrorMessage(e)`);
-      return `[ERROR] 智能体 ${agent.name} 推理过程抛出异常: getErrorMessage(e)`;
-    }
-  }
-
-  /**
-   * 调度执行系统边缘微工具 - 增强版
-   */
-  private async runEdgeTool(toolName: string, input: any, email: string | undefined, taskId?: string): Promise<string> {
-    const tool = await ToolRegistry.getOrLoad(this.env.DB, toolName);
-    if (!tool) {
-      const available = ToolRegistry.getAvailableTools().join(", ");
-      if (taskId) { await appendTaskLog(this.env.DB, taskId, "ERROR", `[工具调度] 未找到工具: ${toolName}，可用: ${available}`); }
-      return `[ERROR] 不支持的工具: ${toolName}。可用工具: ${available}`;
-    }
-    const context: ToolContext = {
-      traceId: taskId || "SYSTEM_WORKFLOW",
-      env: {
-        DB: this.env.DB,
-        AI: this.env.AI,
-        EMAIL_FROM: this.env.EMAIL_FROM,
-        EMAIL_TO: email
-      }
-    };
-    if (taskId) { await appendTaskLog(this.env.DB, taskId, "INFO", `[工具调度] 正在查找工具: ${toolName}`); }
-    return await tool.execute(input, context);
-  }
-
-  /**
-   * Supervisor 本地硬编码 Mock 规划，保障离线或无 AI 绑定时的运行韧性
-   */
-  private mockSupervisorDecision(memory: Array<{ role: string; content: string }>, agents: AgentRow[]): any {
-    // 根据 Memory 的条数来模拟顺序派发
-    const agentCalls = memory.filter((m) => m.role === "user" && m.content.includes("【"));
-    const callCount = agentCalls.length;
-
-    // 获取内置 ID 或是动态列表前几个
-    // 如果存在配置了工具的 Agent，优先调用工具获取真实数据
-    const toolAgent = agents.find((a) => a.tools && a.tools !== "[]");
-    if (callCount === 0 && toolAgent) {
-      const parsedTools = JSON.parse(toolAgent.tools);
-      if (parsedTools.includes("weather_query")) {
-        return { thought: "第一步，调用天气查询工具获取实时数据...", action: "CALL_TOOL", tool_name: "weather_query", input: { city: "北京" } };
-      }
-      if (parsedTools.includes("web_fetch")) {
-        return { thought: "第一步，调度网页抓取工具获取最新数据...", action: "CALL_TOOL", tool_name: "web_fetch", input: "http://example.com" };
-      }
-    }
-    const collector = agents.find((a) => a.id.includes("collector")) || agents[0];
-    const analyst = agents.find((a) => a.id.includes("analyst")) || agents[1] || agents[0];
-    const notifier = agents.find((a) => a.id.includes("notifier")) || agents[2] || agents[0];
-
-    if (callCount === 0) {
-      return {
-        thought: "第一步，调度网络抓取专家抓取最新数据...",
-        action: "ROUTE_TO_AGENT",
-        target_agent_id: collector.id,
-        input: "抓取 http://example.com 获取当前行业的前沿数据"
-      };
-    }
-    
-    if (callCount === 1) {
-      return {
-        thought: "抓取完毕，将得到的内容移交给分析专家进行商业分析...",
-        action: "ROUTE_TO_AGENT",
-        target_agent_id: analyst.id,
-        input: "请对上一步的抓取成果进行提纲挈领的行业剖析并给出分析报告"
-      };
-    }
-
-    if (callCount === 2) {
-      return {
-        thought: "分析完毕，现在交由邮件官撰写并向用户投递通知信件...",
-        action: "ROUTE_TO_AGENT",
-        target_agent_id: notifier.id,
-        input: "将分析师得出的行业剖析整理发件发给用户"
-      };
-    }
-
-    return {
-      thought: "邮件已全量投递，协同流程整体终结。",
-      action: "FINISH",
-      summary: "已成功执行多智能体联动编排：[网页采集专家] -> [深度分析师] -> [邮件通知官] 流程，并将报告推送至用户信箱。"
-    };
-  }
-
-  /**
-   * 兼容保留的原有慢任务硬编码工作流
-   */
-  private async runLegacyWorkflow(taskId: string, taskType: string, payload: Record<string, any>, step: WorkflowStep) {
-    const db = this.env.DB;
-    await step.do("legacy-fetch", async () => {
-      await appendTaskLog(db, taskId, "INFO", `[Fetch] 启动兼容任务拉取。物料: ${JSON.stringify(payload)}`);
-    });
-    await step.do("legacy-ai", async () => {
-      await appendTaskLog(db, taskId, "INFO", `[AI] 本地策略分析中...`);
-    });
-    await step.do("legacy-notify", async () => {
-      await appendTaskLog(db, taskId, "INFO", `[Notify] 触发价格降级警报发送至 ${payload.email || 'user@example.com'}`);
-    });
-    await step.do("legacy-finalize", async () => {
-      await updateTaskStatus(db, taskId, "SUCCESS", "兼容模式：任务已完成规则化比价监控");
-      await appendTaskLog(db, taskId, "INFO", `[Finalize] 兼容流执行完毕。`);
-    });
-  }
-}
-
-// 默认导出
 export default {
+  /**
+   * HTTP 路由接口 (仅充当健康检查防腐层契约)
+   */
   async fetch(request: Request, env: Env, ctx: any): Promise<Response> {
     const url = new URL(request.url);
     if (url.pathname === "/health") {
       return Response.json({ status: "ok", service: "workflow", timestamp: new Date().toISOString() });
     }
     return new Response("Workflow Engine Active", { status: 200 });
+  },
+
+  /**
+   * 统一日志与 AI 审计队列消费者
+   * 采用合并攒批 + 容错退避机制，有效解决高并发下 SQLITE_BUSY 锁冲突
+   */
+  async queue(batch: { messages: Array<{ body: any }> }, env: Env, ctx: any): Promise<void> {
+    const db = drizzle(env.DB);
+    const taskLogEntries: any[] = [];
+    const aiCallLogEntries: any[] = [];
+
+    for (const msg of batch.messages) {
+      const data = msg.body;
+      if (!data) continue;
+
+      if (data.type === "TASK_LOG") {
+        const payload = data.payload;
+        taskLogEntries.push({
+          taskId: payload.taskId,
+          level: payload.level,
+          message: payload.message,
+          createdAt: payload.createdAt
+        });
+      } else if (data.type === "AI_CALL_LOG") {
+        const payload = data.payload;
+        aiCallLogEntries.push({
+          traceId: payload.traceId,
+          purpose: payload.purpose,
+          provider: payload.provider,
+          modelName: payload.modelName,
+          userId: payload.userId || null,
+          agentId: payload.agentId || null,
+          taskId: payload.taskId || null,
+          kbId: payload.kbId || null,
+          inputTokens: payload.inputTokens || 0,
+          outputTokens: payload.outputTokens || 0,
+          latencyMs: payload.latencyMs || 0,
+          status: payload.status || "SUCCESS",
+          errorMessage: payload.errorMessage || null,
+          costUsd: payload.costUsd || 0,
+          createdAt: payload.createdAt
+        });
+      }
+    }
+
+    // 1. 批量落库任务日志
+    if (taskLogEntries.length > 0) {
+      try {
+        await db.insert(taskLogs).values(taskLogEntries);
+      } catch (err: unknown) {
+        TraceLogger.error("WORKFLOW", "QUEUE_BATCH_TASK_LOG_FAILED", "SYSTEM", `批量插入 Task Log 失败: ${err instanceof Error ? err.message : String(err)}，自适应退避逐条插入`, err);
+        // 自适应退避逐条插入，防止单条脏数据导致整批失败丢包
+        for (const entry of taskLogEntries) {
+          try {
+            await db.insert(taskLogs).values(entry);
+          } catch (singleErr: unknown) {
+            TraceLogger.error("WORKFLOW", "QUEUE_SINGLE_TASK_LOG_FAILED", entry.taskId, `单条 Task Log 插入失败: ${singleErr instanceof Error ? singleErr.message : String(singleErr)}`, singleErr);
+          }
+        }
+      }
+    }
+
+    // 2. 批量落库 AI 调用审计日志，并累加更新任务成本
+    if (aiCallLogEntries.length > 0) {
+      try {
+        await db.insert(aiCallLogs).values(aiCallLogEntries);
+
+        // 批量落库成功后，对这批有 taskId 且费率大于 0 的 AI 日志进行增量成本更新
+        for (const entry of aiCallLogEntries) {
+          if (entry.taskId && entry.costUsd > 0) {
+            try {
+              await db
+                .update(tasks)
+                .set({
+                  costUsd: sql`cost_usd + ${entry.costUsd}`,
+                  updatedAt: entry.createdAt
+                })
+                .where(eq(tasks.id, entry.taskId));
+            } catch (updateErr: unknown) {
+              TraceLogger.warn("WORKFLOW", "QUEUE_UPDATE_COST_FAILED", entry.taskId, `更新任务 AI 成本失败: ${updateErr instanceof Error ? updateErr.message : String(updateErr)}`);
+            }
+          }
+        }
+      } catch (err: unknown) {
+        TraceLogger.error("WORKFLOW", "QUEUE_BATCH_AI_LOG_FAILED", "SYSTEM", `批量插入 AI Log 失败: ${err instanceof Error ? err.message : String(err)}，自适应退避逐条插入`, err);
+        // 自适应退避逐条插入
+        for (const entry of aiCallLogEntries) {
+          try {
+            await db.insert(aiCallLogs).values(entry);
+            // 逐条插入成功后也进行成本累加
+            if (entry.taskId && entry.costUsd > 0) {
+              await db
+                .update(tasks)
+                .set({
+                  costUsd: sql`cost_usd + ${entry.costUsd}`,
+                  updatedAt: entry.createdAt
+                })
+                .where(eq(tasks.id, entry.taskId));
+            }
+          } catch (singleErr: unknown) {
+            TraceLogger.error("WORKFLOW", "QUEUE_SINGLE_AI_LOG_FAILED", entry.traceId, `单条 AI Log 写入/成本累加失败: ${singleErr instanceof Error ? singleErr.message : String(singleErr)}`, singleErr);
+          }
+        }
+      }
+    }
   }
 };

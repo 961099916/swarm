@@ -1,4 +1,4 @@
-import { TraceLogger } from "@swarm/kernel";
+import { TraceLogger, getErrorMessage } from "@swarm/kernel";
 import { RAG_DEFAULT_MIN_SCORE, RAG_DEFAULT_TOP_K, RAG_MAX_CONTEXT_LENGTH } from "@swarm/knowledge";
 
 /**
@@ -66,7 +66,7 @@ export async function fetchRAGContext(
 
     return emptyResult;
   } catch (err: unknown) {
-    TraceLogger.warn("RAG", "INJECTOR_FAILED", "WORKFLOW", `RAG 上下文注入调用失败: getErrorMessage(err)`);
+    TraceLogger.warn("RAG", "INJECTOR_FAILED", "WORKFLOW", `RAG 上下文注入调用失败: ${getErrorMessage(err)}`);
     return emptyResult;
   }
 }

@@ -1,5 +1,5 @@
 import { AdRewardReq } from "@swarm/credits";
-import { TraceLogger } from "@swarm/kernel";
+import { TraceLogger, getErrorMessage } from "@swarm/kernel";
 
 // File: /Users/zhangjiahao/IdeaProjects/swarm/backend/workers/user/src/utils/security.ts
 
@@ -84,7 +84,7 @@ export async function verifyAdToken(
 
     return { success: true };
   } catch (err: unknown) {
-    TraceLogger.error("USER", "AD_TOKEN_SECURITY", traceId, `解析广告令牌抛出异常: getErrorMessage(err)`, err, currentUserId);
+    TraceLogger.error("USER", "AD_TOKEN_SECURITY", traceId, `解析广告令牌抛出异常: ${getErrorMessage(err)}`, err, currentUserId);
     return { success: false, errorMsg: "令牌解析异常" };
   }
 }

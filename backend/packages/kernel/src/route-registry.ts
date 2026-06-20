@@ -42,7 +42,7 @@ export const ROUTE_TABLE: RouteEntry[] = [
     prefix: "/api/v1/auth",
     target: "CORE_SVC",
     label: "CORE_SVC (User Center - Auth)",
-    publicPaths: ["/api/v1/auth/login"],
+    publicPaths: ["/api/v1/auth/login", "/api/v1/auth/admin/login"],
   },
   {
     prefix: "/api/v1/user",

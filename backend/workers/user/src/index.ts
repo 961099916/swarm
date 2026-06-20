@@ -1,14 +1,15 @@
-import { TraceLogger, startupSecurityCheck } from "@swarm/kernel";
-
 // File: /Users/zhangjiahao/IdeaProjects/swarm/backend/workers/user/src/index.ts
 
 import { Hono } from "hono";
 import type { Context, Next } from "hono";
-import { handleLogin, handleLogout } from "./handlers/auth";
-import { handleUserProfile, handleUpdateProfile, handleUploadAvatar } from "./handlers/user";
-import { handleBindInvite, handleAdReward, handleCreditsHistory } from "./handlers/credits";
+import { TraceLogger, startupSecurityCheck, getErrorMessage } from "@swarm/kernel";
 import { ResponseBuilder } from "./utils/response";
+import { UserRepository } from "./repositories/user.repository";
+import { UserService } from "./services/user.service";
+import { CreditsService } from "./services/credits.service";
+import { UserController } from "./controllers/user.controller";
 
+// File: /Users/zhangjiahao/IdeaProjects/swarm/backend/workers/user/src/index.ts
 export interface Env {
   DB: D1Database;
   AVATAR_BUCKET: R2Bucket;
@@ -16,9 +17,12 @@ export interface Env {
   // Secrets
   INTERNAL_SECRET: string;
   JWT_SECRET: string;
+  ADMIN_USERNAME?: string;
+  ADMIN_PASSWORD?: string;
+  ADMIN_SUPER_KEY?: string;
   // Vars
   WX_APP_ID: string;
-  WX_APP_SECRET: string; // 也从 Secret 中获取
+  WX_APP_SECRET: string;
   ALLOWED_ORIGIN?: string;
 }
 
@@ -30,43 +34,10 @@ interface UserVariables {
 const app = new Hono<{ Bindings: Env; Variables: UserVariables }>();
 
 // ══════════════════════════════════════════════════
-// 中间件与安全拦截
+// 中间件与请求生命周期拦截
 // ══════════════════════════════════════════════════
 
-app.use("*", async (c: Context, next: Next) => {
-  const isAvatar = c.req.path.startsWith("/avatars/");
-  const traceId = c.req.header("X-Trace-Id") || crypto.randomUUID();
-  c.set("traceId", traceId);
-  c.header("X-Trace-Id", traceId);
-
-  if (isAvatar) {
-    return next();
-  }
-
-  // 2. 启动 Fail-Fast 安全健康预检，确保必需密钥在部署时未遗漏
-  const checkError = await startupSecurityCheck(c.env, traceId, ["INTERNAL_SECRET", "JWT_SECRET"]);
-  if (checkError) return checkError;
-
-  // 3. 内部通信签名校验，强力阻断恶意越权绕过网关
-  const internalKey = c.req.header("X-Internal-Key");
-  if (!internalKey || internalKey !== c.env.INTERNAL_SECRET) {
-    TraceLogger.warn("USER", "UNAUTHORIZED_BYPASS", traceId, `安全拦截：非法客户端绕过网关直接请求核心服务`);
-    return c.json({ success: false, error: "Unauthorized access", traceId }, 401);
-  }
-
-  // 微信登录接口无需鉴权绑定 userId
-  const isLogin = c.req.path === "/api/v1/auth/login";
-  if (!isLogin) {
-    // 4. 解析绑定网关下发的用户身份
-    const userId = c.req.header("X-User-Id");
-    if (!userId) {
-      TraceLogger.warn("USER", "MISSING_IDENTITY", traceId, `安全拦截：网关请求未携带 X-User-Id 身份元数据`);
-      return c.json({ success: false, error: "Missing identity metadata", traceId }, 400);
-    }
-    c.set("userId", userId);
-  }
-
-  // 5. 抓取入参
+async function handleInboundLog(c: Context, traceId: string) {
   let query = c.req.query();
   let requestBody: any = null;
   const contentType = c.req.header("Content-Type") || "";
@@ -74,21 +45,15 @@ app.use("*", async (c: Context, next: Next) => {
     try {
       const clonedReq = c.req.raw.clone();
       requestBody = await clonedReq.json();
-    } catch (err) {
-      // 容错
-    }
+    } catch {}
   }
-
   TraceLogger.info("USER", "REQUEST_INBOUND", traceId, `User Worker 接收内部请求: ${c.req.method} ${c.req.path}`, c.get("userId"), {
     query,
     body: requestBody
   });
+}
 
-  const startTime = Date.now();
-  await next();
-  const durationMs = Date.now() - startTime;
-
-  // 6. 抓取出参
+async function handleOutboundLog(c: Context, traceId: string, durationMs: number) {
   let responseBody: any = null;
   let status = 200;
   if (c.res) {
@@ -103,25 +68,59 @@ app.use("*", async (c: Context, next: Next) => {
         } else {
           responseBody = { truncated: text.slice(0, 1000) + "... (truncated)" };
         }
-      } catch (err) {
-        // 容错
-      }
+      } catch {}
     }
   }
-
   TraceLogger.info("USER", "REQUEST_OUTBOUND", traceId, `User Worker 完成请求响应: ${c.req.method} ${c.req.path} -> [${status}] (${durationMs}ms)`, c.get("userId"), {
     status,
     durationMs,
     response: responseBody
   });
+}
+
+app.use("*", async (c: Context, next: Next) => {
+  const isAvatar = c.req.path.startsWith("/avatars/");
+  const traceId = c.req.header("X-Trace-Id") || crypto.randomUUID();
+  c.set("traceId", traceId);
+  c.header("X-Trace-Id", traceId);
+
+  if (isAvatar) {
+    return next();
+  }
+
+  const checkError = await startupSecurityCheck(c.env, traceId, ["INTERNAL_SECRET", "JWT_SECRET"]);
+  if (checkError) return checkError;
+
+  const internalKey = c.req.header("X-Internal-Key");
+  if (!internalKey || internalKey !== c.env.INTERNAL_SECRET) {
+    TraceLogger.warn("USER", "UNAUTHORIZED_BYPASS", traceId, `安全拦截：非法客户端绕过网关直接请求核心服务`);
+    return c.json({ success: false, error: "Unauthorized access", traceId }, 401);
+  }
+
+  const isLogin = c.req.path === "/api/v1/auth/login" || c.req.path === "/api/v1/auth/admin/login";
+  if (!isLogin) {
+    const userId = c.req.header("X-User-Id");
+    if (!userId) {
+      TraceLogger.warn("USER", "MISSING_IDENTITY", traceId, `安全拦截：网关请求未携带 X-User-Id 身份元数据`);
+      return c.json({ success: false, error: "Missing identity metadata", traceId }, 400);
+    }
+    c.set("userId", userId);
+  }
+
+  await handleInboundLog(c, traceId);
+  const startTime = Date.now();
+  await next();
+  const durationMs = Date.now() - startTime;
+  await handleOutboundLog(c, traceId, durationMs);
 });
 
-// ─── 头像托管路由（由 Core/User 独占写，独占读写 R2）───
+// ══════════════════════════════════════════════════
+// 头像托管路由 (R2 读取)
+// ══════════════════════════════════════════════════
 
 app.get("/avatars/*", async (c) => {
   const traceId = c.req.header("X-Trace-Id") || crypto.randomUUID();
   const key = c.req.path.replace("/avatars/", "");
-
   if (!key || key.length < 3) {
     return new Response(null, { status: 404 });
   }
@@ -144,45 +143,57 @@ app.get("/avatars/*", async (c) => {
   }
 });
 
-// ─── 微信登录 ───
+// ══════════════════════════════════════════════════
+// 控制器工厂辅助方法
+// ══════════════════════════════════════════════════
+
+function getController(c: Context): UserController {
+  const repo = new UserRepository(c.env.DB);
+  const userSvc = new UserService(repo);
+  const creditsSvc = new CreditsService(repo);
+  return new UserController(userSvc, creditsSvc);
+}
+
+// ══════════════════════════════════════════════════
+// 业务路由映射
+// ══════════════════════════════════════════════════
+
 app.post("/api/v1/auth/login", async (c) => {
-  return await handleLogin(c.req.raw, c.env.DB, c.env, c.get("traceId"));
+  return await getController(c).login(c.req.raw, c.env, c.get("traceId"));
 });
 
-// ─── 需要身份绑定的业务路由 ───
+app.post("/api/v1/auth/admin/login", async (c) => {
+  return await getController(c).adminLogin(c.req.raw, c.env, c.get("traceId"));
+});
+
 app.post("/api/v1/auth/logout", async (c) => {
-  return await handleLogout(c.req.raw, c.env.DB, c.env.CACHE_KV, c.get("userId"), c.get("traceId"));
+  return await getController(c).logout(c.env.CACHE_KV, c.get("userId"), c.get("traceId"));
 });
 
 app.get("/api/v1/user/profile", async (c) => {
-  return await handleUserProfile(c.env.DB, c.get("userId"), c.get("traceId"));
+  return await getController(c).getProfile(c.get("userId"), c.get("traceId"));
 });
 
 app.put("/api/v1/user/profile", async (c) => {
-  return await handleUpdateProfile(c.req.raw, c.env.DB, c.get("userId"), c.get("traceId"));
+  return await getController(c).updateProfile(c.req.raw, c.get("userId"), c.get("traceId"));
 });
 
 app.post("/api/v1/user/avatar", async (c) => {
-  return await handleUploadAvatar(c.req.raw, c.env.AVATAR_BUCKET, c.get("userId"), c.get("traceId"));
+  return await getController(c).uploadAvatar(c.req.raw, c.env.AVATAR_BUCKET, c.get("userId"), c.get("traceId"));
 });
 
 app.post("/api/v1/credits/bind-invite", async (c) => {
-  return await handleBindInvite(c.req.raw, c.env.DB, c.get("userId"), c.get("traceId"));
+  return await getController(c).bindInvite(c.req.raw, c.get("userId"), c.get("traceId"));
 });
 
 app.post("/api/v1/credits/reward", async (c) => {
-  return await handleAdReward(c.req.raw, c.env.DB, c.env, c.get("userId"), c.get("traceId"));
+  return await getController(c).claimAdReward(c.req.raw, c.env, c.get("userId"), c.get("traceId"));
 });
 
 app.get("/api/v1/credits/history", async (c) => {
-  return await handleCreditsHistory(c.req.raw, c.env.DB, c.get("userId"), c.get("traceId"));
+  return await getController(c).getCreditsHistory(c.req.raw, c.get("userId"), c.get("traceId"));
 });
 
-// ─── 404 ───
-
-// ══════════════════════════════════════════════════
-// 健康检查 — 用于网关 / 负载均衡存活探针
-// ══════════════════════════════════════════════════
 app.get("/health", async (c) => {
   return c.json({ status: "ok", service: "user", timestamp: new Date().toISOString() });
 });
@@ -191,11 +202,10 @@ app.notFound(async (c) => {
   return ResponseBuilder.error("资源不存在", c.get("traceId") || crypto.randomUUID(), 404);
 });
 
-// ─── 全局未知错误拦截 ───
 app.onError(async (err, c) => {
   const traceId = c.get("traceId") || crypto.randomUUID();
   const userId = c.get("userId") || undefined;
-  TraceLogger.error("USER", "UNCAUGHT_EXCEPTION", traceId, `服务未捕获异常: getErrorMessage(err)`, err, userId);
+  TraceLogger.error("USER", "UNCAUGHT_EXCEPTION", traceId, `服务未捕获异常: ${getErrorMessage(err)}`, err, userId);
   return ResponseBuilder.internalError("系统繁忙，请联系系统管理员", traceId);
 });
 

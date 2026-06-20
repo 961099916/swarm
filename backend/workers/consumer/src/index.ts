@@ -1,16 +1,17 @@
+// File: /Users/zhangjiahao/IdeaProjects/swarm/backend/workers/consumer/src/index.ts
+
 /**
  * swarm-consumer — 异步任务队列消费者
  *
  * 从 Queue 接收任务创建消息，异步触发 Cloudflare Workflows 引擎。
- * 与 Engine Worker 解耦，Engine 只负责写 D1 + 发 Queue，
- * Consumer 负责耗时的工作流启动。
  */
 import { tasks, taskLogs } from "@swarm/agent";
 import { users } from "@swarm/identity";
 import { creditsLedger, TASK_COST } from "@swarm/credits";
-import { TraceLogger } from "@swarm/kernel";
+import { TraceLogger, getErrorMessage } from "@swarm/kernel";
 import { drizzle } from "drizzle-orm/d1";
 import { eq, sql } from "drizzle-orm";
+import { ConsumerConstants } from "./constants/consumer.constant";
 
 export interface Env {
   DB: D1Database;
@@ -57,7 +58,6 @@ async function triggerWorkflow(
     createdAt: now,
   });
 
-  // 触发 Cloudflare Workflows
   const run = await workflow.create({ params: { taskId, taskType, payload } });
 
   await drizzleDb
@@ -89,7 +89,7 @@ async function handleFailureAndRefund(
     const drizzleDb = drizzle(db);
     const now = new Date().toISOString();
 
-    await drizzleDb.transaction(async (tx: any) => {
+    await drizzleDb.transaction(async (tx) => {
       const refundRes = await tx
         .update(users)
         .set({ credits: sql`credits + ${TASK_COST}`, updatedAt: now })
@@ -126,7 +126,7 @@ async function handleFailureAndRefund(
 
     TraceLogger.info("CONSUMER", "REFUND_COMPENSATE", traceId, `工作流启动失败，退款成功: taskId=${taskId}, userId=${userId}`, userId);
   } catch (refundErr: unknown) {
-    TraceLogger.error("CONSUMER", "REFUND_CRITICAL_FAILED", traceId, `退款补偿事务失败! taskId=${taskId}, error=${refundErr.message}`, refundErr, userId);
+    TraceLogger.error("CONSUMER", "REFUND_CRITICAL_FAILED", traceId, `退款补偿事务失败! taskId=${taskId}, error=${getErrorMessage(refundErr)}`, refundErr, userId);
   }
 }
 
@@ -147,24 +147,21 @@ async function queue(
       await triggerWorkflow(env.DB, wf, taskId, taskType, payload, traceId);
       msg.ack();
     } catch (err: unknown) {
-      TraceLogger.error("CONSUMER", "WORKFLOW_TRIGGER_FAILED", traceId, `工作流触发失败: taskId=${taskId}, error=getErrorMessage(err)`, err, userId);
+      const errMsg = getErrorMessage(err);
+      TraceLogger.error("CONSUMER", "WORKFLOW_TRIGGER_FAILED", traceId, `工作流触发失败: taskId=${taskId}, error=${errMsg}`, err, userId);
 
-      // 尝试退款补偿
-      await handleFailureAndRefund(env.DB, userId, taskId, err.message || "未知异常", traceId);
+      await handleFailureAndRefund(env.DB, userId, taskId, errMsg, traceId);
 
-      if (msg.attempts >= 3) {
+      if (msg.attempts >= ConsumerConstants.DEFAULT_MAX_RETRIES) {
         TraceLogger.warn("CONSUMER", "MAX_RETRIES_EXCEEDED", traceId, `消息重试已达上限: taskId=${taskId}`, userId);
         msg.ack();
       } else {
-        msg.retry({ delaySeconds: 10 });
+        msg.retry({ delaySeconds: ConsumerConstants.RETRY_DELAY_SECONDS });
       }
     }
   }
 }
 
-/**
- * Health check / 默认导出
- */
 export default {
   async fetch(request: Request): Promise<Response> {
     const url = new URL(request.url);

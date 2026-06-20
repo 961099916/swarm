@@ -1,19 +1,14 @@
+// File: /Users/zhangjiahao/IdeaProjects/swarm/backend/workers/gateway/src/rateLimiter.ts
+
 /**
  * RateLimiter — 基于 KV 的分布式速率限制中间件
  *
  * 使用滑动窗口（Sliding Window）算法，以 KV 为存储后端。
  * 所有 Worker 共享同一份速率限制状态。
- *
- * 使用方式（Gateway index.ts）：
- *   import { rateLimitMiddleware } from "./rateLimiter";
- *   app.use("/api/v1/*", rateLimitMiddleware({
- *     kv: c.env.CACHE_KV,
- *     maxRequests: 60,
- *     windowSeconds: 60,
- *     traceId: c.get("traceId"),
- *     userId: c.get("userId"),
- *   }));
  */
+
+import { TraceLogger } from "@swarm/kernel";
+import { GatewayConstants } from "./constants/gateway.constant";
 
 export interface RateLimitConfig {
   /** KV 命名空间 */
@@ -35,13 +30,13 @@ export interface RateLimitResult {
   current: number;
   /** 窗口大小（秒） */
   windowSeconds: number;
+  /** 限制的最大请求数 */
+  maxRequests: number;
   /** 剩余请求数 */
   remaining: number;
   /** 重置时间戳（Unix 秒） */
   resetAt: number;
 }
-
-const RATE_LIMIT_PREFIX = "rl:";
 
 /**
  * 对单个请求执行速率限制检查。
@@ -51,7 +46,7 @@ export async function checkRateLimit(config: RateLimitConfig): Promise<RateLimit
   const { kv, maxRequests, windowSeconds, identifier, traceId } = config;
   const now = Math.floor(Date.now() / 1000);
   const windowKey = Math.floor(now / windowSeconds);
-  const bucketKey = `${RATE_LIMIT_PREFIX}${identifier}:${windowKey}`;
+  const bucketKey = `${GatewayConstants.RATE_LIMIT_PREFIX}${identifier}:${windowKey}`;
 
   try {
     // KV atomic increment: 如果 key 不存在则创建，设置 TTL 为 2 个窗口时间
@@ -65,6 +60,7 @@ export async function checkRateLimit(config: RateLimitConfig): Promise<RateLimit
         allowed: false,
         current,
         windowSeconds,
+        maxRequests,
         remaining: 0,
         resetAt,
       };
@@ -77,6 +73,7 @@ export async function checkRateLimit(config: RateLimitConfig): Promise<RateLimit
       allowed: true,
       current: current + 1,
       windowSeconds,
+      maxRequests,
       remaining: maxRequests - current - 1,
       resetAt: (windowKey + 1) * windowSeconds,
     };
@@ -87,6 +84,7 @@ export async function checkRateLimit(config: RateLimitConfig): Promise<RateLimit
       allowed: true,
       current: 0,
       windowSeconds,
+      maxRequests,
       remaining: maxRequests,
       resetAt: now + windowSeconds,
     };
@@ -99,7 +97,7 @@ export async function checkRateLimit(config: RateLimitConfig): Promise<RateLimit
 export function buildRateLimitResponse(result: RateLimitResult, traceId: string): Response {
   return new Response(
     JSON.stringify({
-      code: 1050,
+      code: GatewayConstants.RATE_LIMIT_ERROR_CODE,
       message: `请求过于频繁，请在 ${result.windowSeconds} 秒后重试`,
       traceId,
       timestamp: new Date().toISOString(),

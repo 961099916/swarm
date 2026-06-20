@@ -1,3 +1,4 @@
+/// <reference types="@cloudflare/workers-types" />
 /**
  * CacheService — 分布式缓存服务
  *
@@ -20,14 +21,14 @@ function withJitter(ttl: number): number {
 
 export const CacheService = {
   /**
-   * 读取缓存。返回 undefined 表示缓存未命中（缓存穿透保护）。
+   * 读取缓存。返回 null 表示命中了空占位防缓存穿透，返回 undefined 表示缓存未命中（需回源）。
    */
-  async get<T>(kv: KVNamespace, key: string): Promise<T | undefined> {
+  async get<T>(kv: KVNamespace, key: string): Promise<T | null | undefined> {
     try {
       const raw = await kv.get(key);
       if (raw === null) return undefined;
       const parsed = JSON.parse(raw) as { value: T; ttl?: number };
-      if (parsed.value === (NULL_PLACEHOLDER as any)) return undefined;
+      if (parsed.value === (NULL_PLACEHOLDER as any)) return null;
       return parsed.value;
     } catch {
       return undefined;

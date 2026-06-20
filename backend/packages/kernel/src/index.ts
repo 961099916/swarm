@@ -15,6 +15,7 @@ export { startupSecurityCheck } from "./security";
 
 // ─── 错误处理工具 ───
 export { getErrorMessage, getErrorStack, errorIncludes } from "./error-utils";
+export { BaseBusinessError } from "./business-error";
 
 // ─── 统一响应协议 ───
 export { ApiRes } from "./api-response";

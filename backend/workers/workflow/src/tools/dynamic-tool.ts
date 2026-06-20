@@ -1,5 +1,5 @@
 import { DynamicToolRow } from "@swarm/agent";
-import { TraceLogger } from "@swarm/kernel";
+import { TraceLogger, getErrorMessage } from "@swarm/kernel";
 
 // File: /Users/zhangjiahao/IdeaProjects/swarm/backend/workers/workflow/src/tools/dynamic-tool.ts
 
@@ -50,7 +50,7 @@ export class DynamicWorkflowTool extends BaseWorkflowTool {
         this.inputSchema = [];
       }
     } catch (e: unknown) {
-      TraceLogger.error("WORKFLOW", "TOOL_INIT_FAILED", "SYSTEM_INIT", `动态工具 ${row.name} 解析 paramsSchema 异常: getErrorMessage(e)`, e);
+      TraceLogger.error("WORKFLOW", "TOOL_INIT_FAILED", "SYSTEM_INIT", `动态工具 ${row.name} 解析 paramsSchema 异常: ${getErrorMessage(e)}`, e);
       this.inputSchema = [];
     }
     this.rawConfig = row;
@@ -96,7 +96,7 @@ export class DynamicWorkflowTool extends BaseWorkflowTool {
         return await this.runScriptMode(input, ctx, traceId);
       } catch (err: unknown) {
         // 如果脚本模式失败（如 Cloudflare 禁止 new Function），且没有 endpoint 可降级，才抛出错误
-        TraceLogger.warn("WORKFLOW", "SCRIPT_FALLBACK", traceId, `工具 ${this.name} 脚本执行失败，且无 API 代理模式可降级: getErrorMessage(err)`);
+        TraceLogger.warn("WORKFLOW", "SCRIPT_FALLBACK", traceId, `工具 ${this.name} 脚本执行失败，且无 API 代理模式可降级: ${getErrorMessage(err)}`);
         throw err;
       }
     }
@@ -160,7 +160,7 @@ export class DynamicWorkflowTool extends BaseWorkflowTool {
       }
       return JSON.stringify(result);
     } catch (err: unknown) {
-      let errorMsg = err.message || String(err);
+      let errorMsg = getErrorMessage(err);
       if (errorMsg.includes("disallowed for this context") || errorMsg.includes("EvalError")) {
         errorMsg = `[Cloudflare 安全隔离限制] 当前部署运行在 Cloudflare Workers 生产环境，平台出于安全考虑禁用了运行时动态 JS 脚本执行机制。请在此工具的配置中将其修改为【API 代理模式】（No-Code 模式）运行。`;
       }
@@ -200,7 +200,7 @@ export class DynamicWorkflowTool extends BaseWorkflowTool {
     try {
       headers = typeof headersStr === "string" ? JSON.parse(headersStr) : headersStr;
     } catch (e: unknown) {
-      TraceLogger.error("WORKFLOW", "TOOL_HEADERS_PARSE_ERROR", traceId, `解析 headers JSON 异常: getErrorMessage(e)`, e);
+      TraceLogger.error("WORKFLOW", "TOOL_HEADERS_PARSE_ERROR", traceId, `解析 headers JSON 异常: ${getErrorMessage(e)}`, e);
     }
 
     let body: any = null;
@@ -296,8 +296,8 @@ export class DynamicWorkflowTool extends BaseWorkflowTool {
       return typeof responseData === "string" ? responseData : JSON.stringify(responseData);
     } catch (err: unknown) {
       clearTimeout(timeoutId);
-      TraceLogger.error("WORKFLOW", "TOOL_PROXY_FAILED", traceId, `API 代理请求错误: getErrorMessage(err)`, err);
-      throw new Error(`API代理调用异常: getErrorMessage(err)`);
+      TraceLogger.error("WORKFLOW", "TOOL_PROXY_FAILED", traceId, `API 代理请求错误: ${getErrorMessage(err)}`, err);
+      throw new Error(`API代理调用异常: ${getErrorMessage(err)}`);
     }
   }
 }

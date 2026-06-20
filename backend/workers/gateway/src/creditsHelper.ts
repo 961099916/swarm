@@ -25,7 +25,7 @@ export async function changeUserCredits(
   const drizzleDb = drizzle(db);
 
   try {
-    const newBalance = await drizzleDb.transaction(async (tx: DrizzleD1Database) => {
+    const newBalance = await drizzleDb.transaction(async (tx) => {
       // 1. 读取当前余额（在事务内，可重复读）
       const userRows = await tx
         .select({ credits: users.credits })

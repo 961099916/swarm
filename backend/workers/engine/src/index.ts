@@ -1,11 +1,15 @@
-import { TraceLogger, startupSecurityCheck } from "@swarm/kernel";
+import { TraceLogger, startupSecurityCheck, getErrorMessage } from "@swarm/kernel";
 
 // File: /Users/zhangjiahao/IdeaProjects/swarm/backend/workers/engine/src/index.ts
 
 import { Hono } from "hono";
 import type { Context, Next } from "hono";
-import { handleListAgents, handleCreateAgent, handleUpdateAgent, handleDeleteAgent } from "./handlers/agents";
-import { handleCreateTask, handleListTasks, handleTaskLogs, WorkflowInstance } from "./handlers/tasks";
+import { AgentRepository } from "./repositories/agent.repository";
+import { AgentService } from "./services/agent.service";
+import { AgentController } from "./controllers/agent.controller";
+import { TaskRepository } from "./repositories/task.repository";
+import { TaskService, WorkflowInstance } from "./services/task.service";
+import { TaskController } from "./controllers/task.controller";
 import { ResponseBuilder } from "./utils/response";
 
 export interface Env {
@@ -108,32 +112,53 @@ app.use("*", async (c: Context, next: Next) => {
 
 // ─── 智能体业务路由 ───
 app.get("/api/v1/agents/list", async (c) => {
-  return await handleListAgents(c.req.raw, c.env.DB, c.env.CACHE_KV, c.get("userId"), c.get("traceId"));
+  const agentRepo = new AgentRepository(c.env.DB);
+  const agentSvc = new AgentService(agentRepo);
+  const agentController = new AgentController(agentSvc);
+  return await agentController.handleListAgents(c.env.CACHE_KV, c.get("userId"), c.get("traceId"));
 });
 
 app.post("/api/v1/agents/create", async (c) => {
-  return await handleCreateAgent(c.req.raw, c.env.DB, c.env.CACHE_KV, c.get("userId"), c.get("traceId"));
+  const agentRepo = new AgentRepository(c.env.DB);
+  const agentSvc = new AgentService(agentRepo);
+  const agentController = new AgentController(agentSvc);
+  return await agentController.handleCreateAgent(c.req.raw, c.env.CACHE_KV, c.get("userId"), c.get("traceId"));
 });
 
 app.put("/api/v1/agents/update", async (c) => {
-  return await handleUpdateAgent(c.req.raw, c.env.DB, c.env.CACHE_KV, c.get("userId"), c.get("traceId"));
+  const agentRepo = new AgentRepository(c.env.DB);
+  const agentSvc = new AgentService(agentRepo);
+  const agentController = new AgentController(agentSvc);
+  return await agentController.handleUpdateAgent(c.req.raw, c.env.CACHE_KV, c.get("userId"), c.get("traceId"));
 });
 
 app.delete("/api/v1/agents/delete", async (c) => {
-  return await handleDeleteAgent(c.req.raw, c.env.DB, c.env.CACHE_KV, c.get("userId"), c.get("traceId"));
+  const agentRepo = new AgentRepository(c.env.DB);
+  const agentSvc = new AgentService(agentRepo);
+  const agentController = new AgentController(agentSvc);
+  return await agentController.handleDeleteAgent(c.req.raw, c.env.CACHE_KV, c.get("userId"), c.get("traceId"));
 });
 
 // ─── 任务业务路由 ───
 app.post("/api/v1/tasks/create", async (c) => {
-  return await handleCreateTask(c.req.raw, c.env.DB, c.env.TASK_WORKFLOW, c.env.TASK_QUEUE, c.get("userId"), c.get("traceId"));
+  const taskRepo = new TaskRepository(c.env.DB);
+  const taskSvc = new TaskService(taskRepo);
+  const taskController = new TaskController(taskRepo, taskSvc);
+  return await taskController.handleCreateTask(c.req.raw, c.env.DB, c.env.TASK_WORKFLOW, c.env.TASK_QUEUE, c.get("userId"), c.get("traceId"));
 });
 
 app.get("/api/v1/tasks/list", async (c) => {
-  return await handleListTasks(c.req.raw, c.env.DB, c.get("userId"), c.get("traceId"));
+  const taskRepo = new TaskRepository(c.env.DB);
+  const taskSvc = new TaskService(taskRepo);
+  const taskController = new TaskController(taskRepo, taskSvc);
+  return await taskController.handleListTasks(c.req.raw, c.get("userId"), c.get("traceId"));
 });
 
 app.get("/api/v1/tasks/logs", async (c) => {
-  return await handleTaskLogs(c.req.raw, c.env.DB, c.get("userId"), c.get("userRole"), c.get("traceId"));
+  const taskRepo = new TaskRepository(c.env.DB);
+  const taskSvc = new TaskService(taskRepo);
+  const taskController = new TaskController(taskRepo, taskSvc);
+  return await taskController.handleTaskLogs(c.req.raw, c.get("userId"), c.get("userRole"), c.get("traceId"));
 });
 
 // ─── 404 ───
@@ -153,7 +178,7 @@ app.notFound(async (c) => {
 app.onError(async (err, c) => {
   const traceId = c.get("traceId") || crypto.randomUUID();
   const userId = c.get("userId") || undefined;
-  TraceLogger.error("ENGINE", "UNCAUGHT_EXCEPTION", traceId, `服务未捕获异常: getErrorMessage(err)`, err, userId);
+  TraceLogger.error("ENGINE", "UNCAUGHT_EXCEPTION", traceId, `服务未捕获异常: ${getErrorMessage(err)}`, err, userId);
   return ResponseBuilder.internalError("系统繁忙，请联系系统管理员", traceId);
 });
 

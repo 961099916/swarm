@@ -1,4 +1,4 @@
-import { sqliteTable, text, integer } from "drizzle-orm/sqlite-core";
+import { sqliteTable, text, integer, primaryKey } from "drizzle-orm/sqlite-core";
 
 /**
  * model_configs — 模型路由配置
@@ -53,5 +53,5 @@ export const userRateLimits = sqliteTable("user_rate_limits", {
   callCount: integer("call_count").default(0).notNull(),
   tokenCount: integer("token_count").default(0).notNull(),
 }, (table) => ({
-  pk: { columns: [table.userId, table.purpose, table.minuteBucket] },
+  pk: primaryKey({ columns: [table.userId, table.purpose, table.minuteBucket] }),
 }));

@@ -1,15 +1,11 @@
-import { AIClient, AIClientEnv } from "@swarm/ai-gateway";
-import { TraceLogger } from "@swarm/kernel";
-
 // File: /Users/zhangjiahao/IdeaProjects/swarm/backend/workers/rag/src/index.ts
 
 import { Hono } from "hono";
 import type { Context, Next } from "hono";
-import { ResponseBuilder } from "./utils/response";
-import { handleListKBs, handleCreateKB, handleGetKB, handleDeleteKB, handleUpdateKB, handleAdminListKBs } from "./handlers/knowledge-bases";
-import { handleAddDocument, handleListDocuments, handleDeleteDocument, handleAddDocumentManual } from "./handlers/documents";
-
-import { handleSearchKnowledge } from "./handlers/search";
+import { ApiRes, TraceLogger, startupSecurityCheck, getErrorMessage } from "@swarm/kernel";
+import { RagRepository } from "./repositories/rag.repository";
+import { RagService } from "./services/rag.service";
+import { RagController } from "./controllers/rag.controller";
 import { DocumentProcessWorkflow } from "./processor/pipeline-workflow";
 
 export interface Env {
@@ -30,15 +26,58 @@ interface RagVariables {
 const app = new Hono<{ Bindings: Env; Variables: RagVariables }>();
 
 // ══════════════════════════════════════════════════
-// 中间件
+// 中间件与请求日志
 // ══════════════════════════════════════════════════
+
+async function handleInboundLog(c: Context, traceId: string, userId: string) {
+  let query = c.req.query();
+  let requestBody: any = null;
+  const contentType = c.req.header("Content-Type") || "";
+  if (c.req.method !== "GET" && c.req.method !== "HEAD" && contentType.includes("application/json")) {
+    try {
+      const clonedReq = c.req.raw.clone();
+      requestBody = await clonedReq.json();
+    } catch {}
+  }
+  TraceLogger.info("RAG", "REQUEST_INBOUND", traceId, `RAG Worker 接收请求: ${c.req.method} ${c.req.path}`, userId, {
+    query,
+    body: requestBody
+  });
+}
+
+async function handleOutboundLog(c: Context, traceId: string, userId: string, durationMs: number) {
+  let responseBody: any = null;
+  let status = 200;
+  if (c.res) {
+    status = c.res.status;
+    const resContentType = c.res.headers.get("Content-Type") || "";
+    if (resContentType.includes("application/json")) {
+      try {
+        const clonedRes = c.res.clone();
+        const text = await clonedRes.text();
+        if (text.length < 2000) {
+          responseBody = JSON.parse(text);
+        } else {
+          responseBody = { truncated: text.slice(0, 1000) + "... (truncated)" };
+        }
+      } catch {}
+    }
+  }
+  TraceLogger.info("RAG", "REQUEST_OUTBOUND", traceId, `RAG Worker 响应: ${c.req.method} ${c.req.path} -> ${status} (${durationMs}ms)`, userId, {
+    status,
+    durationMs,
+    response: responseBody
+  });
+}
 
 app.use("*", async (c: Context, next: Next) => {
   const traceId = c.req.header("X-Trace-Id") || crypto.randomUUID();
   c.set("traceId", traceId);
   c.header("X-Trace-Id", traceId);
 
-  // 仅校验用户身份（由 Gateway 注入，无安全风险）
+  const checkError = await startupSecurityCheck(c.env, traceId, ["INTERNAL_SECRET"]);
+  if (checkError) return checkError;
+
   const userId = c.req.header("X-User-Id");
   if (!userId) {
     TraceLogger.warn("RAG", "MISSING_IDENTITY", traceId, `RAG 请求未携带 X-User-Id`);
@@ -48,96 +87,92 @@ app.use("*", async (c: Context, next: Next) => {
   c.set("userId", userId);
   c.set("userRole", c.req.header("X-User-Role") || "FREE_USER");
 
-  TraceLogger.info("RAG", "REQUEST_INBOUND", traceId, `RAG Worker 接收请求: ${c.req.method} ${c.req.path}`, userId);
-
+  await handleInboundLog(c, traceId, userId);
   const startTime = Date.now();
   await next();
   const durationMs = Date.now() - startTime;
-  TraceLogger.info("RAG", "REQUEST_OUTBOUND", traceId, `RAG Worker 响应: ${c.req.method} ${c.req.path} -> ${c.res.status} (${durationMs}ms)`, userId);
+  await handleOutboundLog(c, traceId, userId, durationMs);
 });
 
 // ══════════════════════════════════════════════════
-// 知识库 CRUD
+// 控制器工厂辅助方法
+// ══════════════════════════════════════════════════
+
+function getController(c: Context): RagController {
+  const repo = new RagRepository(c.env.DB);
+  const svc = new RagService(repo);
+  return new RagController(svc);
+}
+
+// ══════════════════════════════════════════════════
+// 路由映射
 // ══════════════════════════════════════════════════
 
 app.get("/api/v1/kb/list", async (c) => {
-  return await handleListKBs(c.req.raw, c.env.DB, c.env.CACHE_KV, c.get("userId"), c.get("traceId"));
+  return await getController(c).getKBs(c.req.raw, c.get("userId"), c.get("userRole"), c.get("traceId"));
 });
 
 app.post("/api/v1/kb/create", async (c) => {
-  return await handleCreateKB(c.req.raw, c.env.DB, c.env.CACHE_KV, c.get("userId"), c.get("traceId"));
-});
-
-app.get("/api/v1/kb/get", async (c) => {
-  return await handleGetKB(c.req.raw, c.env.DB, c.get("userId"), c.get("traceId"));
+  return await getController(c).createKB(c.req.raw, c.get("userId"), c.get("traceId"));
 });
 
 app.put("/api/v1/kb/update", async (c) => {
-  return await handleUpdateKB(c.req.raw, c.env.DB, c.env.CACHE_KV, c.get("userId"), c.get("traceId"));
+  const url = new URL(c.req.url);
+  const kbId = url.searchParams.get("kbId") || "";
+  return await getController(c).updateKB(c.req.raw, kbId, c.get("userId"), c.get("userRole"), c.get("traceId"));
 });
 
 app.delete("/api/v1/kb/delete", async (c) => {
-  return await handleDeleteKB(c.req.raw, c.env.DB, c.env.CACHE_KV, c.get("userId"), c.get("traceId"));
+  const url = new URL(c.req.url);
+  const kbId = url.searchParams.get("kbId") || "";
+  return await getController(c).deleteKB(kbId, c.get("userId"), c.get("userRole"), c.get("traceId"));
 });
 
-// ══════════════════════════════════════════════════
-// 文档管理
-// ══════════════════════════════════════════════════
-
 app.post("/api/v1/kb/document/url", async (c) => {
-  return await handleAddDocument(c.req.raw, c.env, c.get("userId"), c.get("traceId"));
+  return await getController(c).addDocumentByUrl(c.req.raw, c.env.DOC_QUEUE, c.get("userId"), c.get("traceId"));
 });
 
 app.post("/api/v1/kb/document/manual", async (c) => {
-  return await handleAddDocumentManual(c.req.raw, c.env, c.get("userId"), c.get("traceId"));
+  return await getController(c).addDocumentManual(c.req.raw, c.env.DOC_QUEUE, c.get("userId"), c.get("traceId"));
 });
 
 app.get("/api/v1/kb/document/list", async (c) => {
-  return await handleListDocuments(c.req.raw, c.env.DB, c.get("userId"), c.get("traceId"));
+  const url = new URL(c.req.url);
+  const kbId = url.searchParams.get("kbId") || "";
+  return await getController(c).getDocuments(c.req.raw, kbId, c.get("userId"), c.get("traceId"));
 });
 
 app.delete("/api/v1/kb/document/delete", async (c) => {
-  return await handleDeleteDocument(c.req.raw, c.env.DB, c.env.CACHE_KV, c.get("userId"), c.get("traceId"));
+  const url = new URL(c.req.url);
+  const docId = url.searchParams.get("docId") || "";
+  return await getController(c).deleteDocument(docId, c.get("userId"), c.get("userRole"), c.get("traceId"));
 });
-
-// ══════════════════════════════════════════════════
-// 知识检索
-// ══════════════════════════════════════════════════
 
 app.post("/api/v1/kb/search", async (c) => {
-  return await handleSearchKnowledge(c.req.raw, c.env, c.get("userId"), c.get("traceId"));
+  return await getController(c).searchKnowledge(c.req.raw, c.get("userId"), c.get("traceId"));
 });
 
-// RAG 上下文注入（供 Workflow/Agent 内部调用）
 app.post("/api/v1/rag/inject", async (c) => {
-  const { handleRAGContextInject } = await import("./handlers/search");
-  return await handleRAGContextInject(c.req.raw, c.env, c.get("traceId"));
+  return await getController(c).injectContext(c.req.raw, c.get("traceId"));
 });
 
-// 管理后台知识库列表（防腐层，Admin SVC 通过 Service Binding 调用）
 app.post("/api/v1/rag/admin/knowledge-bases", async (c) => {
-  return await handleAdminListKBs(c.env.DB, c.get("traceId"));
+  return await getController(c).getKBsDirect(c.get("traceId"));
 });
 
-// ══════════════════════════════════════════════════
-// 404 & Error
-// ══════════════════════════════════════════════════
-
-// ══════════════════════════════════════════════════
-// 健康检查 — 用于网关 / 负载均衡存活探针
-// ══════════════════════════════════════════════════
 app.get("/health", async (c) => {
   return c.json({ status: "ok", service: "rag", timestamp: new Date().toISOString() });
 });
 
 app.notFound(async (c) => {
-  return ResponseBuilder.error("资源不存在", c.get("traceId") || crypto.randomUUID(), 404);
+  const traceId = c.get("traceId");
+  return c.json(ApiRes.notFound("请求的接口不存在", traceId || "SYSTEM"), 404);
 });
 
 app.onError(async (err, c) => {
   const traceId = c.get("traceId") || crypto.randomUUID();
-  TraceLogger.error("RAG", "UNCAUGHT_EXCEPTION", traceId, `RAG 服务未捕获异常: getErrorMessage(err)`, err);
-  return ResponseBuilder.internalError("系统繁忙，请联系系统管理员", traceId);
+  TraceLogger.error("RAG", "UNCAUGHT_EXCEPTION", traceId, `RAG 服务未捕获异常: ${getErrorMessage(err)}`, err);
+  return c.json(ApiRes.internalError("系统繁忙，请联系系统管理员", traceId), 500);
 });
 
 export { DocumentProcessWorkflow };

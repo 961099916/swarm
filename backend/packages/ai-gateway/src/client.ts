@@ -20,6 +20,7 @@ export interface AIClientEnv {
   AI?: WorkersAIBinding;
   DB: D1Database;
   KV?: KVNamespace;
+  LOG_QUEUE?: any;
 }
 
 function estimateTokens(text: string): number {
@@ -129,7 +130,7 @@ export class AIClient {
     const effectiveMessages = req.messages;
     const inputTokens = estimateChatTokens(effectiveMessages);
     if (!this.env.AI) throw new AIClientError('AI 模型不可用', 'NO_BINDING');
-    const res = await this.env.AI.run(config.model_name, { messages: effectiveMessages }, { gateway: { id: "swarm-ai-gateway" } });
+    const res = await this.env.AI.run(config.model_name, { messages: effectiveMessages });
     const content = res.response || "";
     if (!content) throw new Error("AI 返回内容为空");
     const outputTokens = estimateTokens(content);
@@ -170,10 +171,36 @@ export class AIClient {
   }
 
   private async logCall(params: { traceId: string; purpose: string; provider: string; modelName: string; userId?: string; agentId?: string; taskId?: string; kbId?: string; inputTokens: number; outputTokens: number; latencyMs: number; status: string; errorMessage?: string; costUsd: number }): Promise<void> {
+    const now = new Date().toISOString();
+    
+    // 1. 优先进行异步队列投递，实施高并发削峰
+    if (this.env.LOG_QUEUE && typeof this.env.LOG_QUEUE.send === "function") {
+      try {
+        await this.env.LOG_QUEUE.send({
+          type: "AI_CALL_LOG",
+          payload: {
+            ...params,
+            createdAt: now
+          }
+        });
+        return;
+      } catch (queueErr: unknown) {
+        TraceLogger.warn("AI_GATEWAY", "QUEUE_SEND_FAILED", params.traceId, `AI 审计日志投递 Queue 失败，降级 D1 同步写入: ${queueErr instanceof Error ? queueErr.message : String(queueErr)}`);
+      }
+    }
+
+    // 2. 降级：D1 同步插入
     try {
       await this.env.DB.prepare(
         `INSERT INTO ai_call_logs (trace_id, purpose, provider, model_name, user_id, agent_id, task_id, kb_id, input_tokens, output_tokens, latency_ms, status, error_message, cost_usd, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
-      ).bind(params.traceId, params.purpose, params.provider, params.modelName, params.userId || null, params.agentId || null, params.taskId || null, params.kbId || null, params.inputTokens, params.outputTokens, params.latencyMs, params.status, params.errorMessage || null, params.costUsd, new Date().toISOString()).run();
+      ).bind(params.traceId, params.purpose, params.provider, params.modelName, params.userId || null, params.agentId || null, params.taskId || null, params.kbId || null, params.inputTokens, params.outputTokens, params.latencyMs, params.status, params.errorMessage || null, params.costUsd, now).run();
+
+      // 降级同步累加更新任务总成本
+      if (params.taskId && params.costUsd > 0) {
+        await this.env.DB.prepare(
+          `UPDATE tasks SET cost_usd = cost_usd + ?, updated_at = ? WHERE id = ?`
+        ).bind(params.costUsd, now, params.taskId).run();
+      }
     } catch (err) {
       TraceLogger.warn("AI_GATEWAY", "LOG_WRITE_FAILED", params.traceId, `写入 AI 调用日志失败: ${err}`);
     }

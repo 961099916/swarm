@@ -1,4 +1,4 @@
-import { TraceLogger } from "@swarm/kernel";
+import { TraceLogger, getErrorMessage } from "@swarm/kernel";
 
 /**
  * 文档处理工作流 (DocumentProcessWorkflow)
@@ -243,8 +243,8 @@ export class DocumentProcessWorkflow extends WorkflowEntrypoint<Env, Params> {
       });
 
     } catch (err: unknown) {
-      TraceLogger.error("RAG", "DOC_WF_FAILED", traceId, `文档处理失败: getErrorMessage(err)`, err);
-      await updateDocStatus(db, docId, "FAILED", { errorMessage: err.message || "未知错误" });
+      TraceLogger.error("RAG", "DOC_WF_FAILED", traceId, `文档处理失败: ${getErrorMessage(err)}`, err);
+      await updateDocStatus(db, docId, "FAILED", { errorMessage: err instanceof Error ? err.message : String(err) });
       throw err;
     }
   }
@@ -343,7 +343,7 @@ export async function processDocumentInline(
 
     TraceLogger.info("RAG", "DOC_INLINE_COMPLETE", traceId, `同步处理完成: ${chunks.length} 个块`);
   } catch (err: unknown) {
-    TraceLogger.error("RAG", "DOC_INLINE_FAILED", traceId, `同步处理失败: getErrorMessage(err)`, err);
-    await updateDocStatus(db, docId, "FAILED", { errorMessage: err.message || "未知错误" });
+    TraceLogger.error("RAG", "DOC_INLINE_FAILED", traceId, `同步处理失败: ${getErrorMessage(err)}`, err);
+    await updateDocStatus(db, docId, "FAILED", { errorMessage: err instanceof Error ? err.message : String(err) });
   }
 }

@@ -1,51 +1,18 @@
-import { ApiRes, TraceLogger, startupSecurityCheck } from "@swarm/kernel";
-
 // File: /Users/zhangjiahao/IdeaProjects/swarm/backend/workers/admin/src/index.ts
 
 import { Hono } from "hono";
 import type { Context, Next } from "hono";
-import {
-  handleAdminStats,
-  handleAdminUsers,
-  handleUpdateUserRole,
-  handleAdjustUserCredits,
-  handleInvalidateUserToken,
-  handleBanUser,
-  handleAdminTasks,
-  handleCancelTask,
-  handleAdminListAgents,
-  handleAdminUpdateAgent,
-  handleAdminDeleteAgent,
-  handleAdminListTools,
-  handleAdminCreateTool,
-  handleAdminUpdateTool,
-  handleAdminDeleteTool,
-  handleAdminDebugTool,
-  handleAdminListAuditLogs,
-} from "./handlers/admin";
-import {
-  handleListModelConfigs,
-  handleUpdateModelConfig,
-  handleListAICallLogs,
-  handleAIStats,
-  handleAdminListKBs,
-} from "./handlers/ai-gateway";
-
-// ─── 环境变量类型 ───
+import { ApiRes, TraceLogger, startupSecurityCheck, getErrorMessage } from "@swarm/kernel";
+import { AdminRepository } from "./repositories/admin.repository";
+import { AdminService } from "./services/admin.service";
+import { AdminController } from "./controllers/admin.controller";
 
 export interface Env {
   DB: D1Database;
   CACHE_KV: any;
   INTERNAL_SECRET: string;
-  /**
-   * 防腐层 (Anti-Corruption Layer)
-   * 通过 Service Binding 调用其他领域服务的内部 API，
-   * 不再直接查询对方的数据表。
-   */
-  RAG_SVC?: Fetcher;  // 知识库领域 — 通过 RAG Worker 获取数据
+  RAG_SVC?: Fetcher;
 }
-
-// ─── Hono 上下文变量 ───
 
 interface AdminVariables {
   traceId: string;
@@ -55,37 +22,10 @@ interface AdminVariables {
 const app = new Hono<{ Bindings: Env; Variables: AdminVariables }>();
 
 // ══════════════════════════════════════════════════
-// 中间件
+// 中间件与可观测性
 // ══════════════════════════════════════════════════
 
-/** 统一 TraceID、物理安全验证与请求/响应日志 */
-app.use("*", async (c: Context, next: Next) => {
-  const traceId = c.req.header("X-Trace-Id") || crypto.randomUUID();
-  c.set("traceId", traceId);
-  c.header("X-Trace-Id", traceId);
-
-  // 1. 启动 Fail-Fast 安全健康预检，确保核心内网密钥未遗漏
-  const checkError = await startupSecurityCheck(c.env, traceId, ["INTERNAL_SECRET"]);
-  if (checkError) return checkError;
-
-  // 2. 验证内网通信签名
-  const internalKey = c.req.header("X-Internal-Key");
-  if (!internalKey || internalKey !== c.env.INTERNAL_SECRET) {
-    TraceLogger.warn("ADMIN", "UNAUTHORIZED_BYPASS", traceId, `越权拦截：检测到非法的 Admin Worker 直连请求`);
-    return c.json(ApiRes.unauthorized("无权访问", traceId), 401);
-  }
-
-  // 3. 验证管理员角色身份
-  const userId = c.req.header("X-User-Id");
-  const userRole = c.req.header("X-User-Role");
-  if (!userId || userRole !== "ADMIN") {
-    TraceLogger.warn("ADMIN", "ROLE_INSUFFICIENT", traceId, `越权拦截：用户角色为 ${userRole} 企图访问 Admin Worker`, userId);
-    return c.json(ApiRes.forbidden("权限不足：非管理员无法访问内网管理服务", traceId), 403);
-  }
-
-  c.set("adminId", userId);
-
-  // 4. 抓取请求参数
+async function handleInboundLog(c: Context, traceId: string, userId: string) {
   let query = c.req.query();
   let requestBody: any = null;
   const contentType = c.req.header("Content-Type") || "";
@@ -93,21 +33,15 @@ app.use("*", async (c: Context, next: Next) => {
     try {
       const clonedReq = c.req.raw.clone();
       requestBody = await clonedReq.json();
-    } catch (err) {
-      // 容错
-    }
+    } catch {}
   }
-
   TraceLogger.info("ADMIN", "REQUEST_INBOUND", traceId, `Admin Worker 接收内部请求: ${c.req.method} ${c.req.path}`, userId, {
     query,
     body: requestBody
   });
+}
 
-  const startTime = Date.now();
-  await next();
-  const durationMs = Date.now() - startTime;
-
-  // 5. 抓取响应参数
+async function handleOutboundLog(c: Context, traceId: string, userId: string, durationMs: number) {
   let responseBody: any = null;
   let status = 200;
   if (c.res) {
@@ -122,125 +56,144 @@ app.use("*", async (c: Context, next: Next) => {
         } else {
           responseBody = { truncated: text.slice(0, 1000) + "... (truncated)" };
         }
-      } catch (err) {
-        // 容错
-      }
+      } catch {}
     }
   }
-
   TraceLogger.info("ADMIN", "REQUEST_OUTBOUND", traceId, `Admin Worker 完成请求响应: ${c.req.method} ${c.req.path} -> [${status}] (${durationMs}ms)`, userId, {
     status,
     durationMs,
     response: responseBody
   });
+}
+
+app.use("*", async (c: Context, next: Next) => {
+  const traceId = c.req.header("X-Trace-Id") || crypto.randomUUID();
+  c.set("traceId", traceId);
+  c.header("X-Trace-Id", traceId);
+
+  const checkError = await startupSecurityCheck(c.env, traceId, ["INTERNAL_SECRET"]);
+  if (checkError) return checkError;
+
+  const internalKey = c.req.header("X-Internal-Key");
+  if (!internalKey || internalKey !== c.env.INTERNAL_SECRET) {
+    TraceLogger.warn("ADMIN", "UNAUTHORIZED_BYPASS", traceId, `越权拦截：检测到非法的 Admin Worker 直连请求`);
+    return c.json(ApiRes.unauthorized("无权访问", traceId), 401);
+  }
+
+  const userId = c.req.header("X-User-Id");
+  const userRole = c.req.header("X-User-Role");
+  if (!userId || userRole !== "ADMIN") {
+    TraceLogger.warn("ADMIN", "ROLE_INSUFFICIENT", traceId, `越权拦截：用户角色为 ${userRole} 企图访问 Admin Worker`, userId);
+    return c.json(ApiRes.forbidden("权限不足：非管理员无法访问内网管理服务", traceId), 403);
+  }
+
+  c.set("adminId", userId);
+
+  await handleInboundLog(c, traceId, userId);
+  const startTime = Date.now();
+  await next();
+  const durationMs = Date.now() - startTime;
+  await handleOutboundLog(c, traceId, userId, durationMs);
 });
 
 // ══════════════════════════════════════════════════
-// 路由
+// 控制器工厂辅助方法
 // ══════════════════════════════════════════════════
 
-// 看板统计
+function getController(c: Context): AdminController {
+  const repo = new AdminRepository(c.env.DB);
+  const svc = new AdminService(repo);
+  return new AdminController(svc);
+}
+
+// ══════════════════════════════════════════════════
+// 路由映射
+// ══════════════════════════════════════════════════
+
 app.get("/api/v1/admin/stats", async (c) => {
-  return handleAdminStats(c.env.DB, c.get("traceId"));
+  return await getController(c).getStats(c.get("traceId"));
 });
 
-// 用户列表
 app.get("/api/v1/admin/users", async (c) => {
-  return handleAdminUsers(c.req.raw, c.env.DB, c.get("traceId"));
+  return await getController(c).getUsers(c.req.raw, c.get("traceId"));
 });
 
-// 全局任务列表
 app.get("/api/v1/admin/tasks", async (c) => {
-  return handleAdminTasks(c.req.raw, c.env.DB, c.get("traceId"));
+  return await getController(c).getTasks(c.req.raw, c.get("traceId"));
 });
 
-// 智能体管理
 app.get("/api/v1/admin/agents", async (c) => {
-  return handleAdminListAgents(c.req.raw, c.env.DB, c.get("traceId"));
+  return await getController(c).getAgents(c.req.raw, c.get("traceId"));
 });
 
 app.put("/api/v1/admin/agents/update", async (c) => {
-  return handleAdminUpdateAgent(c.get("adminId"), c.req.raw, c.env.DB, c.get("traceId"));
+  return await getController(c).updateAgent(c.get("adminId"), c.req.raw, c.env.CACHE_KV, c.get("traceId"));
 });
 
 app.delete("/api/v1/admin/agents/delete", async (c) => {
-  return handleAdminDeleteAgent(c.get("adminId"), c.req.raw, c.env.DB, c.get("traceId"));
+  return await getController(c).deleteAgent(c.get("adminId"), c.req.raw, c.env.CACHE_KV, c.get("traceId"));
 });
 
-// 工具管理
 app.get("/api/v1/admin/tools", async (c) => {
-  return handleAdminListTools(c.env.DB, c.get("traceId"));
+  return await getController(c).listTools(c.get("traceId"));
 });
 
 app.post("/api/v1/admin/tools/create", async (c) => {
-  return handleAdminCreateTool(c.get("adminId"), c.req.raw, c.env.DB, c.get("traceId"));
+  return await getController(c).createTool(c.get("adminId"), c.req.raw, c.get("traceId"));
 });
 
 app.put("/api/v1/admin/tools/update", async (c) => {
-  return handleAdminUpdateTool(c.get("adminId"), c.req.raw, c.env.DB, c.get("traceId"));
+  return await getController(c).updateTool(c.get("adminId"), c.req.raw, c.get("traceId"));
 });
 
 app.delete("/api/v1/admin/tools/delete", async (c) => {
-  return handleAdminDeleteTool(c.get("adminId"), c.req.raw, c.env.DB, c.get("traceId"));
-});
-
-app.post("/api/v1/admin/tools/debug", async (c) => {
-  return handleAdminDebugTool(c.get("adminId"), c.req.raw, c.get("traceId"));
+  return await getController(c).deleteTool(c.get("adminId"), c.req.raw, c.get("traceId"));
 });
 
 app.get("/api/v1/admin/audit-logs", async (c) => {
-  return handleAdminListAuditLogs(c.req.raw, c.env.DB, c.get("traceId"));
+  return await getController(c).getAuditLogs(c.req.raw, c.get("traceId"));
 });
 
-// ─── AI Gateway 管理 ───
 app.get("/api/v1/admin/ai/models", async (c) => {
-  return handleListModelConfigs(c.env.DB, c.get("traceId"));
+  return await getController(c).listModelConfigs(c.get("traceId"));
 });
 
 app.put("/api/v1/admin/ai/models/update", async (c) => {
-  return handleUpdateModelConfig(c.env.DB, c.req.raw, c.get("traceId"));
+  return await getController(c).updateModelConfig(c.req.raw, c.get("traceId"));
 });
 
 app.get("/api/v1/admin/ai/logs", async (c) => {
-  return handleListAICallLogs(c.env.DB, c.req.raw, c.get("traceId"));
+  return await getController(c).listAICallLogs(c.req.raw, c.get("traceId"));
 });
 
 app.get("/api/v1/admin/ai/stats", async (c) => {
-  return handleAIStats(c.env.DB, c.get("traceId"));
+  return await getController(c).getAIStats(c.get("traceId"));
 });
 
-// ─── 知识库管理 ───
 app.get("/api/v1/admin/knowledge-bases", async (c) => {
-  return handleAdminListKBs(c.env.DB, c.get("traceId"), c.env.RAG_SVC, c.get("adminId"));
+  return await getController(c).getKBs(c.req.raw, c.env.RAG_SVC, c.get("adminId"), c.get("traceId"));
 });
-
-// ─── 动态路由（通过 Hono 的 param 提取，替代原生正则匹配）───
 
 app.put("/api/v1/admin/users/:id/role", async (c) => {
-  return handleUpdateUserRole(c.get("adminId"), c.req.param("id"), c.req.raw, c.env.DB, c.env.CACHE_KV, c.get("traceId"));
+  return await getController(c).updateUserRole(c.get("adminId"), c.req.param("id"), c.req.raw, c.env.CACHE_KV, c.get("traceId"));
 });
 
 app.put("/api/v1/admin/users/:id/credits", async (c) => {
-  return handleAdjustUserCredits(c.get("adminId"), c.req.param("id"), c.req.raw, c.env.DB, c.get("traceId"));
+  return await getController(c).adjustUserCredits(c.get("adminId"), c.req.param("id"), c.req.raw, c.get("traceId"));
 });
 
 app.post("/api/v1/admin/users/:id/invalidate", async (c) => {
-  return handleInvalidateUserToken(c.get("adminId"), c.req.param("id"), c.env.DB, c.env.CACHE_KV, c.get("traceId"));
+  return await getController(c).invalidateUserToken(c.get("adminId"), c.req.param("id"), c.env.CACHE_KV, c.get("traceId"));
 });
 
 app.post("/api/v1/admin/users/:id/ban", async (c) => {
-  return handleBanUser(c.get("adminId"), c.req.param("id"), c.req.raw, c.env.DB, c.env.CACHE_KV, c.get("traceId"));
+  return await getController(c).banUser(c.get("adminId"), c.req.param("id"), c.req.raw, c.env.CACHE_KV, c.get("traceId"));
 });
 
 app.put("/api/v1/admin/tasks/:id/cancel", async (c) => {
-  return handleCancelTask(c.get("adminId"), c.req.param("id"), c.env.DB, c.get("traceId"));
+  return await getController(c).cancelTask(c.get("adminId"), c.req.param("id"), c.get("traceId"));
 });
 
-// ─── 404 ───
-
-// ══════════════════════════════════════════════════
-// 健康检查 — 用于网关 / 负载均衡存活探针
-// ══════════════════════════════════════════════════
 app.get("/health", async (c) => {
   return c.json({ status: "ok", service: "admin", timestamp: new Date().toISOString() });
 });
@@ -250,11 +203,9 @@ app.notFound(async (c) => {
   return c.json(ApiRes.notFound(`管理端未定义该内部路径: ${c.req.method} ${c.req.path}`, traceId), 404);
 });
 
-// ─── 全局错误处理 ───
-
 app.onError(async (err, c) => {
   const traceId = c.get("traceId") || crypto.randomUUID();
-  TraceLogger.error("ADMIN", "CORE_CRASH", traceId, `Admin Worker 核心逻辑崩溃: getErrorMessage(err)`, err);
+  TraceLogger.error("ADMIN", "CORE_CRASH", traceId, `Admin Worker 核心逻辑崩溃: ${getErrorMessage(err)}`, err);
   return c.json(ApiRes.internalError("内网管理服务异常，请联系系统管理员", traceId), 500);
 });
 

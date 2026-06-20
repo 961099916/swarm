@@ -323,4 +323,73 @@ export class AdminController {
       return ApiRes.internalError("跨服务更新评测配置失败", traceId);
     }
   }
+
+  public async listPrompts(adminId: string, traceId: string): Promise<Response> {
+    try {
+      const list = await this.adminService.listPrompts(adminId, traceId);
+      return ApiRes.success(list, traceId);
+    } catch (err) {
+      TraceLogger.error("ADMIN", "LIST_PROMPTS_CTRL_ERR", traceId, "获取 Prompt 列表失败", err);
+      return ApiRes.internalError("系统加载提示词列表异常", traceId);
+    }
+  }
+
+  public async listPromptVersions(request: Request, adminId: string, traceId: string): Promise<Response> {
+    try {
+      const url = new URL(request.url);
+      const key = url.searchParams.get("key");
+      if (!key) return ApiRes.badRequest("缺少 key 参数", traceId);
+
+      const list = await this.adminService.listPromptVersions(adminId, key, traceId);
+      return ApiRes.success(list, traceId);
+    } catch (err) {
+      TraceLogger.error("ADMIN", "LIST_PROMPT_VERSIONS_CTRL_ERR", traceId, "获取 Prompt 版本历史失败", err);
+      return ApiRes.internalError("系统加载提示词历史版本异常", traceId);
+    }
+  }
+
+  public async setPromptActiveVersion(
+    request: Request,
+    adminId: string,
+    kv: KVNamespace,
+    traceId: string
+  ): Promise<Response> {
+    try {
+      const body = await request.json() as { key?: string; version?: number };
+      if (!body.key || body.version === undefined) {
+        return ApiRes.badRequest("参数错误：缺少 key 或 version 字段", traceId);
+      }
+      await this.adminService.setPromptActiveVersion(adminId, body.key, body.version, kv, traceId);
+      return ApiRes.success({ success: true }, traceId);
+    } catch (err) {
+      TraceLogger.error("ADMIN", "SET_PROMPT_ACTIVE_CTRL_ERR", traceId, "切换 Prompt 激活版本失败", err);
+      return ApiRes.internalError("系统切换提示词激活版本异常", traceId);
+    }
+  }
+
+  public async createPromptVersion(
+    request: Request,
+    adminId: string,
+    kv: KVNamespace,
+    traceId: string
+  ): Promise<Response> {
+    try {
+      const body = await request.json() as { key?: string; content?: string; description?: string };
+      if (!body.key || !body.content) {
+        return ApiRes.badRequest("参数错误：缺少 key 或 content 字段", traceId);
+      }
+      const newVersion = await this.adminService.createPromptVersion(
+        adminId,
+        body.key,
+        body.content,
+        body.description || "",
+        kv,
+        traceId
+      );
+      return ApiRes.success({ success: true, version: newVersion }, traceId);
+    } catch (err) {
+      TraceLogger.error("ADMIN", "CREATE_PROMPT_VERSION_CTRL_ERR", traceId, "发布 Prompt 新版本失败", err);
+      return ApiRes.internalError("系统发布提示词新版本异常", traceId);
+    }
+  }
 }

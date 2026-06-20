@@ -66,6 +66,12 @@ const routes: Array<RouteRecordRaw> = [
         meta: { title: '评测测试管理', icon: 'Checked' },
       },
       {
+        path: 'prompts',
+        name: 'Prompts',
+        component: () => import('@/views/prompts/index.vue'),
+        meta: { title: '提示词管理', icon: 'Brush' },
+      },
+      {
         path: 'audit-logs',
         name: 'AuditLogs',
         component: () => import('@/views/logs/index.vue'),

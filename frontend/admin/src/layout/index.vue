@@ -52,6 +52,11 @@
           <template #title>评测测试管理</template>
         </el-menu-item>
 
+        <el-menu-item index="/prompts">
+          <el-icon><Brush /></el-icon>
+          <template #title>提示词管理</template>
+        </el-menu-item>
+
         <el-menu-item index="/audit-logs">
           <el-icon><Document /></el-icon>
           <template #title>审计与监控</template>
@@ -137,6 +142,7 @@ import {
   SwitchButton,
   Notebook,
   Checked,
+  Brush,
 } from '@element-plus/icons-vue';
 import request from '@/utils/request';
 

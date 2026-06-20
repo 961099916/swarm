@@ -223,6 +223,22 @@ app.put("/api/v1/admin/quiz/configs", async (c) => {
   return await getController(c).updateQuizConfigs(c.req.raw, c.env.QUIZ_SVC, c.get("adminId"), c.get("traceId"));
 });
 
+app.get("/api/v1/admin/prompts", async (c) => {
+  return await getController(c).listPrompts(c.get("adminId"), c.get("traceId"));
+});
+
+app.get("/api/v1/admin/prompts/versions", async (c) => {
+  return await getController(c).listPromptVersions(c.req.raw, c.get("adminId"), c.get("traceId"));
+});
+
+app.post("/api/v1/admin/prompts/active", async (c) => {
+  return await getController(c).setPromptActiveVersion(c.req.raw, c.get("adminId"), c.env.CACHE_KV, c.get("traceId"));
+});
+
+app.post("/api/v1/admin/prompts/create", async (c) => {
+  return await getController(c).createPromptVersion(c.req.raw, c.get("adminId"), c.env.CACHE_KV, c.get("traceId"));
+});
+
 app.get("/health", async (c) => {
   return c.json({ status: "ok", service: "admin", timestamp: new Date().toISOString() });
 });

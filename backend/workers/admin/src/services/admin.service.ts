@@ -474,4 +474,46 @@ export class AdminService {
     await this.appendAudit(adminId, "UPDATE_QUIZ_CONFIGS", "SYSTEM", { configsCount: configs.length });
     TraceLogger.info("ADMIN", "UPDATE_QUIZ_CONFIGS_SUCCESS", traceId, `管理员修改评测系统配置成功`, adminId);
   }
+
+  // ══════════════════════════════════════════════════
+  // Prompt 提示词版本管理业务逻辑
+  // ══════════════════════════════════════════════════
+
+  public async listPrompts(adminId: string, traceId: string) {
+    return await this.adminRepo.listPrompts();
+  }
+
+  public async listPromptVersions(adminId: string, key: string, traceId: string) {
+    return await this.adminRepo.listPromptVersions(key);
+  }
+
+  public async setPromptActiveVersion(
+    adminId: string,
+    key: string,
+    version: number,
+    kv: KVNamespace,
+    traceId: string
+  ): Promise<void> {
+    await this.adminRepo.setPromptActiveVersion(key, version);
+    const cacheKey = `prompt:${key}`;
+    await kv.delete(cacheKey).catch(() => {});
+    await this.appendAudit(adminId, "SET_PROMPT_ACTIVE", `${key}:v${version}`, null);
+    TraceLogger.info("ADMIN", "SET_PROMPT_ACTIVE_SUCCESS", traceId, `管理员切换Prompt激活版本成功: key=${key}, version=${version}`, adminId);
+  }
+
+  public async createPromptVersion(
+    adminId: string,
+    key: string,
+    content: string,
+    description: string,
+    kv: KVNamespace,
+    traceId: string
+  ): Promise<number> {
+    const newVer = await this.adminRepo.createPromptVersion(key, content, description);
+    const cacheKey = `prompt:${key}`;
+    await kv.delete(cacheKey).catch(() => {});
+    await this.appendAudit(adminId, "CREATE_PROMPT_VERSION", `${key}:v${newVer}`, { description });
+    TraceLogger.info("ADMIN", "CREATE_PROMPT_VERSION_SUCCESS", traceId, `管理员发布Prompt新版本成功: key=${key}, version=${newVer}`, adminId);
+    return newVer;
+  }
 }

@@ -379,4 +379,84 @@ export class AdminRepository {
       .limit(limit)
       .offset(offset);
   }
+
+  public async listPrompts(): Promise<Array<{
+    key: string;
+    activeVersion: number;
+    latestVersion: number;
+    description: string | null;
+    lastUpdated: string;
+  }>> {
+    const result = await this.db.prepare(`
+      SELECT 
+        key,
+        MAX(CASE WHEN is_active = 1 THEN version ELSE 0 END) as activeVersion,
+        MAX(version) as latestVersion,
+        MAX(description) as description,
+        MAX(created_at) as lastUpdated
+      FROM prompts
+      GROUP BY key
+      ORDER BY lastUpdated DESC
+    `).all<any>();
+    
+    return (result.results || []).map(r => ({
+      key: r.key,
+      activeVersion: Number(r.activeVersion),
+      latestVersion: Number(r.latestVersion),
+      description: r.description,
+      lastUpdated: r.lastUpdated,
+    }));
+  }
+
+  public async listPromptVersions(key: string): Promise<Array<{
+    key: string;
+    version: number;
+    content: string;
+    description: string | null;
+    isActive: boolean;
+    createdAt: string;
+  }>> {
+    const result = await this.db.prepare(`
+      SELECT key, version, content, description, is_active, created_at
+      FROM prompts
+      WHERE key = ?
+      ORDER BY version DESC
+    `).bind(key).all<any>();
+
+    return (result.results || []).map(r => ({
+      key: r.key,
+      version: Number(r.version),
+      content: r.content,
+      description: r.description,
+      isActive: r.is_active === 1,
+      createdAt: r.created_at,
+    }));
+  }
+
+  public async setPromptActiveVersion(key: string, version: number): Promise<boolean> {
+    await this.db.batch([
+      this.db.prepare("UPDATE prompts SET is_active = 0 WHERE key = ?").bind(key),
+      this.db.prepare("UPDATE prompts SET is_active = 1 WHERE key = ? AND version = ?").bind(key, version)
+    ]);
+    return true;
+  }
+
+  public async createPromptVersion(key: string, content: string, description: string): Promise<number> {
+    const versionRow = await this.db
+      .prepare("SELECT version FROM prompts WHERE key = ? ORDER BY version DESC LIMIT 1")
+      .bind(key)
+      .first<{ version: number }>();
+      
+    const latestVersion = versionRow?.version || 0;
+    const newVersion = latestVersion + 1;
+    const now = new Date().toISOString();
+
+    await this.db.batch([
+      this.db.prepare("UPDATE prompts SET is_active = 0 WHERE key = ?").bind(key),
+      this.db.prepare("INSERT INTO prompts (key, version, content, description, is_active, created_at) VALUES (?, ?, ?, ?, 1, ?)")
+        .bind(key, newVersion, content, description, now)
+    ]);
+
+    return newVersion;
+  }
 }

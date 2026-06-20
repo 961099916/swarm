@@ -5,7 +5,7 @@
  * Aggregate Roots: QuizUser (测评用户聚合)
  */
 
-export { quizUsers, testHistory, userStageProgress, systemConfigs } from './schema';
+export { quizUsers, testHistory, userStageProgress, systemConfigs, quizStages, quizNpcs, quizQuestions } from './schema';
 export type {
   QuizUserRow, TestHistoryRow, UserStageProgressRow,
 } from './types';

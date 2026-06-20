@@ -51,3 +51,44 @@ export const systemConfigs = sqliteTable("system_configs", {
   value: text("value").notNull(),
   updatedAt: text("updated_at").notNull(),
 });
+
+/**
+ * quiz_stages — 测评关卡年级表
+ */
+export const quizStages = sqliteTable("quiz_stages", {
+  id: text("id").primaryKey(),
+  name: text("name").notNull(),
+  group: text("stage_group").notNull(),
+  order: integer("stage_order").notNull(),
+  updatedAt: text("updated_at"),
+});
+
+/**
+ * quiz_npcs — 导师挑战配置表
+ */
+export const quizNpcs = sqliteTable("quiz_npcs", {
+  id: text("id").primaryKey(),
+  stageId: text("stage_id").notNull(),
+  name: text("name").notNull(),
+  type: text("npc_type").notNull(),
+  subjectName: text("subject_name").notNull(),
+  requiredScore: integer("required_score").notNull(),
+  dialogueLocked: text("dialogue_locked").notNull(),
+  dialogueTodo: text("dialogue_todo").notNull(),
+  dialoguePassed: text("dialogue_passed").notNull(),
+  updatedAt: text("updated_at"),
+});
+
+/**
+ * quiz_questions — 题库表
+ */
+export const quizQuestions = sqliteTable("quiz_questions", {
+  id: integer("id").primaryKey(),
+  npcId: text("npc_id").notNull(),
+  text: text("question_text").notNull(),
+  options: text("options").notNull(),
+  correctId: text("correct_id").notNull(),
+  explanation: text("explanation"),
+  updatedAt: text("updated_at"),
+});
+

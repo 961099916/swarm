@@ -288,14 +288,17 @@ export class QuizService {
     try {
       let configs = await CacheService.get<any>(kv, cacheKey);
       if (configs === undefined) {
-        const dbConfigs = await this.quizRepo.getSystemConfigs();
-        const stageConfigRow = dbConfigs.find(c => c.key === "stage_configs");
-        if (stageConfigRow) {
-          configs = JSON.parse(stageConfigRow.value);
-          await CacheService.set(kv, cacheKey, configs, 3600).catch(() => {});
-        } else {
-          configs = STAGE_CONFIGS;
+        let dbConfigs = await this.quizRepo.getStageConfigsFromDb();
+        
+        // 若数据库为空（首次运行），自动物理初始化，将默认题库写入结构化表
+        if (!dbConfigs || Object.keys(dbConfigs).length === 0) {
+          TraceLogger.info("QUIZ", "INIT_DB_STAGE_CONFIGS", traceId, "检测到动态配置表为空，执行默认关系题库物理初始化...");
+          await this.quizRepo.saveStageConfigsToDb(STAGE_CONFIGS);
+          dbConfigs = STAGE_CONFIGS;
         }
+        
+        configs = dbConfigs;
+        await CacheService.set(kv, cacheKey, configs, 3600).catch(() => {});
       }
       return configs;
     } catch (err: any) {
@@ -312,16 +315,26 @@ export class QuizService {
   }
 
   public async getQuizConfigs(traceId: string): Promise<{ key: string; value: string }[]> {
-    return await this.quizRepo.getSystemConfigs();
+    const dbConfigs = await this.quizRepo.getStageConfigsFromDb();
+    let configVal = JSON.stringify(dbConfigs);
+    if (!dbConfigs || Object.keys(dbConfigs).length === 0) {
+      configVal = JSON.stringify(STAGE_CONFIGS);
+    }
+    return [
+      { key: "stage_configs", value: configVal }
+    ];
   }
 
   public async updateQuizConfigs(configs: { key: string; value: string }[], kv: KVNamespace, traceId: string): Promise<void> {
     for (const c of configs) {
-      await this.quizRepo.saveSystemConfig(c.key, c.value);
       if (c.key === "stage_configs") {
+        const parsedJson = JSON.parse(c.value);
+        await this.quizRepo.saveStageConfigsToDb(parsedJson);
         await CacheService.delete(kv, "system:quiz:stage_configs").catch(() => {});
+      } else {
+        await this.quizRepo.saveSystemConfig(c.key, c.value);
       }
     }
-    TraceLogger.info("QUIZ", "ADMIN_UPDATE_QUIZ_CONFIGS", traceId, `管理员更新了评测系统配置`);
+    TraceLogger.info("QUIZ", "ADMIN_UPDATE_QUIZ_CONFIGS", traceId, `管理员更新了评测系统配置（已同步写入结构化关系表并强制更新缓存）`);
   }
 }

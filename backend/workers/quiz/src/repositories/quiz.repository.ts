@@ -1,6 +1,6 @@
 // File: /Users/zhangjiahao/IdeaProjects/swarm/backend/workers/quiz/src/repositories/quiz.repository.ts
 
-import { quizUsers, testHistory, userStageProgress, systemConfigs } from "@swarm/quiz";
+import { quizUsers, testHistory, userStageProgress, systemConfigs, quizStages, quizNpcs, quizQuestions } from "@swarm/quiz";
 import type { QuizUserRow, UserStageProgressRow, TestHistoryRow } from "@swarm/quiz";
 import { EXP_PER_LEVEL, QUIZ_PASS_THRESHOLD } from "@swarm/quiz";
 import { TraceLogger } from "@swarm/kernel";
@@ -283,5 +283,116 @@ export class QuizRepository {
         target: systemConfigs.key,
         set: { value, updatedAt: now }
       });
+  }
+
+  public async getStageConfigsFromDb(): Promise<Record<string, any>> {
+    const drizzleDb = this.getDrizzle();
+    
+    const stages = await drizzleDb.select().from(quizStages).orderBy(quizStages.order);
+    if (!stages || stages.length === 0) {
+      return {};
+    }
+    
+    const npcs = await drizzleDb.select().from(quizNpcs);
+    const questions = await drizzleDb.select().from(quizQuestions);
+    
+    const result: Record<string, any> = {};
+    for (const stg of stages) {
+      const stageChallenges = npcs
+        .filter(n => n.stageId === stg.id)
+        .map(n => {
+          const npcQs = questions
+            .filter(q => q.npcId === n.id)
+            .map(q => {
+              let parsedOptions: { id: string; text: string }[] = [];
+              try {
+                parsedOptions = JSON.parse(q.options);
+              } catch {}
+              return {
+                id: q.id,
+                text: q.text,
+                options: parsedOptions,
+                correctId: q.correctId,
+                explanation: q.explanation || "",
+              };
+            });
+            
+          return {
+            npcId: n.id,
+            npcName: n.name,
+            npcType: n.type,
+            subjectName: n.subjectName,
+            requiredScore: n.requiredScore,
+            dialogueText: {
+              locked: n.dialogueLocked,
+              todo: n.dialogueTodo,
+              passed: n.dialoguePassed,
+            },
+            questions: npcQs,
+          };
+        });
+        
+      result[stg.id] = {
+        stageId: stg.id,
+        stageName: stg.name,
+        stageGroup: stg.group,
+        stageOrder: stg.order,
+        challenges: stageChallenges,
+      };
+    }
+    
+    return result;
+  }
+
+  public async saveStageConfigsToDb(configs: Record<string, any>): Promise<void> {
+    const drizzleDb = this.getDrizzle();
+    const now = new Date().toISOString();
+    
+    await drizzleDb.transaction(async (tx) => {
+      await tx.delete(quizQuestions);
+      await tx.delete(quizNpcs);
+      await tx.delete(quizStages);
+      
+      for (const [stageId, stage] of Object.entries(configs)) {
+        await tx.insert(quizStages).values({
+          id: stageId,
+          name: stage.stageName || "",
+          group: stage.stageGroup || "",
+          order: stage.stageOrder || 0,
+          updatedAt: now,
+        });
+        
+        if (stage.challenges && Array.isArray(stage.challenges)) {
+          for (const ch of stage.challenges) {
+            await tx.insert(quizNpcs).values({
+              id: ch.npcId,
+              stageId: stageId,
+              name: ch.npcName || "",
+              type: ch.npcType || "math",
+              subjectName: ch.subjectName || "",
+              requiredScore: ch.requiredScore || 60,
+              dialogueLocked: ch.dialogueText?.locked || "",
+              dialogueTodo: ch.dialogueText?.todo || "",
+              dialoguePassed: ch.dialogueText?.passed || "",
+              updatedAt: now,
+            });
+            
+            if (ch.questions && Array.isArray(ch.questions)) {
+              for (const q of ch.questions) {
+                await tx.insert(quizQuestions).values({
+                  id: q.id,
+                  npcId: ch.npcId,
+                  text: q.text || "",
+                  options: JSON.stringify(q.options || []),
+                  correctId: q.correctId || "A",
+                  explanation: q.explanation || "",
+                  updatedAt: now,
+                });
+              }
+            }
+          }
+        }
+      }
+    });
   }
 }

@@ -1,0 +1,175 @@
+/* File: /Users/zhangjiahao/IdeaProjects/swarm/frontend/mini-program/packageKnowledge/add/index.wxss */
+/* packageKnowledge/add/index.wxss — 暖绒奶油风 */
+.page { 
+  min-height: 100vh; 
+  background: var(--bg-root); 
+  padding-bottom: 40rpx; 
+  color: var(--text-primary); 
+}
+
+.form-section { 
+  padding: 24rpx; 
+  display: flex; 
+  flex-direction: column; 
+  gap: 20rpx; 
+}
+
+.field-input, .url-input { 
+  height: 88rpx; 
+  background: var(--glass-bg); 
+  border-radius: var(--radius-lg); 
+  padding: 0 24rpx; 
+  font-size: 28rpx; 
+  color: var(--text-primary); 
+  border: 1rpx solid var(--glass-border); 
+  box-sizing: border-box;
+  transition: all 0.3s ease;
+}
+
+.field-input:focus, .url-input:focus {
+  border-color: var(--brand-border);
+  box-shadow: 0 0 12rpx var(--brand-subtle);
+}
+
+/* 覆盖 TDesign 自定义组件变量使其融入全局毛玻璃设计 */
+.page t-textarea {
+  --td-textarea-background-color: var(--glass-bg) !important;
+  --td-textarea-border-color: var(--glass-border) !important;
+  --td-textarea-text-color: var(--text-primary) !important;
+  --td-textarea-placeholder-color: var(--text-placeholder) !important;
+  --td-textarea-border-radius: var(--radius-lg) !important;
+}
+
+.page t-input {
+  --td-input-bg-color: var(--glass-bg) !important;
+  --td-input-border-color: var(--glass-border) !important;
+  --td-input-text-color: var(--text-primary) !important;
+  --td-input-placeholder-color: var(--text-placeholder) !important;
+  --td-input-border-radius: var(--radius-lg) !important;
+}
+
+/* 覆盖 t-tabs 为无缝悬浮透明底 */
+.custom-tabs {
+  --td-tabs-bg-color: transparent !important;
+  --td-tab-item-color: var(--text-secondary) !important;
+  --td-tab-item-active-color: var(--brand) !important;
+  --td-tab-track-color: var(--brand) !important;
+  --td-tab-track-thickness: 4rpx !important;
+  margin-bottom: 16rpx;
+}
+
+.char-count { 
+  text-align: right; 
+  font-size: 22rpx; 
+  color: var(--text-muted); 
+  margin-top: 4rpx; 
+}
+
+.tip { 
+  font-size: 22rpx; 
+  color: var(--text-muted); 
+  line-height: 1.6; 
+  padding: 16rpx 20rpx; 
+  background: var(--bg-surface); 
+  border-radius: var(--radius-md); 
+  border: 1rpx solid var(--glass-border);
+}
+
+.submit-area { 
+  padding: 0 24rpx; 
+  margin-top: 16rpx; 
+}
+
+.submit-btn {
+  --td-button-primary-color: #ffffff !important; /* 穿透并强制覆盖组件内部文字颜色为白色 */
+  --td-button-primary-bg-color: transparent !important; /* 设为透明以使渐变外层生效 */
+  --td-button-primary-border-color: transparent !important;
+  --td-button-font-weight: 600 !important;
+  --td-button-medium-height: 96rpx !important;
+  --td-button-border-radius: var(--radius-lg) !important;
+  background: linear-gradient(135deg, var(--success), #26A69A) !important; /* 改为高级奶油绿渐变 */
+  box-shadow: 0 0 24rpx rgba(46, 204, 113, 0.25) !important; /* 改为绿色柔和阴影 */
+  border: none !important;
+  color: #ffffff !important;
+  transition: all 0.3s ease !important;
+}
+
+.submit-btn:active {
+  opacity: 0.9 !important;
+  transform: scale(0.98);
+  background: linear-gradient(135deg, #27AE60, #1E8449) !important; /* 点击态绿色加深 */
+}
+
+/* 修复提交按钮禁用态 (disabled/loading) 配色问题，降级为低饱和度实底奶油色并提高文字对比度 */
+.submit-btn.t-button--disabled, .submit-btn[disabled] {
+  --td-button-disabled-color: var(--text-muted) !important; /* 穿透强制覆盖禁用态文字颜色 */
+  --td-button-disabled-bg-color: var(--bg-surface-solid) !important; /* 穿透强制覆盖禁用态背景颜色 */
+  background: var(--bg-surface-solid) !important;
+  color: var(--text-muted) !important;
+  box-shadow: none !important;
+  border: 1rpx solid var(--border-default) !important;
+  opacity: 0.5 !important;
+}
+
+.result-card { 
+  display: flex; 
+  align-items: center; 
+  gap: 16rpx; 
+  margin: 32rpx 24rpx; 
+  padding: 24rpx; 
+  border-radius: var(--radius-md); 
+  border: 1rpx solid var(--glass-border);
+  backdrop-filter: blur(10px);
+}
+
+.result-success { 
+  background: var(--success-subtle) !important; 
+  color: var(--success) !important;
+  border-color: var(--success-border) !important;
+}
+
+.result-success .t-icon {
+  color: var(--success) !important;
+}
+
+.result-fail { 
+  background: var(--danger-subtle) !important; 
+  color: var(--danger) !important;
+  border-color: var(--danger-border) !important;
+}
+
+.result-fail .t-icon {
+  color: var(--danger) !important;
+}
+
+.result-text { 
+  flex: 1; 
+  font-size: 26rpx; 
+  color: var(--text-primary); 
+}
+
+.result-docid { 
+  display: block; 
+  font-size: 20rpx; 
+  color: var(--text-muted); 
+  margin-top: 4rpx; 
+}
+
+.back-link { 
+  display: flex; 
+  align-items: center; 
+  justify-content: center; 
+  gap: 8rpx; 
+  font-size: 26rpx; 
+  color: var(--brand); 
+  padding: 24rpx; 
+  transition: all 0.3s ease;
+}
+
+.back-link:active {
+  opacity: 0.8;
+}
+
+.back-link .t-icon { 
+  color: var(--brand) !important; 
+}

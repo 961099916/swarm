@@ -1,0 +1,87 @@
+{
+  "description": "Swarm 智能体编排网络控制台 - 原生微信小程序版",
+  "packOptions": {
+    "ignore": [
+      {
+        "value": "tsconfig.json",
+        "type": "file"
+      },
+      {
+        "value": "postcss.config.js",
+        "type": "file"
+      },
+      {
+        "value": "tailwind.config.js",
+        "type": "file"
+      },
+      {
+        "value": ".eslintrc.cjs",
+        "type": "file"
+      },
+      {
+        "value": "scripts",
+        "type": "folder"
+      },
+      {
+        "value": "src",
+        "type": "folder"
+      }
+    ],
+    "include": []
+  },
+  "setting": {
+    "ignoreUploadUnusedFiles": true,
+    "urlCheck": false,
+    "es6": true,
+    "enhance": true,
+    "postcss": true,
+    "preloadBackgroundData": false,
+    "minified": true,
+    "newFeature": true,
+    "coverView": true,
+    "nodeModules": true,
+    "autoAudits": false,
+    "showShadowRootInWxmlPanel": true,
+    "scopeDataCheck": false,
+    "uglifyFileName": false,
+    "checkInvalidKey": true,
+    "checkSiteMap": true,
+    "uploadWithSourceMap": true,
+    "compileHotRebuild": true,
+    "lazyloadPlaceholderEnable": false,
+    "useMultiFrameRuntime": true,
+    "useApiHook": true,
+    "useApiHostProcess": true,
+    "babelSetting": {
+      "ignore": [],
+      "disablePlugins": [],
+      "outputPath": ""
+    },
+    "useIsolateContext": true,
+    "userConfirmedBundleSwitch": false,
+    "packNpmManually": true,
+    "packNpmRelationList": [
+      {
+        "packageJsonPath": "./package.json",
+        "miniprogramNpmDistDir": "./"
+      }
+    ],
+    "minifyWXSS": true,
+    "compileWorklet": false,
+    "minifyWXML": true,
+    "localPlugins": false,
+    "disableUseStrict": false,
+    "useCompilerPlugins": false,
+    "condition": false,
+    "swc": false,
+    "disableSWC": true
+  },
+  "compileType": "miniprogram",
+  "libVersion": "3.12.1",
+  "appid": "wxdebda985cf78a90d",
+  "projectname": "swarm-native",
+  "condition": {},
+  "srcMiniprogramRoot": "./",
+  "simulatorPluginLibVersion": {},
+  "editorSetting": {}
+}

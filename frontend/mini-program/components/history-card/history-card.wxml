@@ -1,0 +1,19 @@
+<!-- File: /Users/zhangjiahao/IdeaProjects/swarm/frontend/mini-program/components/history-card/history-card.wxml -->
+<view class="glass-card history-item-card card-actionable" bindtap="onCardTap">
+  <view class="item-header">
+    <text class="item-title">{{testTitle}}</text>
+    <view class="delete-btn-area" catchtap="onDeleteTap">
+      <view class="delete-icon"></view>
+    </view>
+  </view>
+  
+  <view class="item-body">
+    <text class="result-badge">{{resultCode}}</text>
+    <text class="result-name-text">{{resultName}}</text>
+  </view>
+  
+  <view class="item-footer">
+    <text class="time-text">{{formattedTime}}</text>
+    <text class="view-report-link">查看详情 →</text>
+  </view>
+</view>

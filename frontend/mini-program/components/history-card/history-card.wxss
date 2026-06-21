@@ -1,0 +1,99 @@
+/* File: /Users/zhangjiahao/IdeaProjects/swarm/frontend/mini-program/components/history-card/history-card.wxss */
+
+/* ── 历史记录卡片（暖色毛玻璃）── */
+.history-item-card {
+  background: var(--glass-bg, rgba(255, 255, 255, 0.05));
+  backdrop-filter: var(--glass-blur, blur(20px));
+  -webkit-backdrop-filter: var(--glass-blur, blur(20px));
+  border: 1rpx solid var(--glass-border, rgba(255, 255, 255, 0.1));
+  border-radius: var(--radius-md, 16rpx);
+  padding: 20rpx;
+  transition: all 0.25s ease;
+  box-sizing: border-box;
+  margin-bottom: 24rpx;
+}
+
+.card-actionable:active {
+  transform: scale(0.98);
+  background: var(--bg-surface-hover, rgba(255, 255, 255, 0.08));
+  border-color: var(--border-strong, rgba(255, 255, 255, 0.2));
+}
+
+.item-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 24rpx;
+}
+
+.item-title {
+  font-size: var(--font-h4, 28rpx);
+  font-weight: 700;
+  color: var(--text-primary, #ffffff);
+}
+
+.delete-btn-area {
+  width: 50rpx;
+  height: 50rpx;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  transition: background 0.2s ease;
+}
+
+.delete-btn-area:active {
+  background: var(--danger-subtle, rgba(231, 76, 60, 0.15));
+}
+
+.delete-icon {
+  width: 28rpx;
+  height: 28rpx;
+  opacity: 0.55;
+  transition: all 0.2s ease;
+  background: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%23E74C3C'><path d='M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z'/></svg>") no-repeat center;
+  background-size: contain;
+}
+
+.item-body {
+  display: flex;
+  align-items: center;
+  gap: 20rpx;
+  margin-bottom: 28rpx;
+}
+
+.result-badge {
+  background: var(--brand-gradient, linear-gradient(90deg, #ff6b6b 0%, #ff8585 100%));
+  color: #FFFFFF;
+  font-size: 26rpx;
+  font-weight: 800;
+  padding: 6rpx 16rpx;
+  border-radius: var(--radius-sm, 8rpx);
+  letter-spacing: 2rpx;
+  box-shadow: var(--shadow-glow);
+}
+
+.result-name-text {
+  font-size: var(--font-body-lg, 30rpx);
+  color: var(--text-primary, #ffffff);
+  font-weight: 600;
+}
+
+.item-footer {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  border-top: 1rpx solid var(--border-subtle, rgba(255, 255, 255, 0.05));
+  padding-top: 20rpx;
+}
+
+.time-text {
+  font-size: var(--font-caption, 22rpx);
+  color: var(--text-muted, #7a726a);
+}
+
+.view-report-link {
+  font-size: var(--font-body, 26rpx);
+  color: var(--brand, #ff6b6b);
+  font-weight: 700;
+}

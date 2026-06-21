@@ -2,7 +2,7 @@
 
 import { ApiRes, TraceLogger, getErrorMessage } from "@swarm/kernel";
 import { RagService } from "../services/rag.service";
-import { RAG_DEFAULT_TOP_K } from "@swarm/knowledge";
+import { KnowledgeConfig } from "@swarm/knowledge";
 
 export class RagController {
   constructor(private ragService: RagService) {}
@@ -78,14 +78,15 @@ export class RagController {
     }
   }
 
-  public async searchKnowledge(request: Request, userId: string, traceId: string): Promise<Response> {
+  public async searchKnowledge(request: Request, db: D1Database, userId: string, traceId: string): Promise<Response> {
     try {
       const body = await request.json() as { kbId?: string; query?: string; topK?: number };
       if (!body.kbId || !body.query) {
         return ApiRes.badRequest("缺少必填参数 kbId 或 query", traceId);
       }
 
-      const topK = body.topK || RAG_DEFAULT_TOP_K;
+      const defaultTopK = await KnowledgeConfig.getDefaultTopK(db);
+      const topK = body.topK || defaultTopK;
       const results = await this.ragService.keywordSearch(body.kbId, body.query, topK, traceId);
 
       TraceLogger.info("RAG", "SEARCH_RESULTS", traceId, `知识库搜索完成: kbId=${body.kbId}, 结果数=${results.length}`, userId);
@@ -156,4 +157,115 @@ export class RagController {
       return ApiRes.internalError("系统获取全局文档失败", traceId);
     }
   }
+
+  public async chatKnowledge(
+    request: Request,
+    ai: any,
+    userId: string,
+    traceId: string
+  ): Promise<Response> {
+    try {
+      if (!ai) {
+        TraceLogger.error("RAG", "AI_BINDING_MISSING", traceId, "Cloudflare AI 实例未绑定");
+        return ApiRes.internalError("AI 问答模块不可用", traceId);
+      }
+
+      const body = await request.json() as { kbId?: string; query?: string; history?: Array<{ role: string; content: string }> };
+      if (!body.kbId || !body.query) {
+        return ApiRes.badRequest("缺少必填参数 kbId 或 query", traceId);
+      }
+
+      // 1. 语义和关键字混合检索知识库
+      const topK = 5;
+      let results: any[] = [];
+      let context = "";
+      try {
+        results = await this.ragService.keywordSearch(body.kbId, body.query, topK, traceId);
+        if (results && results.length > 0) {
+          context = results.map((r, i) => `[参考 ${i + 1}] (来自《${r.documentTitle}》):\n${r.content}`).join("\n\n");
+        }
+      } catch (searchErr: any) {
+        TraceLogger.warn("RAG", "SEARCH_FAILED_FALLBACK", traceId, `语义检索失败，降级为无参考问答: ${searchErr.message}`);
+      }
+
+      // 2. 组装 RAG 系统 Prompt 约束模型，避免幻觉
+      const systemPrompt = `你是一个专业且耐心的知识库问答助手。
+请根据以下提供的【参考内容】回答用户提出的问题。
+如果从【参考内容】中无法找到相关答案，请直接、委婉地告诉用户“抱歉，在知识库中未找到关于该问题的相关参考内容”，绝对不能凭空编造、捏造事实或提供与参考内容冲突的回答。
+
+【参考内容】:
+${context || "暂无相关参考文档"}
+`;
+
+      const modelMessages = [
+        { role: "system", content: systemPrompt }
+      ];
+
+      // 装载历史对话
+      if (body.history && Array.isArray(body.history)) {
+        for (const h of body.history) {
+          if (h.role && h.content) {
+            modelMessages.push({ role: h.role, content: h.content });
+          }
+        }
+      }
+
+      // 装载当前提问
+      modelMessages.push({ role: "user", content: body.query });
+
+      // 3. 构建可双工异步写入的合并流，优先发送 sources 信息
+      const model = "@cf/meta/llama-3.1-8b-instruct-fp8";
+      TraceLogger.info("RAG", "AI_CHAT_STREAM_START", traceId, `启动大模型流式生成: model=${model}, kbId=${body.kbId}`, userId);
+
+      const encoder = new TextEncoder();
+      const { readable, writable } = new TransformStream();
+      const writer = writable.getWriter();
+
+      // 异步执行流写入，防主线程阻塞
+      (async () => {
+        try {
+          // 发送参考的文档来源数组，供前端呈现“参考文档：[A, B]”
+          const sources = [...new Set(results.map((r: any) => r.documentTitle))];
+          await writer.write(encoder.encode(`event: sources\ndata: ${JSON.stringify(sources)}\n\n`));
+
+          // 触发大模型流
+          const responseStream = await ai.run(model, {
+            messages: modelMessages,
+            stream: true,
+          });
+
+          // 逐个分片合并读取并写入输出流
+          const reader = responseStream.getReader();
+          while (true) {
+            const { done, value } = await reader.read();
+            if (done) break;
+            await writer.write(value);
+          }
+
+          // 发送 DONE 信号
+          await writer.write(encoder.encode("data: [DONE]\n\n"));
+        } catch (err: any) {
+          TraceLogger.error("RAG", "ASYNC_STREAM_WRITE_FAILED", traceId, `流异步写入失败: ${err.message}`, err);
+          await writer.write(encoder.encode(`event: error\ndata: ${err.message || "流写入错误"}\n\n`));
+        } finally {
+          await writer.close();
+        }
+      })();
+
+      // 4. 返回 Event Stream 响应
+      return new Response(readable, {
+        headers: {
+          "Content-Type": "text/event-stream; charset=utf-8",
+          "Cache-Control": "no-cache",
+          "Connection": "keep-alive",
+        },
+      });
+
+    } catch (err: any) {
+      TraceLogger.error("RAG", "CHAT_FAILED", traceId, `知识库流式问答崩溃: ${err.message}`, err);
+      return ApiRes.internalError("知识问答服务异常，请稍后重试", traceId);
+    }
+  }
 }
+
+

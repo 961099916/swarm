@@ -1,0 +1,97 @@
+<view class="page">
+  <!-- 顶部：标题 + 新建按钮 -->
+  <view class="page-header">
+    <text class="page-title">知识库</text>
+    <view class="create-btn" bindtap="showCreate">
+      <t-icon name="add" size="28" />
+      <text>新建</text>
+    </view>
+  </view>
+
+  <!-- 搜索栏 -->
+  <t-search value="{{searchValue}}" bindchange="onSearch" placeholder="搜索知识库名称或描述" />
+
+  <!-- 统计概览 -->
+  <view wx:if="{{!loading && kbList.length > 0}}" class="stats-row">
+    <view class="stat-item">
+      <text class="stat-num">{{stats.total}}</text>
+      <text class="stat-label">全部</text>
+    </view>
+    <view class="stat-item">
+      <text class="stat-num">{{stats.public}}</text>
+      <text class="stat-label">公开</text>
+    </view>
+    <view class="stat-item">
+      <text class="stat-num">{{stats.private}}</text>
+      <text class="stat-label">私有</text>
+    </view>
+  </view>
+
+  <!-- 加载 -->
+  <view wx:if="{{loading}}" class="loading-wrap">
+    <t-loading size="40rpx" />
+    <text class="loading-text">加载中...</text>
+  </view>
+
+  <!-- 知识库列表 -->
+  <view wx:elif="{{filteredList.length > 0}}" class="kb-list">
+    <view wx:for="{{filteredList}}" wx:key="id" class="kb-card">
+      <!-- 点击进入问答 -->
+      <view class="kb-card-top" data-kb="{{item}}" bindtap="goToChat">
+        <view class="kb-icon {{item.isPublic ? 'icon-public' : 'icon-private'}}">
+          <t-icon name="{{item.isPublic ? 'bookmark' : 'lock-on'}}" size="28" />
+        </view>
+        <view class="kb-info">
+          <text class="kb-name">{{item.name}}</text>
+          <text class="kb-desc" wx:if="{{item.description}}">{{item.description}}</text>
+        </view>
+        <t-icon name="chevron-right" size="28" class="arrow" />
+      </view>
+      <view class="kb-meta">
+        <text>{{item.documentCount || 0}} 篇文档</text>
+        <text>{{item.isPublic ? '公开' : '私有'}}</text>
+      </view>
+      <!-- 操作栏 -->
+      <view class="kb-actions">
+        <view class="action-btn" data-kb="{{item}}" bindtap="goToChat">
+          <t-icon name="chat" size="24" /><text>问答</text>
+        </view>
+        <view class="action-btn" data-kb="{{item}}" bindtap="goToDetail">
+          <t-icon name="list" size="24" /><text>文档</text>
+        </view>
+        <view class="action-btn action-danger" data-kb="{{item}}" bindtap="onDeleteKB">
+          <t-icon name="delete" size="24" /><text>删除</text>
+        </view>
+      </view>
+    </view>
+  </view>
+
+  <!-- 空状态 -->
+  <view wx:elif="{{!loading && kbList.length === 0}}" class="empty-wrap">
+    <t-icon name="bookmark" size="80" />
+    <text class="empty-text">暂无知识库</text>
+    <text class="empty-hint">点击右上角「新建」创建你的第一个知识库</text>
+  </view>
+
+  <!-- 创建知识库弹窗（底部弹出） -->
+  <t-popup visible="{{showCreateDialog}}" placement="bottom" bindvisiblechange="onCreateCancel">
+    <view class="popup-sheet">
+      <view class="popup-header">
+        <text class="popup-title">新建知识库</text>
+        <view class="popup-close" bindtap="onCreateCancel">
+          <t-icon name="close" size="32" />
+        </view>
+      </view>
+      <view class="popup-body">
+        <t-input label="名称" placeholder="知识库名称（必填）" value="{{newKBName}}" bind:change="onNameInput" />
+        <t-input label="描述" placeholder="可选：知识库用途说明" value="{{newKBDesc}}" bind:change="onDescInput" />
+      </view>
+      <view class="popup-footer">
+        <t-button theme="default" size="medium" block bindtap="onCreateCancel">取消</t-button>
+        <t-button theme="primary" size="medium" block bindtap="onCreateKB">创建</t-button>
+      </view>
+    </view>
+  </t-popup>
+
+  <!-- 自定义 Tabbar -->
+</view>

@@ -1,3 +1,4 @@
+// File: packages/identity/src/index.ts
 /**
  * @swarm/identity — 身份与访问控制限界上下文
  *
@@ -6,7 +7,7 @@
  */
 
 // Schema
-export { users, rolePermissions } from './schema';
+export { users, rolePermissions } from './infrastructure/db/schema';
 
 // Types
 export type {

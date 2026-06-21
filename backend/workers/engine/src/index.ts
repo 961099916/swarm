@@ -1,4 +1,4 @@
-import { TraceLogger, startupSecurityCheck, getErrorMessage } from "@swarm/kernel";
+import { TraceLogger, startupSecurityCheck, getErrorMessage, handleGlobalError } from "@swarm/kernel";
 
 // File: /Users/zhangjiahao/IdeaProjects/swarm/backend/workers/engine/src/index.ts
 
@@ -176,10 +176,7 @@ app.notFound(async (c) => {
 
 // ─── 全局未知错误拦截 ───
 app.onError(async (err, c) => {
-  const traceId = c.get("traceId") || crypto.randomUUID();
-  const userId = c.get("userId") || undefined;
-  TraceLogger.error("ENGINE", "UNCAUGHT_EXCEPTION", traceId, `服务未捕获异常: ${getErrorMessage(err)}`, err, userId);
-  return ResponseBuilder.internalError("系统繁忙，请联系系统管理员", traceId);
+  return handleGlobalError(err, c, "ENGINE");
 });
 
 export default app;

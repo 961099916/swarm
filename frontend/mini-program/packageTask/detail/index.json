@@ -1,0 +1,10 @@
+{
+  "navigationBarTitleText": "协同终端控制台",
+  "backgroundColor": "#2D2A24",
+  "backgroundColorContent": "#2D2A24",
+  "backgroundColorTop": "#2D2A24",
+  "backgroundColorBottom": "#2D2A24",
+  "usingComponents": {
+    "t-button": "tdesign-miniprogram/button/button"
+  }
+}

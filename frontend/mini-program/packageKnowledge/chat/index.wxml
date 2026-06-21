@@ -1,0 +1,119 @@
+<view class="page">
+  <!-- 头部 -->
+  <view class="header">
+    <view class="header-left" bindtap="toggleSidebar">
+      <t-icon name="{{showSidebar ? 'chevron-down' : 'bookmark'}}" size="32" />
+      <text class="header-title">{{kbName}}</text>
+    </view>
+  </view>
+
+  <!-- 文档侧栏 -->
+  <view wx:if="{{showSidebar}}" class="docs-panel">
+    <view class="docs-header">
+      <text class="docs-title">知识库文档</text>
+      <text class="docs-count">{{documents.length}} 篇</text>
+    </view>
+    <view wx:if="{{docLoading}}" class="docs-loading">加载中...</view>
+    <view wx:elif="{{documents.length > 0}}" class="docs-list">
+      <view wx:for="{{documents}}" wx:key="id" class="doc-item">
+        <t-icon name="file-text" size="28" />
+        <view class="doc-item-info">
+          <text class="doc-item-title">{{item.title}}</text>
+          <text class="doc-item-status {{item.status}}">
+            {{item.status === 'READY' ? '就绪' : item.status === 'PROCESSING' ? '处理中' : item.status === 'FAILED' ? '失败' : '待处理'}}
+          </text>
+        </view>
+      </view>
+    </view>
+    <view wx:else class="docs-empty">暂无文档</view>
+  </view>
+
+  <!-- 对话区域 -->
+  <scroll-view 
+    class="chat-area" 
+    scroll-y 
+    scroll-top="{{scrollTop}}" 
+    scroll-with-animation
+    bindscroll="onScroll"
+    style="padding-bottom: {{keyboardHeight > 0 ? (keyboardHeight + 20) + 'px' : '140rpx'}}"
+  >
+    <view wx:for="{{messages}}" wx:for-index="idx" wx:key="id" class="msg {{item.role === 'user' ? 'msg-user' : 'msg-assistant'}}">
+      <view wx:if="{{item.role === 'user'}}" class="msg-bubble user-bubble">{{item.content}}</view>
+      <view wx:else class="msg-bubble assistant-bubble">
+        <view wx:if="{{item.thinking}}" class="thinking">
+          <t-loading size="28rpx" />
+          <text>思考中...</text>
+        </view>
+        <view wx:else class="assistant-content">
+          <mp-html content="{{item.htmlContent || item.content}}"></mp-html>
+          <view wx:if="{{item.typing}}" class="typing-cursor"></view>
+          
+          <view wx:if="{{item.sources && item.sources.length > 0}}" class="sources">
+            <text class="sources-label">参考文档：</text>
+            <text wx:for="{{item.sources}}" wx:key="*this" class="source-tag" bindtap="showDocDetail" data-title="{{item}}">{{item}}</text>
+          </view>
+        </view>
+      </view>
+    </view>
+    <view id="bottom" style="height: 1rpx;" />
+  </scroll-view>
+
+  <!-- 新消息悬浮球 -->
+  <view wx:if="{{showNewMsgBadge}}" class="new-msg-badge" bindtap="forceScrollToBottom">
+    <t-icon name="arrow-down" size="24rpx" color="#FF6B6B" />
+    <text>👇 有新消息</text>
+  </view>
+
+  <!-- 输入区域 -->
+  <view class="input-area" style="padding-bottom: {{keyboardHeight > 0 ? keyboardHeight + 'px' : 'calc(16rpx + env(safe-area-inset-bottom))'}}">
+    <input
+      class="chat-input"
+      value="{{inputValue}}"
+      placeholder="输入你的问题..."
+      adjust-position="{{false}}"
+      bindinput="onInput"
+      bindconfirm="onSend"
+      bindfocus="onInputFocus"
+      bindblur="onInputBlur"
+      confirm-type="send"
+    />
+    <t-button
+      theme="primary"
+      size="small"
+      bindtap="onSend"
+      loading="{{sending}}"
+      disabled="{{!inputValue.trim() || sending}}"
+    >发送</t-button>
+  </view>
+
+  <!-- 文档详情抽屉 -->
+  <t-popup visible="{{showDocPopup}}" placement="right" bind:visible-change="onCloseDocPopup">
+    <view class="doc-detail-drawer" style="padding-bottom: env(safe-area-inset-bottom);">
+      <view class="doc-detail-header">
+        <text class="doc-detail-title">{{selectedDocTitle}}</text>
+        <view class="doc-detail-close" bindtap="onCloseDocPopup">
+          <t-icon name="close" size="36rpx" />
+        </view>
+      </view>
+      <scroll-view class="doc-detail-content" scroll-y>
+        <view wx:if="{{docDetailLoading}}" class="doc-detail-loading">
+          <t-loading size="40rpx" theme="circular" text="加载中..." />
+        </view>
+        <view wx:else class="doc-detail-body">
+          <view class="doc-origin-bar" wx:if="{{selectedDoc && (selectedDoc.sourceType === 'UPLOAD' || selectedDoc.sourceType === 'WEB_SCRAPE')}}">
+            <view wx:if="{{selectedDoc.sourceType === 'UPLOAD'}}" class="origin-btn btn-primary-green" bindtap="previewDocument">
+              <t-icon name="file-pdf" size="14" />
+              <text>查看 Office/PDF 原件</text>
+            </view>
+            <view wx:if="{{selectedDoc.sourceType === 'WEB_SCRAPE' && selectedDoc.sourceUrl}}" class="origin-btn btn-secondary-gray" bindtap="copySourceUrl">
+              <t-icon name="link" size="14" />
+              <text>复制网页原文链接</text>
+            </view>
+          </view>
+          <mp-html wx:if="{{selectedDocContent}}" content="{{selectedDocContent}}"></mp-html>
+          <view wx:else class="doc-detail-empty">暂无文档内容</view>
+        </view>
+      </scroll-view>
+    </view>
+  </t-popup>
+</view>

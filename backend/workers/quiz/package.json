@@ -1,5 +1,5 @@
 {
-  "name": "swarm-quiz",
+  "name": "@swarm/worker-quiz",
   "version": "1.0.0",
   "private": true,
   "scripts": {
@@ -8,9 +8,9 @@
     "type-check": "tsc --noEmit"
   },
   "dependencies": {
-    "@swarm/kernel": "*",
-    "@swarm/quiz": "*",
-    "@swarm/identity": "*",
+    "@swarm/kernel": "workspace:*",
+    "@swarm/quiz": "workspace:*",
+    "@swarm/identity": "workspace:*",
     "drizzle-orm": "^0.45.2",
     "hono": "^4.0.0"
   },

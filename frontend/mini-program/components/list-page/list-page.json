@@ -1,0 +1,8 @@
+{
+  "_filePath": "/Users/zhangjiahao/IdeaProjects/swarm/frontend/mini-program/components/list-page/list-page.json",
+  "component": true,
+  "usingComponents": {
+    "search-bar": "../search-bar/search-bar",
+    "empty-state": "../empty-state/empty-state"
+  }
+}

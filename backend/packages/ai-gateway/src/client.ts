@@ -5,8 +5,8 @@
  * 封装所有 AI 调用（LLM 推理），提供模型路由、速率限制、调用日志。
  */
 
-import { TraceLogger } from "@swarm/kernel";
-import type { ModelConfigRow } from "./types";
+import { TraceLogger, ConfigService } from "@swarm/kernel";
+import type { ModelConfigRow, IAiService } from "./types";
 import type { AIChatRequest, AIChatResponse, AIEmbedRequest, AIEmbedResponse } from "./types";
 import { AI_CHAT_TIMEOUT_MS, AI_DEFAULT_RPM } from "./constants";
 
@@ -47,7 +47,7 @@ export class AIClientError extends Error {
   }
 }
 
-export class AIClient {
+export class AIClient implements IAiService {
   constructor(private env: AIClientEnv) {}
 
   async chat(req: AIChatRequest): Promise<AIChatResponse> {
@@ -154,7 +154,7 @@ export class AIClient {
 
   private async fallbackChat(req: AIChatRequest, startTime: number): Promise<AIChatResponse> {
     if (!this.env.AI) throw new AIClientError('AI 模型不可用', 'NO_BINDING');
-    const model = "@cf/meta/llama-3.1-8b-instruct-fp8";
+    const model = await ConfigService.get(this.env.DB, "workflow.default_model");
     const res = await this.env.AI.run(model, { messages: req.messages });
     const content = res.response || "";
     const latencyMs = Date.now() - startTime;
@@ -163,7 +163,7 @@ export class AIClient {
 
   private async fallbackEmbed(req: AIEmbedRequest, startTime: number): Promise<AIEmbedResponse> {
     if (!this.env.AI) throw new AIClientError('嵌入模型不可用', 'NO_BINDING');
-    const model = "@cf/baai/bge-small-en-v1.5";
+    const model = await ConfigService.get(this.env.DB, "knowledge.default_embed_model");
     const inputs = typeof req.input === 'string' ? [req.input] : req.input;
     const res = await this.env.AI.run(model, { text: inputs });
     const latencyMs = Date.now() - startTime;

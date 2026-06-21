@@ -2,7 +2,7 @@
 
 import { Hono } from "hono";
 import type { Context, Next } from "hono";
-import { ApiRes, TraceLogger, startupSecurityCheck, getErrorMessage } from "@swarm/kernel";
+import { ApiRes, TraceLogger, startupSecurityCheck, getErrorMessage, handleGlobalError } from "@swarm/kernel";
 import { RagRepository } from "./repositories/rag.repository";
 import { RagService } from "./services/rag.service";
 import { RagController } from "./controllers/rag.controller";
@@ -149,7 +149,11 @@ app.delete("/api/v1/kb/document/delete", async (c) => {
 });
 
 app.post("/api/v1/kb/search", async (c) => {
-  return await getController(c).searchKnowledge(c.req.raw, c.get("userId"), c.get("traceId"));
+  return await getController(c).searchKnowledge(c.req.raw, c.env.DB, c.get("userId"), c.get("traceId"));
+});
+
+app.post("/api/v1/kb/chat", async (c) => {
+  return await getController(c).chatKnowledge(c.req.raw, c.env.AI, c.get("userId"), c.get("traceId"));
 });
 
 app.post("/api/v1/rag/inject", async (c) => {
@@ -184,9 +188,7 @@ app.notFound(async (c) => {
 });
 
 app.onError(async (err, c) => {
-  const traceId = c.get("traceId") || crypto.randomUUID();
-  TraceLogger.error("RAG", "UNCAUGHT_EXCEPTION", traceId, `RAG 服务未捕获异常: ${getErrorMessage(err)}`, err);
-  return c.json(ApiRes.internalError("系统繁忙，请联系系统管理员", traceId), 500);
+  return handleGlobalError(err, c, "RAG");
 });
 
 export { DocumentProcessWorkflow };

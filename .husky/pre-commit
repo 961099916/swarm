@@ -3,14 +3,17 @@
 
 echo "🔍 运行 pre-commit 质量门禁..."
 
-# 1. 检查是否有硬编码 Secret
+# 1. 获取暂存的修改文件
 STAGED_FILES=$(git diff --cached --name-only --diff-filter=ACMR | grep -E '\.(ts|js|json|yaml|yml)$' | grep -v 'node_modules\|\.wrangler\|package-lock\.json')
 if [ -n "$STAGED_FILES" ]; then
-  # 2. ESLint 检查暂存文件（只在有 .ts 文件时）
+  # 2. ESLint 检查暂存的 TS 文件
   TS_FILES=$(echo "$STAGED_FILES" | grep '\.ts$' || true)
   if [ -n "$TS_FILES" ]; then
-    echo "  🔎 Linting TypeScript 文件..."
-    npx eslint $TS_FILES --max-warnings=0 2>/dev/null || echo "  ⚠️  ESLint 警告，请检查"
+    echo "  🔎 正在扫描 TypeScript 代码规范..."
+    if ! npx eslint $TS_FILES --max-warnings=0; then
+      echo "❌ [ESLint 拦截] 存在代码规范错误，已阻止 Commit，请修复后再次提交！"
+      exit 1
+    fi
   fi
 fi
 

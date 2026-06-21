@@ -1,16 +1,16 @@
+// File: packages/quiz/src/index.ts
 /**
- * @swarm/quiz — 测评评定限界上下文
+ * @swarm/quiz — 评测经济与成长限界上下文
  *
- * Bounded Context (DDD): 闯关测评、关卡配置、评分引擎、经验等级
- * Aggregate Roots: QuizUser (测评用户聚合)
+ * Bounded Context (DDD): 测评系统、导师挑战、经验等级体系
+ * Aggregate Roots: QuizUser (评测用户聚合)
  */
 
-export { quizUsers, testHistory, userStageProgress, systemConfigs, quizStages, quizNpcs, quizQuestions } from './schema';
-export type {
-  QuizUserRow, TestHistoryRow, UserStageProgressRow,
-} from './types';
 export {
-  EXP_PER_LEVEL, QUIZ_PASS_THRESHOLD,
-  EXP_STAGE_PASS, EXP_QUIZ_COMPLETE, EXP_QUIZ_CALCULATE,
-  TEST_HISTORY_MAX_LIMIT,
-} from './constants';
+  quizUsers, testHistory, userStageProgress,
+  systemConfigs, quizStages, quizNpcs, quizQuestions,
+} from './infrastructure/db/schema';
+export type {
+  QuizUserRow, UserStageProgressRow, TestHistoryRow,
+} from './types';
+export { QuizConfig } from './constants';

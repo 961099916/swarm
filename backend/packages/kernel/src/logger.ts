@@ -28,18 +28,34 @@ const SENSITIVE_PATTERNS = [
   /wx_open_id/i,
   /session_key/i,
   /openid/i,
+  /^code$/i,
   /wx_code/i,
 ];
 
-function sanitize(data: unknown): unknown {
-  if (!data || typeof data !== 'object') return data;
-  if (Array.isArray(data)) return data.map(sanitize);
+function sanitize(data: unknown, level: LogLevel): unknown {
+  if (!data) return data;
+  if (typeof data === 'string') {
+    // 按照日志分级原则，除 DEBUG 外在 INFO/WARN 级截断超长日志防溢出
+    if ((level === 'INFO' || level === 'WARN') && data.length > 2000) {
+      return data.slice(0, 1000) + `... [TRUNCATED ${data.length - 1000} CHARS]`;
+    }
+    return data;
+  }
+  if (typeof data !== 'object') return data;
+  if (Array.isArray(data)) return data.map(item => sanitize(item, level));
+  
   const sanitized: Record<string, unknown> = {};
   for (const [key, value] of Object.entries(data)) {
     if (SENSITIVE_PATTERNS.some(p => p.test(key))) {
       sanitized[key] = '***REDACTED***';
     } else if (typeof value === 'object' && value !== null) {
-      sanitized[key] = sanitize(value);
+      sanitized[key] = sanitize(value, level);
+    } else if (typeof value === 'string') {
+      if ((level === 'INFO' || level === 'WARN') && value.length > 2000) {
+        sanitized[key] = value.slice(0, 1000) + `... [TRUNCATED ${value.length - 1000} CHARS]`;
+      } else {
+        sanitized[key] = value;
+      }
     } else {
       sanitized[key] = value;
     }
@@ -57,6 +73,11 @@ function buildPayload(
   payload?: Record<string, unknown>,
   exception?: unknown
 ): LogPayload {
+  // 清洗 message 字段
+  const cleanMsg = typeof message === 'string' && (level === 'INFO' || level === 'WARN') && message.length > 2000
+    ? message.slice(0, 1000) + `... [TRUNCATED ${message.length - 1000} CHARS]`
+    : message;
+
   return {
     traceId,
     timestamp: new Date().toISOString(),
@@ -64,8 +85,8 @@ function buildPayload(
     module,
     event,
     userId,
-    message,
-    payload: payload ? (sanitize(payload) as Record<string, unknown>) : undefined,
+    message: cleanMsg,
+    payload: payload ? (sanitize(payload, level) as Record<string, unknown>) : undefined,
     exception: exception
       ? { message: (exception as Error).message || String(exception), stack: (exception as Error).stack }
       : undefined,

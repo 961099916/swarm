@@ -3,7 +3,7 @@
 import { ApiRes, TraceLogger, getErrorMessage } from "@swarm/kernel";
 import { QuizService } from "../services/quiz.service";
 import type { AnswerSubmit } from "../types";
-import { TEST_HISTORY_MAX_LIMIT } from "@swarm/quiz";
+import { QuizConfig } from "@swarm/quiz";
 
 export class QuizController {
   constructor(private quizService: QuizService) {}
@@ -94,10 +94,11 @@ export class QuizController {
     }
   }
 
-  public async getTestHistory(request: Request, userId: string, traceId: string): Promise<Response> {
+  public async getTestHistory(request: Request, db: D1Database, userId: string, traceId: string): Promise<Response> {
     try {
       const url = new URL(request.url);
-      const limit = Math.min(parseInt(url.searchParams.get("limit") || "50"), TEST_HISTORY_MAX_LIMIT);
+      const maxLimit = await QuizConfig.getTestHistoryMaxLimit(db);
+      const limit = Math.min(parseInt(url.searchParams.get("limit") || "50"), maxLimit);
       const offset = Math.max(parseInt(url.searchParams.get("offset") || "0"), 0);
 
       const list = await this.quizService.getTestHistory(userId, limit, offset);

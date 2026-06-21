@@ -1,0 +1,8 @@
+{
+  "navigationBarTitleText": "测评答题中",
+  "backgroundColor": "#2D2A24",
+  "backgroundColorContent": "#2D2A24",
+  "usingComponents": {
+    "cyber-modal": "/components/cyber-modal/cyber-modal"
+  }
+}

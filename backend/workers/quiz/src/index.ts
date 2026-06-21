@@ -2,7 +2,7 @@
 
 import { Hono } from "hono";
 import type { Context, Next } from "hono";
-import { ApiRes, TraceLogger, startupSecurityCheck, getErrorMessage } from "@swarm/kernel";
+import { ApiRes, TraceLogger, startupSecurityCheck, getErrorMessage, handleGlobalError } from "@swarm/kernel";
 import { QuizRepository } from "./repositories/quiz.repository";
 import { QuizService } from "./services/quiz.service";
 import { QuizController } from "./controllers/quiz.controller";
@@ -123,7 +123,7 @@ app.post("/api/v1/quiz/stages/:stageId/npcs/:npcId/submit", async (c) => {
 });
 
 app.get("/api/v1/quiz/test-history", async (c) => {
-  return await getController(c).getTestHistory(c.req.raw, c.get("userId"), c.get("traceId"));
+  return await getController(c).getTestHistory(c.req.raw, c.env.DB, c.get("userId"), c.get("traceId"));
 });
 
 app.get("/api/v1/quiz/test-history/:id", async (c) => {
@@ -164,9 +164,7 @@ app.notFound(async (c) => {
 });
 
 app.onError(async (err, c) => {
-  const traceId = c.get("traceId") || crypto.randomUUID();
-  TraceLogger.error("QUIZ", "UNCAUGHT_EXCEPTION", traceId, `服务未捕获异常: ${getErrorMessage(err)}`, err, c.get("userId"));
-  return c.json(ApiRes.internalError("系统繁忙，请稍后再试", traceId), 500);
+  return handleGlobalError(err, c, "QUIZ");
 });
 
 export default app;

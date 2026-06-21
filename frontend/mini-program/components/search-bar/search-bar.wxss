@@ -1,0 +1,47 @@
+/* File: /Users/zhangjiahao/IdeaProjects/swarm/frontend/mini-program/components/search-bar/search-bar.wxss */
+.search-bar-wrap {
+  width: 100%;
+  box-sizing: border-box;
+}
+.search-bar-inner {
+  display: flex;
+  align-items: center;
+  height: 72rpx;
+  background: var(--glass-bg);
+  backdrop-filter: var(--glass-blur);
+  -webkit-backdrop-filter: var(--glass-blur);
+  border: 1rpx solid var(--glass-border);
+  border-radius: var(--radius-full);
+  padding: 0 24rpx;
+  box-sizing: border-box;
+}
+.search-icon {
+  font-size: 24rpx !important;
+  color: var(--text-muted) !important;
+  margin-right: 10rpx;
+}
+.search-input {
+  flex: 1;
+  height: 100%;
+  font-size: 24rpx;
+  color: var(--text-primary);
+  background: transparent;
+  border: none;
+  outline: none;
+}
+.search-placeholder {
+  color: var(--text-placeholder);
+  font-size: 24rpx;
+}
+.search-clear {
+  width: 40rpx;
+  height: 40rpx;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+.search-clear-icon {
+  font-size: 20rpx !important;
+  color: var(--text-muted) !important;
+}

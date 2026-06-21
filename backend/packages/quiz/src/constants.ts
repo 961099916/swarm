@@ -1,17 +1,38 @@
-/** 每级所需经验值 */
-export const EXP_PER_LEVEL = 100;
+// File: packages/quiz/src/constants.ts
+/// <reference types="@cloudflare/workers-types" />
+import { ConfigService } from "@swarm/kernel";
 
-/** 关卡通过阈值 (分数占比) */
-export const QUIZ_PASS_THRESHOLD = 0.6;
+/**
+ * QuizConfig — 测评关卡动态配置读取门面
+ */
+export const QuizConfig = {
+  /** 每级所需经验值 */
+  async getExpPerLevel(db: D1Database): Promise<number> {
+    return ConfigService.getNumber(db, "quiz.exp_per_level");
+  },
 
-/** 通过关卡奖励经验 */
-export const EXP_STAGE_PASS = 20;
+  /** 关卡通过阈值 (分数占比) */
+  async getQuizPassThreshold(db: D1Database): Promise<number> {
+    return ConfigService.getNumber(db, "quiz.quiz_pass_threshold");
+  },
 
-/** 完成测评奖励经验 */
-export const EXP_QUIZ_COMPLETE = 10;
+  /** 通过关卡奖励经验 */
+  async getExpStagePass(db: D1Database): Promise<number> {
+    return ConfigService.getNumber(db, "quiz.exp_stage_pass");
+  },
 
-/** 纯测评计算奖励经验 */
-export const EXP_QUIZ_CALCULATE = 5;
+  /** 完成测评奖励经验 */
+  async getExpQuizComplete(db: D1Database): Promise<number> {
+    return ConfigService.getNumber(db, "quiz.exp_quiz_complete");
+  },
 
-/** 测评历史列表最大返回条数 */
-export const TEST_HISTORY_MAX_LIMIT = 200;
+  /** 纯测评计算奖励经验 */
+  async getExpQuizCalculate(db: D1Database): Promise<number> {
+    return ConfigService.getNumber(db, "quiz.exp_quiz_calculate");
+  },
+
+  /** 测评历史列表最大返回条数 */
+  async getTestHistoryMaxLimit(db: D1Database): Promise<number> {
+    return ConfigService.getNumber(db, "quiz.test_history_max_limit");
+  }
+};

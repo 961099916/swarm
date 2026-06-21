@@ -1,5 +1,5 @@
 import { TraceLogger } from "@swarm/kernel";
-import { RAG_EMBED_PASSAGE_PREFIX, RAG_MAX_CONCURRENT_EMBEDDINGS } from "@swarm/knowledge";
+import { RAG_EMBED_PASSAGE_PREFIX } from "@swarm/knowledge";
 
 /**
  * 嵌入生成器
@@ -19,12 +19,14 @@ export interface EmbeddingResult {
  * @param ai Workers AI binding
  * @param chunks 待嵌入的文本列表（含 chunkId）
  * @param model 嵌入模型名
+ * @param maxConcurrent 最大并发数
  * @returns 嵌入向量列表
  */
 export async function generateEmbeddings(
   ai: any,
   chunks: Array<{ id: string; text: string }>,
-  model: string = DEFAULT_EMBED_MODEL
+  model: string = DEFAULT_EMBED_MODEL,
+  maxConcurrent: number = 10
 ): Promise<EmbeddingResult[]> {
   if (!ai) {
     TraceLogger.error("RAG", "EMBEDDING", "SYSTEM", "AI 绑定不可用，无法生成嵌入");
@@ -34,8 +36,8 @@ export async function generateEmbeddings(
   const results: EmbeddingResult[] = [];
 
   // 分批并发执行
-  for (let i = 0; i < chunks.length; i += RAG_MAX_CONCURRENT_EMBEDDINGS) {
-    const batch = chunks.slice(i, i + RAG_MAX_CONCURRENT_EMBEDDINGS);
+  for (let i = 0; i < chunks.length; i += maxConcurrent) {
+    const batch = chunks.slice(i, i + maxConcurrent);
     const batchResults = await processBatch(ai, batch, model);
     results.push(...batchResults);
   }

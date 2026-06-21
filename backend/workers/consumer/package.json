@@ -1,5 +1,5 @@
 {
-  "name": "swarm-consumer",
+  "name": "@swarm/worker-consumer",
   "version": "1.0.0",
   "private": true,
   "scripts": {
@@ -8,10 +8,10 @@
     "type-check": "tsc --noEmit"
   },
   "dependencies": {
-    "@swarm/kernel": "*",
-    "@swarm/agent": "*",
-    "@swarm/identity": "*",
-    "@swarm/credits": "*",
+    "@swarm/kernel": "workspace:*",
+    "@swarm/agent": "workspace:*",
+    "@swarm/identity": "workspace:*",
+    "@swarm/credits": "workspace:*",
     "drizzle-orm": "^0.45.2"
   },
   "devDependencies": {

@@ -1,0 +1,116 @@
+{
+  "pages": [
+    "pages/task/list/index",
+    "pages/deploy/index",
+    "pages/knowledge/index",
+    "pages/chat/index",
+    "pages/map/index/index",
+    "pages/credits/index",
+    "pages/profile/index",
+    "pages/login/login",
+    "pages/mine/index"
+  ],
+  "subpackages": [
+    {
+      "root": "packageTask",
+      "pages": [
+        "detail/index",
+        "agent/manager/index"
+      ]
+    },
+    {
+      "root": "packageKnowledge",
+      "pages": [
+        "detail/index",
+        "chat/index",
+        "add/index"
+      ]
+    },
+    {
+      "root": "packageQuiz",
+      "pages": [
+        "pages/test/test",
+        "pages/result/result"
+      ]
+    }
+  ],
+  "preloadRule": {
+    "pages/map/index/index": {
+      "network": "all",
+      "packages": [
+        "packageQuiz"
+      ]
+    },
+    "pages/profile/index": {
+      "network": "all",
+      "packages": [
+        "packageKnowledge"
+      ]
+    },
+    "pages/task/list/index": {
+      "network": "all",
+      "packages": [
+        "packageTask"
+      ]
+    },
+    "pages/knowledge/index": {
+      "network": "all",
+      "packages": [
+        "packageKnowledge"
+      ]
+    }
+  },
+  "window": {
+    "backgroundTextStyle": "dark",
+    "navigationBarBackgroundColor": "#2D2A24",
+    "navigationBarTitleText": "Swarm",
+    "navigationBarTextStyle": "white",
+    "backgroundColor": "#2D2A24",
+    "backgroundColorContent": "#2D2A24",
+    "backgroundColorTop": "#2D2A24",
+    "backgroundColorBottom": "#2D2A24"
+  },
+  "tabBar": {
+    "color": "#7A726A",
+    "selectedColor": "#FF6B6B",
+    "backgroundColor": "#2D2A24",
+    "borderStyle": "white",
+    "list": [
+      {
+        "pagePath": "pages/task/list/index",
+        "text": "任务",
+        "iconPath": "static/tabbar/task.png",
+        "selectedIconPath": "static/tabbar/task_active.png"
+      },
+      {
+        "pagePath": "pages/deploy/index",
+        "text": "部署",
+        "iconPath": "static/tabbar/deploy.png",
+        "selectedIconPath": "static/tabbar/deploy_active.png"
+      },
+      {
+        "pagePath": "pages/knowledge/index",
+        "text": "知识库",
+        "iconPath": "static/tabbar/knowledge.png",
+        "selectedIconPath": "static/tabbar/knowledge_active.png"
+      },
+      {
+        "pagePath": "pages/map/index/index",
+        "text": "测评",
+        "iconPath": "static/tabbar/map.png",
+        "selectedIconPath": "static/tabbar/map_active.png"
+      },
+      {
+        "pagePath": "pages/profile/index",
+        "text": "我的",
+        "iconPath": "static/tabbar/profile.png",
+        "selectedIconPath": "static/tabbar/profile_active.png"
+      }
+    ]
+  },
+  "usingComponents": {
+    "list-page": "/components/list-page/list-page"
+  },
+  "sitemapLocation": "sitemap.json",
+  "lazyCodeLoading": "requiredComponents"
+}

@@ -459,4 +459,33 @@ export class AdminRepository {
 
     return newVersion;
   }
+
+  public async findTraceLogs(traceId: string) {
+    // 1. 查询 AI 调用日志
+    const aiLogs = await this.db
+      .prepare("SELECT * FROM ai_call_logs WHERE trace_id = ? ORDER BY created_at ASC")
+      .bind(traceId)
+      .all<any>()
+      .then(res => res.results || []);
+
+    // 2. 查询审计日志 (通过 detail 模糊匹配 traceId)
+    const auditLogs = await this.db
+      .prepare("SELECT * FROM admin_audit_logs WHERE detail LIKE ? ORDER BY created_at ASC")
+      .bind(`%${traceId}%`)
+      .all<any>()
+      .then(res => res.results || []);
+
+    // 3. 查询任务日志 (通过 message 模糊匹配 traceId)
+    const taskLogsList = await this.db
+      .prepare("SELECT * FROM task_logs WHERE message LIKE ? ORDER BY created_at ASC")
+      .bind(`%${traceId}%`)
+      .all<any>()
+      .then(res => res.results || []);
+
+    return {
+      aiLogs,
+      auditLogs,
+      taskLogs: taskLogsList
+    };
+  }
 }

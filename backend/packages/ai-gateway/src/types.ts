@@ -103,3 +103,12 @@ export interface AIStatsDTO {
   callsByModel: Array<{ modelName: string; count: number; costUsd: number }>;
   callsByHour: Array<{ hour: string; count: number }>;
 }
+
+/**
+ * IAiService — AI 推理网关限界上下文的防腐契约接口 (ACL)
+ */
+export interface IAiService {
+  chat(req: AIChatRequest): Promise<AIChatResponse>;
+  embed(req: AIEmbedRequest): Promise<AIEmbedResponse>;
+}
+

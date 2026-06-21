@@ -1,5 +1,5 @@
 {
-  "name": "swarm-rag",
+  "name": "@swarm/worker-rag",
   "version": "1.0.0",
   "private": true,
   "scripts": {
@@ -8,9 +8,9 @@
     "type-check": "tsc --noEmit"
   },
   "dependencies": {
-    "@swarm/kernel": "*",
-    "@swarm/knowledge": "*",
-    "@swarm/ai-gateway": "*",
+    "@swarm/kernel": "workspace:*",
+    "@swarm/knowledge": "workspace:*",
+    "@swarm/ai-gateway": "workspace:*",
     "hono": "^4.0.0",
     "drizzle-orm": "^0.45.2"
   },

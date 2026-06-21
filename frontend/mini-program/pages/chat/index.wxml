@@ -1,0 +1,54 @@
+<view class="page">
+  <!-- 对话区域 -->
+  <scroll-view 
+    class="chat-area" 
+    scroll-y 
+    scroll-top="{{scrollTop}}" 
+    scroll-with-animation 
+    bindscroll="onScroll" 
+    style="padding-bottom: {{keyboardHeight > 0 ? (keyboardHeight + 20) + 'px' : '140rpx'}}"
+  >
+    <view wx:for="{{messages}}" wx:for-index="idx" wx:key="id" class="msg {{item.role === 'user' ? 'msg-user' : 'msg-assistant'}}">
+      <view wx:if="{{item.role === 'user'}}" class="msg-bubble user-bubble">{{item.content}}</view>
+      <view wx:else class="msg-bubble assistant-bubble">
+        <view wx:if="{{item.thinking}}" class="thinking">
+          <t-loading size="28rpx" />
+          <text>思考中...</text>
+        </view>
+        <view wx:else class="assistant-content">
+          <mp-html content="{{item.htmlContent || item.content}}"></mp-html>
+          <view wx:if="{{item.typing}}" class="typing-cursor"></view>
+        </view>
+      </view>
+    </view>
+    <view id="bottom" style="height: 1rpx;" />
+  </scroll-view>
+
+  <!-- 新消息悬浮球 -->
+  <view wx:if="{{showNewMsgBadge}}" class="new-msg-badge" bindtap="forceScrollToBottom">
+    <t-icon name="arrow-down" size="24rpx" color="#FF6B6B" />
+    <text>👇 有新消息</text>
+  </view>
+
+  <!-- 输入区域 -->
+  <view class="input-area" style="padding-bottom: {{keyboardHeight > 0 ? keyboardHeight + 'px' : 'calc(16rpx + env(safe-area-inset-bottom))'}}">
+    <t-input
+      class="chat-input"
+      value="{{inputValue}}"
+      placeholder="输入你的问题..."
+      adjust-position="{{false}}"
+      bindinput="onInput"
+      bindconfirm="onSend"
+      bindfocus="onInputFocus"
+      bindblur="onInputBlur"
+      confirm-type="send"
+    />
+    <t-button
+      theme="primary"
+      size="small"
+      bindtap="onSend"
+      loading="{{sending}}"
+      disabled="{{!inputValue.trim() || sending}}"
+    >发送</t-button>
+  </view>
+</view>

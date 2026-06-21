@@ -5,7 +5,7 @@ import { RagConstants } from "../constants/rag.constant";
 import { eq, or, like } from "drizzle-orm";
 import { knowledgeBases, documents } from "@swarm/knowledge";
 import { TraceLogger, getErrorMessage } from "@swarm/kernel";
-import { RAG_MAX_CONTEXT_LENGTH } from "@swarm/knowledge";
+import { KnowledgeConfig } from "@swarm/knowledge";
 
 export class RagService {
   constructor(private ragRepo: RagRepository) {}
@@ -186,10 +186,44 @@ export class RagService {
   // 核心检索与 RAG 注入
   // ══════════════════════════════════════════════════
 
+  private escapeRegExp(str: string): string {
+    return str.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  }
+
   public extractKeywords(query: string): string[] {
-    return query
-      .replace(/[，。！？、；：""''（）【】\s,.!?;:()\[\]{}]+/g, " ")
-      .split(" ")
+    const englishWords = query.match(/[a-zA-Z0-9.-]+/g) || [];
+    const cleanQuery = query.replace(/[，。！？、；：""''（）【】\s,.!?;:()\[\]{}+]+/g, "");
+    const stopWords = new Set([
+      "的", "了", "和", "是", "就", "都", "而", "及", "与", "着", 
+      "个", "这", "那", "有", "无", "去", "做", "在", "也", "他", 
+      "她", "它", "我", "你", "您", "我们", "你们", "他们", "一下", 
+      "请", "帮", "给我", "讲讲", "讲一下", "介绍", "什么是", "怎么", 
+      "如何", "关于", "解释", "分析", "对比"
+    ]);
+
+    const words: string[] = [...englishWords];
+
+    let chineseText = cleanQuery;
+    for (const eng of englishWords) {
+      chineseText = chineseText.replace(new RegExp(this.escapeRegExp(eng), "g"), "");
+    }
+
+    if (chineseText.length > 0) {
+      for (let i = 0; i < chineseText.length - 1; i++) {
+        const biGram = chineseText.slice(i, i + 2);
+        if (!stopWords.has(biGram)) {
+          words.push(biGram);
+        }
+      }
+      for (let i = 0; i < chineseText.length - 2; i++) {
+        const triGram = chineseText.slice(i, i + 3);
+        if (!stopWords.has(triGram)) {
+          words.push(triGram);
+        }
+      }
+    }
+
+    return [...new Set(words)]
       .map(w => w.trim())
       .filter(w => w.length > 1);
   }
@@ -248,8 +282,9 @@ export class RagService {
         const content = chunk.content.length > 500 ? chunk.content.slice(0, 500) + "..." : chunk.content;
         context += `${header}\n${content}\n\n`;
       }
-      if (context.length > RAG_MAX_CONTEXT_LENGTH) {
-        context = context.slice(0, RAG_MAX_CONTEXT_LENGTH) + "\n...(上下文已截断)";
+      const maxContextLength = await KnowledgeConfig.getMaxContextLength(this.ragRepo.db);
+      if (context.length > maxContextLength) {
+        context = context.slice(0, maxContextLength) + "\n...(上下文已截断)";
       }
     }
 

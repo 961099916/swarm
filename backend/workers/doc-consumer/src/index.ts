@@ -7,7 +7,7 @@
  *   获取内容 → 分块 → 嵌入 → 存储 → 标记就绪
  */
 
-import { TraceLogger, getErrorMessage } from "@swarm/kernel";
+import { TraceLogger, getErrorMessage, ConfigService } from "@swarm/kernel";
 import { DocConsumerConstants } from "./constants/doc-consumer.constant";
 
 export interface Env {
@@ -57,6 +57,105 @@ function estimateTokens(text: string): number {
     else tokens += 0.25;
   }
   return Math.ceil(tokens);
+}
+
+// ══════════════════════════════════════════════════
+// HTML 与 Markdown 清洗与纯净化工具函数
+// ══════════════════════════════════════════════════
+
+function htmlToMarkdown(html: string): string {
+  if (!html) return "";
+
+  // 1. 去除无用的 script、style、iframe、noscript、nav、footer 等标签
+  let cleaned = html
+    .replace(/<script[^>]*>[\s\S]*?<\/script>/gi, "")
+    .replace(/<style[^>]*>[\s\S]*?<\/style>/gi, "")
+    .replace(/<iframe[^>]*>[\s\S]*?<\/iframe>/gi, "")
+    .replace(/<noscript[^>]*>[\s\S]*?<\/noscript>/gi, "")
+    .replace(/<nav[^>]*>[\s\S]*?<\/nav>/gi, "")
+    .replace(/<footer[^>]*>[\s\S]*?<\/footer>/gi, "")
+    .replace(/<header[^>]*>[\s\S]*?<\/header>/gi, "");
+
+  // 2. 提取 body 内容
+  const bodyMatch = cleaned.match(/<body[^>]*>([\s\S]*?)<\/body>/i);
+  let md = bodyMatch ? bodyMatch[1] : cleaned;
+
+  // 3. 去除 HTML 注释
+  md = md.replace(/<!--[\s\S]*?-->/g, "");
+
+  // 4. 替换块级标题标签 h1 - h6 为 Markdown # 标题
+  md = md.replace(/<h1[^>]*>([\s\S]*?)<\/h1>/gi, "\n# $1\n");
+  md = md.replace(/<h2[^>]*>([\s\S]*?)<\/h2>/gi, "\n## $1\n");
+  md = md.replace(/<h3[^>]*>([\s\S]*?)<\/h3>/gi, "\n### $1\n");
+  md = md.replace(/<h4[^>]*>([\s\S]*?)<\/h4>/gi, "\n#### $1\n");
+  md = md.replace(/<h5[^>]*>([\s\S]*?)<\/h5>/gi, "\n##### $1\n");
+  md = md.replace(/<h6[^>]*>([\s\S]*?)<\/h6>/gi, "\n###### $1\n");
+
+  // 5. 替换粗体和斜体
+  md = md.replace(/<(strong|b)[^>]*>([\s\S]*?)<\/\1>/gi, "**$2**");
+  md = md.replace(/<(em|i)[^>]*>([\s\S]*?)<\/\1>/gi, "*$2*");
+
+  // 6. 替换代码块与行内代码
+  md = md.replace(/<pre[^>]*><code[^>]*>([\s\S]*?)<\/code><\/pre>/gi, "\n```\n$1\n```\n");
+  md = md.replace(/<pre[^>]*>([\s\S]*?)<\/pre>/gi, "\n```\n$1\n```\n");
+  md = md.replace(/<code[^>]*>([\s\S]*?)<\/code>/gi, "`$1`");
+
+  // 7. 替换列表项
+  md = md.replace(/<li[^>]*>([\s\S]*?)<\/li>/gi, "\n* $1");
+
+  // 8. 替换段落、br 和 div 换行
+  md = md.replace(/<p[^>]*>([\s\S]*?)<\/p>/gi, "\n$1\n");
+  md = md.replace(/<br\s*\/?>/gi, "\n");
+  md = md.replace(/<div[^>]*>([\s\S]*?)<\/div>/gi, "\n$1\n");
+
+  // 9. 替换超链接和图片
+  md = md.replace(/<a[^>]*href="([^"]*)"[^>]*>([\s\S]*?)<\/a>/gi, "[$2]($1)");
+  md = md.replace(/<img[^>]*src="([^"]*)"[^>]*alt="([^"]*)"[^>]*>/gi, "![$2]($1)");
+  md = md.replace(/<img[^>]*src="([^"]*)"[^>]*>/gi, "![]( $1 )");
+
+  // 10. 剥离剩余的所有 HTML 标签
+  md = md.replace(/<[^>]+>/g, "");
+
+  // 11. 还原常用的 HTML 实体字符
+  md = md
+    .replace(/&nbsp;/g, " ")
+    .replace(/&lt;/g, "<")
+    .replace(/&gt;/g, ">")
+    .replace(/&amp;/g, "&")
+    .replace(/&quot;/g, '"')
+    .replace(/&#39;/g, "'");
+
+  // 12. 格式清理：整理换行，避免连续三个及以上换行
+  md = md
+    .split("\n")
+    .map(line => line.trim())
+    .join("\n")
+    .replace(/\n{3,}/g, "\n\n")
+    .trim();
+
+  return md;
+}
+
+function stripMarkdown(md: string): string {
+  if (!md) return "";
+  let text = md;
+  // 1. 移除代码块
+  text = text.replace(/```[\s\S]*?```/g, "");
+  // 2. 移除行内代码
+  text = text.replace(/`([^`]+)`/g, "$1");
+  // 3. 移除 Markdown 标题符号
+  text = text.replace(/^#+\s+/gm, "");
+  // 4. 移除粗体和斜体标记
+  text = text.replace(/\*\*([^*]+)\*\*/g, "$1");
+  text = text.replace(/\*([^*]+)\*/g, "$1");
+  // 5. 移除图片和超链接标记，但保留说明文字
+  text = text.replace(/!\[([^\]]*)\]\([^)]*\)/g, "$1");
+  text = text.replace(/\[([^\]]*)\]\([^)]*\)/g, "$1");
+  // 6. 移除列表符号
+  text = text.replace(/^\s*[\*\-+]\s+/gm, "");
+  text = text.replace(/^\s*\d+\.\s+/gm, "");
+  
+  return text.trim();
 }
 
 // ══════════════════════════════════════════════════
@@ -146,16 +245,9 @@ async function extractDocumentContent(
     const titleMatch = html.match(/<title[^>]*>([^<]+)<\/title>/i);
     const title = titleMatch ? titleMatch[1].trim() : sourceUrl;
 
-    const content = html
-      .replace(/<script[^>]*>[\s\S]*?<\/script>/gi, "")
-      .replace(/<style[^>]*>[\s\S]*?<\/style>/gi, "")
-      .replace(/<nav[^>]*>[\s\S]*?<\/nav>/gi, "")
-      .replace(/<footer[^>]*>[\s\S]*?<\/footer>/gi, "")
-      .replace(/<header[^>]*>[\s\S]*?<\/header>/gi, "")
-      .replace(/<[^>]+>/g, " ")
-      .replace(/&nbsp;/g, " ")
-      .replace(/\s+/g, " ")
-      .trim();
+    // 使用高保真清洗算法，将网页 HTML 转换为完备的 Markdown
+    const content = htmlToMarkdown(html);
+
     return { title, content };
   } else if (sourceType === "MANUAL" && rawContent) {
     const doc = await db.prepare("SELECT title FROM documents WHERE id = ?").bind(docId).first<any>();
@@ -181,15 +273,20 @@ async function processDocument(
   if (!content || content.length < 20) throw new Error("文档内容为空或过短");
 
   const kb = await db.prepare("SELECT chunk_size, chunk_overlap FROM knowledge_bases WHERE id = ?").bind(kbId).first<any>();
-  const chunkSize = kb?.chunk_size || 500;
-  const chunkOverlap = kb?.chunk_overlap || 100;
+  const defaultChunkSize = await ConfigService.getNumber(db, "knowledge.default_chunk_size");
+  const defaultChunkOverlap = await ConfigService.getNumber(db, "knowledge.default_chunk_overlap");
+  const chunkSize = kb?.chunk_size || defaultChunkSize;
+  const chunkOverlap = kb?.chunk_overlap || defaultChunkOverlap;
 
-  const chunks = splitText(content, chunkSize, chunkOverlap);
+  // 向量检索切片纯净化：在 Chunks 向量化切片之前，剥离所有 Markdown 格式，以确保向量特征正确
+  const cleanContentForEmbedding = stripMarkdown(content);
+  const chunks = splitText(cleanContentForEmbedding, chunkSize, chunkOverlap);
   TraceLogger.info("DOC_CONSUMER", "CHUNKED", traceId, `分块完成: ${chunks.length} 个块`);
   if (chunks.length === 0) throw new Error("分块后内容为空");
 
+  const embedModel = await ConfigService.get(db, "knowledge.default_embed_model");
   const texts = chunks.map(c => c.text);
-  const vectors = await generateEmbeddings(ai, texts);
+  const vectors = await generateEmbeddings(ai, texts, embedModel);
   TraceLogger.info("DOC_CONSUMER", "EMBEDDED", traceId, `嵌入生成完成: ${vectors.length} 个向量`);
 
   const now = new Date().toISOString();

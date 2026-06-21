@@ -1,0 +1,12 @@
+<!-- File: /Users/zhangjiahao/IdeaProjects/swarm/frontend/mini-program/components/empty-state/empty-state.wxml -->
+<view class="empty-state custom-class">
+  <view class="empty-icon float-breathe" wx:if="{{icon}}" style="width: {{iconWrapSize}}rpx; height: {{iconWrapSize}}rpx;">
+    <t-icon name="{{icon}}" size="{{iconSize}}rpx" style="font-size: {{iconSize}}rpx;" />
+  </view>
+  <text class="empty-label" wx:if="{{label}}">{{label}}</text>
+  <text class="empty-desc" wx:if="{{desc}}">{{desc}}</text>
+  <!-- 额外操作区 -->
+  <view class="empty-actions">
+    <slot></slot>
+  </view>
+</view>

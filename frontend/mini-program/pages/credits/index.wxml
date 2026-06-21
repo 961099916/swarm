@@ -1,0 +1,102 @@
+<!-- File: /Users/zhangjiahao/IdeaProjects/swarm/frontend/mini-program/pages/credits/index.wxml -->
+<view class="credits-container {{theme}}">
+  <view class="card balance-card">
+    <text class="bal-label">当前可用算力</text>
+    <view class="bal-row">
+      <text class="bal-num num-font">{{ userCredits }}</text>
+      <text class="bal-unit">积分</text>
+    </view>
+    <text class="bal-desc">边缘集群计算点数</text>
+    <view class="separator"></view>
+    <view class="bal-actions">
+      <view class="action-grid-item" bindtap="playVideoAd">
+        <view class="t-icon t-icon-video action-icon"></view>
+        <text class="action-title">观看广告</text>
+        <text class="action-val">+20 积分</text>
+      </view>
+      <view class="action-grid-item" open-type="share">
+        <view class="t-icon t-icon-usergroup action-icon"></view>
+        <text class="action-title">邀请好友</text>
+        <text class="action-val">+50 积分</text>
+      </view>
+    </view>
+  </view>
+
+  <!-- 筛选栏 -->
+  <scroll-view class="cr-filter-bar" scroll-x enable-flex enhanced show-scrollbar="{{false}}">
+    <view class="filter-items">
+      <view wx:for="{{typeOptions}}" wx:key="value"
+        class="pill-filter {{filterValue === item.value ? 'active' : ''}}"
+        data-value="{{item.value}}"
+        bindtap="onFilterChange"
+      >
+        {{item.label}}
+      </view>
+    </view>
+  </scroll-view>
+
+  <!-- 流水列表（下拉刷新+上拉加载） -->
+  <scroll-view
+    class="cr-list-scroll"
+    scroll-y
+    enhanced
+    refresher-enabled
+    refresher-triggered="{{refreshing}}"
+    bindrefresherrefresh="onRefresh"
+    bindscrolltolower="loadNextPage"
+  >
+    <!-- 骨架屏 -->
+    <view wx:if="{{loading && list.length === 0}}" class="credits-skeleton-wrap">
+      <view class="skeleton skeleton-card" wx:for="{{[1,2,3]}}" wx:key="*this"></view>
+    </view>
+
+    <!-- 空状态（引用原子组件） -->
+    <empty-state
+      wx:elif="{{!loading && list.length === 0}}"
+      icon="mail"
+      label="暂无流水记录"
+      desc="使用算力执行智能体任务后将产生记录"
+    />
+
+    <!-- 流水时间线（按日期分组） -->
+    <view wx:else class="credits-list-wrap">
+      <block wx:for="{{groupedList}}" wx:key="date">
+        <text class="cr-date-header">{{item.date}}</text>
+        <view wx:for="{{item.items}}" wx:key="id" class="history-item fade-up">
+          <view class="tl-dot {{item.delta > 0 ? 'up' : 'down'}}"></view>
+          <view class="card history-card">
+            <view class="hist-top">
+              <text class="hist-reason">{{item.reasonLabel}}</text>
+              <text class="hist-time">{{item.timeOnly}}</text>
+            </view>
+            <text class="hist-amount {{item.delta > 0 ? 'up' : 'down'}}">{{item.delta > 0 ? '+' : ''}}{{item.delta}}</text>
+            <text wx:if="{{item.balance !== undefined}}" class="hist-balance">余额: {{item.balance}}</text>
+          </view>
+        </view>
+      </block>
+
+      <!-- 加载更多 -->
+      <view wx:if="{{loading && list.length > 0}}" class="cr-load-more">
+        <view class="spinner-ios"></view>
+        <text class="cr-load-more-text">加载中...</text>
+      </view>
+      <view wx:elif="{{!hasMore && list.length > 0}}" class="cr-load-more">
+        <text class="cr-load-more-end">— 已展示全部 —</text>
+      </view>
+      <view class="list-bottom-spacer"></view>
+    </view>
+  </scroll-view>
+
+  <!-- 广告模拟弹窗 -->
+  <t-popup visible="{{showMockAd}}" placement="center" bind:visible-change="onAdVisibleChange">
+    <view class="ad-panel">
+      <text class="ad-title">观看激励视频</text>
+      <view class="ad-progress-bar">
+        <view class="ad-progress-fill" style="width: {{adProgressWidth}};"></view>
+      </view>
+      <text class="ad-countdown">{{adCountdown}}s</text>
+      <text class="ad-hint">观看完成后自动发放奖励...</text>
+    </view>
+  </t-popup>
+
+</view>

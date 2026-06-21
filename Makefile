@@ -18,7 +18,7 @@ SHELL := /bin/bash
 
 install:
 	@echo "📦 安装后端依赖..."
-	cd backend && npm ci
+	cd backend && pnpm install
 	@echo "📦 安装前端依赖..."
 	cd frontend && npm ci
 	@echo "✅ 依赖安装完成"
@@ -28,9 +28,9 @@ install:
 dev:
 	@echo "🚀 启动开发环境..."
 	@echo "   请分别在终端中执行:"
-	@echo "   cd backend/workers/gateway && npm run dev"
-	@echo "   cd backend/workers/user && npm run dev"
-	@echo "   cd backend/workers/engine && npm run dev"
+	@echo "   cd backend/workers/gateway && pnpm run dev"
+	@echo "   cd backend/workers/user && pnpm run dev"
+	@echo "   cd backend/workers/engine && pnpm run dev"
 	@echo "   前端通过微信开发者工具打开 frontend/"
 
 # ─── 质量门禁 ───
@@ -39,20 +39,15 @@ check: lint type-check test
 
 lint:
 	@echo "🔍 ESLint 检查..."
-	cd backend && npx eslint packages/ workers/ --ext .ts --max-warnings 50
+	cd backend && pnpm run lint
 
 type-check:
 	@echo "🔎 TypeScript 类型检查..."
-	@for dir in packages/kernel workers/gateway workers/workflow workers/user workers/admin; do \
-		echo "  → backend/$$dir"; \
-		cd backend/$$dir && npx tsc --noEmit 2>&1 | tail -3; \
-	done
-	@echo "  → frontend"
-	cd frontend && npx tsc --noEmit 2>&1 | tail -5
+	cd backend && pnpm -r run type-check
 
 test:
 	@echo "🧪 运行单元测试..."
-	cd backend/packages/kernel && npx vitest run
+	cd backend && pnpm --filter @swarm/kernel run test
 	@echo "✅ 测试完成"
 
 # ─── 安全 ───

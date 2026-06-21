@@ -1,0 +1,7 @@
+{
+  "_filePath": "/Users/zhangjiahao/IdeaProjects/swarm/frontend/mini-program/components/empty-state/empty-state.json",
+  "component": true,
+  "usingComponents": {
+    "t-icon": "tdesign-miniprogram/icon/icon"
+  }
+}

@@ -1,0 +1,142 @@
+/* File: /Users/zhangjiahao/IdeaProjects/swarm/frontend/admin/src/style.css */
+
+/* ──────────────────────────────────────────────────
+ * Swarm 暖绒奶油设计体系 v3 — Warm Cream UI for Web
+ * ────────────────────────────────────────────────── */
+
+:root {
+  /* ── 暖暗底色映射 ── */
+  --bg-root: #1E1B18;           /* 沉浸式暗奶油底 */
+  --bg-surface: #25211E;        /* 侧边栏/头部面层 */
+  --bg-surface-solid: #2D2A24;  /* 核心卡片暗底 */
+  --bg-content: #181513;        /* 内容区背景 */
+
+  /* ── 品牌珊瑚橙渐变 ── */
+  --brand: #FF6B6B;
+  --brand-gradient: linear-gradient(135deg, #FF6B6B 0%, #FFA07A 100%);
+  --brand-border: rgba(255, 107, 107, 0.25);
+  --brand-subtle: rgba(255, 107, 107, 0.12);
+
+  /* ── 奶油色系文字 ── */
+  --text-primary: #FFF8F0;
+  --text-secondary: #E8E0D8;
+  --text-muted: #A09890;
+
+  /* ── Element Plus 主色重写 (核心样式穿透) ── */
+  --el-color-primary: var(--brand) !important;
+  --el-color-primary-light-3: #FF8E8E !important;
+  --el-color-primary-light-5: #FFA07A !important;
+  --el-color-primary-light-7: rgba(255, 107, 107, 0.3) !important;
+  --el-color-primary-light-8: rgba(255, 107, 107, 0.2) !important;
+  --el-color-primary-light-9: rgba(255, 107, 107, 0.1) !important;
+  --el-color-primary-dark-2: #E74C3C !important;
+  --el-bg-color: var(--bg-root) !important;
+  --el-bg-color-overlay: var(--bg-surface) !important;
+  --el-border-color-light: rgba(255, 248, 240, 0.08) !important;
+  --el-border-color-lighter: rgba(255, 248, 240, 0.04) !important;
+  --el-text-color-primary: var(--text-primary) !important;
+  --el-text-color-regular: var(--text-secondary) !important;
+  --el-text-color-secondary: var(--text-muted) !important;
+}
+
+html, body {
+  margin: 0;
+  padding: 0;
+  width: 100vw;
+  height: 100vh;
+  background-color: var(--bg-root) !important;
+  color: var(--text-primary);
+  font-family: 'Outfit', 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  overflow: hidden;
+}
+
+/* 强制重置 Vite 默认限制 */
+#app {
+  width: 100% !important;
+  max-width: 100% !important;
+  height: 100% !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  border: none !important;
+  display: block !important;
+  text-align: left !important;
+  background-color: var(--bg-root);
+}
+
+/* 美化全局滚动条为暗色微光滚动条 */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: var(--bg-root);
+}
+
+::-webkit-scrollbar-thumb {
+  background: rgba(255, 248, 240, 0.08);
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--brand-border);
+}
+
+/* Element Plus 弹窗、下拉卡片微调 (配合奶油风格) */
+.el-dropdown-menu, .el-select-dropdown__list, .el-picker-panel {
+  background-color: var(--bg-surface) !important;
+  border: 1px solid var(--el-border-color-light) !important;
+  border-radius: 12px !important;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5) !important;
+}
+
+.el-dropdown-menu__item:hover, .el-select-dropdown__item.hover {
+  background-color: rgba(255, 248, 240, 0.04) !important;
+  color: var(--text-primary) !important;
+}
+
+.el-message-box {
+  background-color: var(--bg-surface) !important;
+  border: 1px solid var(--el-border-color-light) !important;
+  border-radius: 16px !important;
+}
+
+.el-message-box__title, .el-message-box__content {
+  color: var(--text-primary) !important;
+}
+
+/* 统一卡片与面板基础类 */
+.glass-card {
+  background: rgba(255, 248, 240, 0.03) !important;
+  backdrop-filter: blur(24px);
+  -webkit-backdrop-filter: blur(24px);
+  border: 1px solid rgba(255, 248, 240, 0.07) !important;
+  border-radius: 16px !important;
+  box-shadow: 0 8px 32px rgba(30, 27, 24, 0.25) !important;
+  color: var(--text-primary) !important;
+}
+
+.glass-card .el-card__header {
+  border-bottom: 1px solid rgba(255, 248, 240, 0.05) !important;
+}
+
+/* 按钮微动效 */
+.el-button--primary {
+  background: var(--brand-gradient) !important;
+  border: none !important;
+  box-shadow: 0 4px 12px rgba(255, 107, 107, 0.2) !important;
+  transition: all 0.2s ease !important;
+}
+
+.el-button--primary:hover {
+  opacity: 0.9 !important;
+  transform: translateY(-1px) !important;
+  box-shadow: 0 6px 16px rgba(255, 107, 107, 0.3) !important;
+}
+
+.el-button--primary:active {
+  transform: translateY(0) !important;
+  opacity: 1 !important;
+}

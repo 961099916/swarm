@@ -1,7 +1,6 @@
-// File: /Users/zhangjiahao/IdeaProjects/swarm/backend/workers/admin/src/controllers/admin.controller.ts
-
-import { ApiRes, TraceLogger, getErrorMessage } from "@swarm/kernel";
+import { ApiRes, TraceLogger, getErrorMessage, ConfigService } from "@swarm/kernel";
 import { AdminService } from "../services/admin.service";
+import { z } from "zod";
 
 export class AdminController {
   constructor(private adminService: AdminService) {}
@@ -390,6 +389,119 @@ export class AdminController {
     } catch (err) {
       TraceLogger.error("ADMIN", "CREATE_PROMPT_VERSION_CTRL_ERR", traceId, "发布 Prompt 新版本失败", err);
       return ApiRes.internalError("系统发布提示词新版本异常", traceId);
+    }
+  }
+
+  public async getConfigs(db: D1Database, traceId: string): Promise<Response> {
+    try {
+      const allConfigs = await ConfigService.getAll(db);
+      return ApiRes.success(allConfigs, traceId);
+    } catch (err) {
+      TraceLogger.error("ADMIN", "GET_CONFIGS_CTRL_ERR", traceId, "获取系统动态配置失败", err);
+      return ApiRes.internalError("系统获取配置异常", traceId);
+    }
+  }
+
+  public async updateConfig(
+    db: D1Database,
+    adminId: string,
+    request: Request,
+    kv: KVNamespace | undefined,
+    traceId: string
+  ): Promise<Response> {
+    try {
+      const updateConfigSchema = z.union([
+        z.object({
+          key: z.string({ message: "参数错误：缺少 key 字段" }),
+          value: z.union([z.string(), z.number()], { message: "参数错误：缺少 value 字段" })
+        }),
+        z.object({
+          configs: z.array(
+            z.object({
+              key: z.string({ message: "参数错误：缺少 key 字段" }),
+              value: z.union([z.string(), z.number()], { message: "参数错误：缺少 value 字段" })
+            })
+          )
+        })
+      ]);
+
+      const bodyJson = await request.json();
+      const parsed = updateConfigSchema.safeParse(bodyJson);
+      if (!parsed.success) {
+        const errorMsg = parsed.error.issues.map((issue: any) => issue.message).join(", ");
+        return ApiRes.badRequest(errorMsg, traceId);
+      }
+
+      const data = parsed.data;
+
+      // 1. 批量更新处理分支
+      if ("configs" in data) {
+        const { configs } = data;
+
+        // 校验所有 key 是否合法
+        for (const item of configs) {
+          if (!ConfigService.isValidKey(item.key)) {
+            return ApiRes.badRequest(`非法的配置键名: ${item.key}`, traceId);
+          }
+        }
+
+        // 循环执行更新并写入审计日志
+        for (const item of configs) {
+          await ConfigService.set(db, item.key as any, item.value, kv);
+          await (this.adminService as any).appendAudit(adminId, "UPDATE_CONFIG", item.key, { value: item.value });
+        }
+
+        TraceLogger.info(
+          "ADMIN",
+          "BATCH_UPDATE_CONFIG_SUCCESS",
+          traceId,
+          `管理员批量更新系统配置成功: count=${configs.length}`,
+          adminId
+        );
+
+        return ApiRes.success({ success: true }, traceId);
+      }
+
+      // 2. 单条更新处理分支
+      const { key, value } = data;
+
+      if (!ConfigService.isValidKey(key)) {
+        return ApiRes.badRequest(`非法的配置键名: ${key}`, traceId);
+      }
+
+      // 写入配置并清除/更新缓存
+      await ConfigService.set(db, key as any, value, kv);
+
+      // 记录管理端操作审计日志
+      await (this.adminService as any).appendAudit(adminId, "UPDATE_CONFIG", key, { value });
+
+      TraceLogger.info(
+        "ADMIN",
+        "UPDATE_CONFIG_SUCCESS",
+        traceId,
+        `管理员更新系统配置成功: key=${key}, value=${value}`,
+        adminId
+      );
+
+      return ApiRes.success({ success: true }, traceId);
+    } catch (err) {
+      TraceLogger.error("ADMIN", "UPDATE_CONFIG_CTRL_ERR", traceId, "更新系统配置失败", err);
+      return ApiRes.internalError("系统更新配置异常", traceId);
+    }
+  }
+
+  public async getTraceLogs(request: Request, traceId: string): Promise<Response> {
+    try {
+      const url = new URL(request.url);
+      const targetTraceId = url.searchParams.get("targetTraceId") || "";
+      if (!targetTraceId) {
+        return ApiRes.badRequest("参数错误：缺少 targetTraceId 字段", traceId);
+      }
+      const data = await this.adminService.getTraceLogs(targetTraceId);
+      return ApiRes.success(data, traceId);
+    } catch (err) {
+      TraceLogger.error("ADMIN", "GET_TRACE_LOGS_CTRL_ERR", traceId, "获取全链路日志失败", err);
+      return ApiRes.internalError("系统获取全链路日志异常", traceId);
     }
   }
 }

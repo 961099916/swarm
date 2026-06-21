@@ -77,6 +77,12 @@ const routes: Array<RouteRecordRaw> = [
         component: () => import('@/views/logs/index.vue'),
         meta: { title: '审计与监控', icon: 'Document' },
       },
+      {
+        path: 'settings',
+        name: 'Settings',
+        component: () => import('@/views/settings/index.vue'),
+        meta: { title: '系统参数配置', icon: 'Setting' },
+      },
     ],
   },
   {

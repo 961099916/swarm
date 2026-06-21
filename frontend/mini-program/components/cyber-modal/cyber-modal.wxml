@@ -1,0 +1,39 @@
+<!-- File: miniprogram/components/cyber-modal/cyber-modal.wxml -->
+<view class="cyber-modal-mask {{show ? 'modal-show' : ''}}" catchtouchmove="preventTouchMove">
+  <view class="cyber-modal-card">
+    <!-- 顶部渐变流光，根据 isDanger 改变色调 -->
+    <view class="modal-glow-line {{isDanger ? 'glow-danger' : ''}}"></view>
+    
+    <!-- 标题区 -->
+    <view class="modal-title-container" wx:if="{{title}}">
+      <text class="modal-title-text">{{title}}</text>
+    </view>
+    
+    <!-- 正文内容区 -->
+    <view class="modal-body-container">
+      <!-- 若为 Loading 状态，展示旋转光圈 -->
+      <block wx:if="{{isLoading}}">
+        <view class="cyber-loading-wrapper">
+          <view class="cyber-loading-spinner"></view>
+          <text class="cyber-loading-tip">{{content}}</text>
+        </view>
+      </block>
+      <block wx:else>
+        <text class="modal-body-text">{{content}}</text>
+      </block>
+    </view>
+    
+    <!-- 按钮操作区 (Loading 时隐藏) -->
+    <view class="modal-action-row" wx:if="{{!isLoading}}">
+      <button 
+        class="modal-btn modal-btn-cancel" 
+        wx:if="{{showCancel}}" 
+        bindtap="onCancel"
+      >{{cancelText}}</button>
+      <button 
+        class="modal-btn modal-btn-confirm {{isDanger ? 'btn-danger' : ''}}" 
+        bindtap="onConfirm"
+      >{{confirmText}}</button>
+    </view>
+  </view>
+</view>

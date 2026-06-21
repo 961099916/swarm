@@ -1,0 +1,13 @@
+{
+  "navigationBarTitleText": "知识库详情",
+  "backgroundColor": "#2D2A24",
+  "backgroundColorContent": "#2D2A24",
+  "usingComponents": {
+    "t-button": "tdesign-miniprogram/button/button",
+    "t-icon": "tdesign-miniprogram/icon/icon",
+    "t-loading": "tdesign-miniprogram/loading/loading",
+    "t-popup": "tdesign-miniprogram/popup/popup",
+    "mp-html": "../../components/mp-html/index",
+    "empty-state": "/components/empty-state/empty-state"
+  }
+}

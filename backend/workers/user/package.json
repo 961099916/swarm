@@ -1,5 +1,5 @@
 {
-  "name": "swarm-user",
+  "name": "@swarm/worker-user",
   "version": "1.0.0",
   "private": true,
   "scripts": {
@@ -8,9 +8,9 @@
     "type-check": "tsc --noEmit"
   },
   "dependencies": {
-    "@swarm/kernel": "*",
-    "@swarm/identity": "*",
-    "@swarm/credits": "*",
+    "@swarm/kernel": "workspace:*",
+    "@swarm/identity": "workspace:*",
+    "@swarm/credits": "workspace:*",
     "hono": "^4.0.0",
     "drizzle-orm": "^0.45.2"
   },

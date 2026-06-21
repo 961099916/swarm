@@ -223,6 +223,14 @@ app.put("/api/v1/admin/quiz/configs", async (c) => {
   return await getController(c).updateQuizConfigs(c.req.raw, c.env.QUIZ_SVC, c.get("adminId"), c.get("traceId"));
 });
 
+app.get("/api/v1/admin/configs", async (c) => {
+  return await getController(c).getConfigs(c.env.DB, c.get("traceId"));
+});
+
+app.put("/api/v1/admin/configs", async (c) => {
+  return await getController(c).updateConfig(c.env.DB, c.get("adminId"), c.req.raw, c.env.CACHE_KV, c.get("traceId"));
+});
+
 app.get("/api/v1/admin/prompts", async (c) => {
   return await getController(c).listPrompts(c.get("adminId"), c.get("traceId"));
 });
@@ -237,6 +245,10 @@ app.post("/api/v1/admin/prompts/active", async (c) => {
 
 app.post("/api/v1/admin/prompts/create", async (c) => {
   return await getController(c).createPromptVersion(c.req.raw, c.get("adminId"), c.env.CACHE_KV, c.get("traceId"));
+});
+
+app.get("/api/v1/admin/trace-logs", async (c) => {
+  return await getController(c).getTraceLogs(c.req.raw, c.get("traceId"));
 });
 
 app.get("/health", async (c) => {

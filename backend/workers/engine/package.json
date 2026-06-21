@@ -1,5 +1,5 @@
 {
-  "name": "swarm-engine",
+  "name": "@swarm/worker-engine",
   "version": "1.0.0",
   "private": true,
   "scripts": {
@@ -8,8 +8,8 @@
     "type-check": "tsc --noEmit"
   },
   "dependencies": {
-    "@swarm/kernel": "*",
-    "@swarm/agent": "*",
+    "@swarm/kernel": "workspace:*",
+    "@swarm/agent": "workspace:*",
     "hono": "^4.0.0",
     "drizzle-orm": "^0.45.2"
   },

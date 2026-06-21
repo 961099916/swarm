@@ -8,13 +8,7 @@ import {
 import { STAGE_CONFIGS } from "../evaluator/stageConfigs";
 import { calculateLocalQuiz, QUIZ_META } from "../evaluator/questions";
 import type { AnswerSubmit, NPCChallengeConfig } from "../types";
-import {
-  QUIZ_PASS_THRESHOLD,
-  EXP_STAGE_PASS,
-  EXP_QUIZ_COMPLETE,
-  EXP_QUIZ_CALCULATE,
-  TEST_HISTORY_MAX_LIMIT,
-} from "@swarm/quiz";
+import { QuizConfig } from "@swarm/quiz";
 import { CacheService, TraceLogger } from "@swarm/kernel";
 import { CONFIG } from "../config";
 
@@ -173,11 +167,15 @@ export class QuizService {
     let nextLevelName: string | undefined;
     let stageHistoryId: string | undefined;
 
+    const passThreshold = await QuizConfig.getQuizPassThreshold(this.quizRepo.db);
+    const expStagePass = await QuizConfig.getExpStagePass(this.quizRepo.db);
+    const expQuizComplete = await QuizConfig.getExpQuizComplete(this.quizRepo.db);
+
     if (total > 0) {
       const challenge = stage?.challenges.find((ch: any) => ch.npcId === npcId);
       await this.quizRepo.saveStageProgress(userId, stageId, npcId, score, total);
 
-      const passed = score >= total * QUIZ_PASS_THRESHOLD;
+      const passed = score >= total * passThreshold;
       stageHistoryId = crypto.randomUUID();
       const percentage = total > 0 ? Math.round((score / total) * 100) : 0;
 
@@ -193,7 +191,7 @@ export class QuizService {
       });
 
       if (passed) {
-        const { previousLevel, newLevel } = await this.quizRepo.addExp(userId, EXP_STAGE_PASS);
+        const { previousLevel, newLevel } = await this.quizRepo.addExp(userId, expStagePass);
         if (newLevel > previousLevel) {
           stageLevelUp = true;
           nextLevelName = CONFIG.getStageNameByLevel(newLevel);
@@ -220,7 +218,7 @@ export class QuizService {
           rawScores: JSON.stringify(result.scores ?? {}),
         });
         await this.quizRepo.incrementCompleted(userId, isNewType);
-        await this.quizRepo.addExp(userId, EXP_QUIZ_COMPLETE);
+        await this.quizRepo.addExp(userId, expQuizComplete);
       }
     }
 
@@ -230,7 +228,7 @@ export class QuizService {
     return {
       score,
       total,
-      passed: total > 0 ? score >= total * QUIZ_PASS_THRESHOLD : false,
+      passed: total > 0 ? score >= total * passThreshold : false,
       result,
       levelUp: stageLevelUp,
       nextLevelName,
@@ -266,8 +264,9 @@ export class QuizService {
       rawScores: JSON.stringify(result.scores ?? {}),
     });
 
+    const expQuizCalculate = await QuizConfig.getExpQuizCalculate(this.quizRepo.db);
     await this.quizRepo.incrementCompleted(userId, isNewType);
-    await this.quizRepo.addExp(userId, EXP_QUIZ_CALCULATE);
+    await this.quizRepo.addExp(userId, expQuizCalculate);
 
     await CacheService.delete(kv, `user:quiz:${userId}`).catch(() => {});
     TraceLogger.info("QUIZ", "CALCULATE_TEST", traceId, `纯测评计算成功 testId=${testId}`, userId);

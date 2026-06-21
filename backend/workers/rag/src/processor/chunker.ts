@@ -1,5 +1,3 @@
-import { RAG_DEFAULT_CHUNK_OVERLAP, RAG_DEFAULT_CHUNK_SIZE } from "@swarm/knowledge";
-
 /**
  * 智能中文分块器 (Recursive Character Text Splitter)
  *
@@ -17,8 +15,8 @@ export interface ChunkResult {
  */
 export function splitText(
   text: string,
-  chunkSize: number = RAG_DEFAULT_CHUNK_SIZE,
-  chunkOverlap: number = RAG_DEFAULT_CHUNK_OVERLAP
+  chunkSize: number = 500,
+  chunkOverlap: number = 100
 ): ChunkResult[] {
   if (!text || text.trim().length === 0) return [];
 

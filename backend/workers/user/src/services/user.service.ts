@@ -2,7 +2,7 @@
 
 import { UserRow } from "@swarm/identity";
 import { TOKEN_EXPIRY_SECONDS } from "@swarm/identity";
-import { INITIAL_CREDITS, INVITE_REWARD } from "@swarm/credits";
+import { CreditsConfig } from "@swarm/credits";
 import { CacheService, TraceLogger } from "@swarm/kernel";
 import { signJWT } from "../utils/jwtHelper";
 import { UserRepository } from "../repositories/user.repository";
@@ -49,7 +49,10 @@ export class UserService {
       if (inviter) invitedBy = inviter.id;
     }
 
-    const finalCredits = invitedBy ? INITIAL_CREDITS + INVITE_REWARD : INITIAL_CREDITS;
+    const db = this.userRepo.db;
+    const initialCredits = await CreditsConfig.getInitialCredits(db);
+    const inviteReward = await CreditsConfig.getInviteReward(db);
+    const finalCredits = invitedBy ? initialCredits + inviteReward : initialCredits;
 
     const dbUser = await this.userRepo.registerNewUserTransaction({
       newUserId,
@@ -58,6 +61,8 @@ export class UserService {
       avatarUrl,
       invitedBy,
       finalCredits,
+      initialCredits,
+      inviteReward,
       now,
     });
 

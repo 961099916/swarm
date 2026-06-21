@@ -2,7 +2,7 @@
 
 import { Hono } from "hono";
 import type { Context, Next } from "hono";
-import { TraceLogger, startupSecurityCheck, getErrorMessage } from "@swarm/kernel";
+import { TraceLogger, startupSecurityCheck, getErrorMessage, handleGlobalError } from "@swarm/kernel";
 import { ResponseBuilder } from "./utils/response";
 import { UserRepository } from "./repositories/user.repository";
 import { UserService } from "./services/user.service";
@@ -203,10 +203,7 @@ app.notFound(async (c) => {
 });
 
 app.onError(async (err, c) => {
-  const traceId = c.get("traceId") || crypto.randomUUID();
-  const userId = c.get("userId") || undefined;
-  TraceLogger.error("USER", "UNCAUGHT_EXCEPTION", traceId, `服务未捕获异常: ${getErrorMessage(err)}`, err, userId);
-  return ResponseBuilder.internalError("系统繁忙，请联系系统管理员", traceId);
+  return handleGlobalError(err, c, "USER");
 });
 
 export default app;

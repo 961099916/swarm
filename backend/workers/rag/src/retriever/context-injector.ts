@@ -1,5 +1,5 @@
+// File: /Users/zhangjiahao/IdeaProjects/swarm/backend/workers/rag/src/retriever/context-injector.ts
 import { TraceLogger, getErrorMessage } from "@swarm/kernel";
-import { RAG_DEFAULT_MIN_SCORE, RAG_DEFAULT_TOP_K, RAG_MAX_CONTEXT_LENGTH } from "@swarm/knowledge";
 
 /**
  * RAG 上下文注入器
@@ -33,8 +33,8 @@ export async function fetchRAGContext(
   ragBinding: Fetcher | undefined,
   kbIds: string[],
   query: string,
-  maxChunks: number = RAG_DEFAULT_TOP_K,
-  minScore: number = RAG_DEFAULT_MIN_SCORE
+  maxChunks: number = 5,
+  minScore: number = 0.4
 ): Promise<RAGInjectResult> {
   const emptyResult: RAGInjectResult = { context: "", chunks: [] };
 
@@ -74,14 +74,18 @@ export async function fetchRAGContext(
 /**
  * 将 RAG context 组装到 Agent system prompt 末尾
  */
-export function injectContextToPrompt(originalPrompt: string, ragContext: string): string {
+export function injectContextToPrompt(
+  originalPrompt: string,
+  ragContext: string,
+  maxContextLength: number = 3000
+): string {
   if (!ragContext || ragContext.trim().length === 0) {
     return originalPrompt;
   }
 
   // 截断过长的上下文
-  const truncatedContext = ragContext.length > RAG_MAX_CONTEXT_LENGTH
-    ? ragContext.slice(0, RAG_MAX_CONTEXT_LENGTH) + "\n...(上下文已截断)"
+  const truncatedContext = ragContext.length > maxContextLength
+    ? ragContext.slice(0, maxContextLength) + "\n...(上下文已截断)"
     : ragContext;
 
   return `${originalPrompt}\n\n## 参考知识\n${truncatedContext}\n\n请优先使用上述参考知识来回答用户问题。如果参考知识中不包含相关信息，则使用你自己的知识回答。`;
@@ -91,7 +95,7 @@ export function injectContextToPrompt(originalPrompt: string, ragContext: string
  * 组装 Supervisor 需要查询的知识库（从用户配置或默认）
  */
 export function getDefaultKnowledgeBaseIds(payload: any): string[] {
-  // 从任务 payload 中读取配置的知识库 ID
+  // 从任务 payload 中读取配置 of 知识库 ID
   if (payload?.knowledgeBaseIds && Array.isArray(payload.knowledgeBaseIds)) {
     return payload.knowledgeBaseIds;
   }

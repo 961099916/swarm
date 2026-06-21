@@ -1,5 +1,5 @@
 {
-  "name": "swarm-doc-consumer",
+  "name": "@swarm/worker-doc-consumer",
   "version": "1.0.0",
   "private": true,
   "scripts": {
@@ -7,7 +7,7 @@
     "type-check": "tsc --noEmit"
   },
   "dependencies": {
-    "@swarm/kernel": "*"
+    "@swarm/kernel": "workspace:*"
   },
   "devDependencies": {
     "@cloudflare/workers-types": "^4.20240923.0",

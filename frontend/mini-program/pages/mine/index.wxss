@@ -1,0 +1,356 @@
+/* Swarm 暖绒奶油风 — 个人中心 */
+
+/* ══════════════════════════════════════════════════
+   页面容器 — 背景由 app.wxss 全局 page 统管
+   ══════════════════════════════════════════════════ */
+.page-container {
+  min-height: 100vh;
+  background: var(--bg-root);
+  animation: fade-up 0.35s ease-out both;
+}
+.page-container.theme-light { background: var(--bg-root); }
+
+/* 底部安全区 safe-area 兜底遮罩（修复 iOS home indicator 白底） */
+.safe-area-bottom {
+  width: 100%;
+  height: env(safe-area-inset-bottom);
+  height: constant(safe-area-inset-bottom);
+  background-color: var(--bg-root);
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  z-index: 9999;
+}
+
+/* ── 用户身份卡片（珊瑚橙暖色渐变）── */
+.user-header-card {
+  display: flex;
+  align-items: center;
+  gap: 36rpx;
+  background: linear-gradient(135deg, rgba(255, 107, 107, 0.10) 0%, rgba(255, 160, 122, 0.05) 100%);
+  margin-top: 20rpx;
+  padding: 48rpx 40rpx;
+  border-bottom: 1rpx solid var(--border-subtle);
+}
+
+.user-info-text {
+  display: flex;
+  flex-direction: column;
+  gap: 12rpx;
+}
+
+/* ── 头像授权按钮样式重置（暖色珊瑚橙辉光）── */
+.avatar-wrapper-btn {
+  padding: 0 !important;
+  width: 110rpx !important;
+  height: 110rpx !important;
+  border-radius: 50% !important;
+  background: transparent !important;
+  margin: 0 !important;
+  position: relative !important;
+  line-height: 1 !important;
+  overflow: visible !important;
+  border: 2rpx solid var(--glass-border);
+  animation: avatarGlowWarm 4s infinite ease-in-out;
+}
+
+@keyframes avatarGlowWarm {
+  0%   { box-shadow: 0 4rpx 16rpx rgba(255, 107, 107, 0.25), 0 0 0 0 rgba(255, 107, 107, 0.15); }
+  50%  { box-shadow: 0 4rpx 22rpx rgba(255, 160, 122, 0.40), 0 0 0 10rpx rgba(255, 160, 122, 0); }
+  100% { box-shadow: 0 4rpx 16rpx rgba(255, 107, 107, 0.25), 0 0 0 0 rgba(255, 107, 107, 0.15); }
+}
+
+.avatar-wrapper-btn::after {
+  border: none !important;
+}
+
+.user-avatar {
+  width: 100%;
+  height: 100%;
+  border-radius: 50%;
+  background: var(--bg-surface-solid);
+  display: block;
+}
+
+.avatar-edit-badge {
+  position: absolute;
+  right: -4rpx;
+  bottom: -4rpx;
+  width: 36rpx;
+  height: 36rpx;
+  border-radius: 50%;
+  background: var(--brand-gradient);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 2rpx solid var(--bg-root);
+  box-shadow: var(--shadow-glow);
+}
+
+.camera-icon {
+  width: 14rpx;
+  height: 14rpx;
+  border: 2rpx solid #FFFFFF;
+  border-radius: 4rpx;
+  position: relative;
+}
+
+.camera-icon::before {
+  content: '';
+  position: absolute;
+  top: -4rpx;
+  left: 3rpx;
+  width: 4rpx;
+  height: 2rpx;
+  background: #FFFFFF;
+}
+
+.nickname-row {
+  display: flex;
+  align-items: center;
+  gap: 12rpx;
+}
+
+.nickname-display {
+  display: flex;
+  align-items: center;
+  gap: 10rpx;
+}
+
+.nickname-input {
+  font-size: 34rpx;
+  font-weight: 700;
+  color: var(--text-primary);
+  width: 280rpx;
+  border-bottom: 1rpx dashed var(--border-subtle);
+  padding: 4rpx 0;
+}
+
+.nickname-placeholder {
+  color: var(--text-placeholder);
+}
+
+.get-nickname-badge {
+  padding: 4rpx 14rpx;
+  border-radius: var(--radius-sm);
+  background: var(--brand-subtle);
+  border: 1rpx solid var(--brand-border);
+  box-shadow: var(--shadow-glow);
+  margin-left: 12rpx;
+  display: inline-flex;
+  align-items: center;
+  transition: all 0.2s ease;
+}
+
+.get-nickname-badge:active {
+  background: rgba(255, 107, 107, 0.25);
+  box-shadow: 0 0 15rpx rgba(255, 107, 107, 0.4);
+}
+
+.badge-get-text {
+  font-size: 18rpx;
+  color: var(--brand);
+  font-weight: 700;
+  letter-spacing: 1rpx;
+}
+
+.status-badge-row {
+  display: flex;
+}
+
+/* ── 状态标签（使用全局 .tag 系，并覆盖 old style）── */
+.status-badge {
+  font-size: 18rpx;
+  height: 38rpx;
+  line-height: 1 !important;
+  padding: 0 20rpx;
+  border-radius: var(--radius-full);
+  font-weight: 600;
+  letter-spacing: 1rpx;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--glass-bg);
+  color: var(--text-secondary);
+  border: 1rpx solid var(--glass-border);
+  backdrop-filter: var(--glass-blur);
+  -webkit-backdrop-filter: var(--glass-blur);
+  box-shadow: var(--shadow-sm);
+}
+
+.status-badge-dot {
+  width: 10rpx;
+  height: 10rpx;
+  border-radius: 50%;
+  margin-right: 12rpx;
+  animation: pulseLight 2s infinite ease-in-out;
+  flex-shrink: 0;
+}
+
+.status-badge-text {
+  line-height: 1 !important;
+  display: inline-block;
+}
+
+@keyframes pulseLight {
+  0%   { transform: scale(0.85); opacity: 0.4; }
+  50%  { transform: scale(1.2);  opacity: 1; }
+  100% { transform: scale(0.85); opacity: 0.4; }
+}
+
+.badge-online {
+  background: var(--success-subtle) !important;
+  border-color: var(--success-border) !important;
+  color: var(--success) !important;
+  box-shadow: 0 0 15rpx rgba(46, 204, 113, 0.1) !important;
+}
+
+.badge-online .status-badge-dot {
+  background: var(--success);
+  box-shadow: 0 0 10rpx rgba(46, 204, 113, 0.5);
+}
+
+.badge-offline {
+  background: var(--glass-bg) !important;
+  border-color: var(--border-default) !important;
+  color: var(--text-muted) !important;
+}
+
+.badge-offline .status-badge-dot {
+  background: var(--text-muted);
+}
+
+/* ── 仪表盘（暖色统计数据）── */
+.stats-dashboard {
+  display: flex;
+  justify-content: space-around;
+  align-items: center;
+  padding: 36rpx 20rpx !important;
+  margin-top: -12rpx;
+  margin-bottom: 40rpx;
+  background: var(--glass-bg) !important;
+  backdrop-filter: var(--glass-blur);
+  -webkit-backdrop-filter: var(--glass-blur);
+  border: 1rpx solid var(--glass-border) !important;
+  border-radius: var(--radius-lg);
+}
+
+.stat-box {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  flex: 1;
+}
+
+.stat-val {
+  font-size: 40rpx;
+  font-weight: 900;
+  color: var(--text-primary);
+  background: var(--brand-gradient);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+.stat-lbl {
+  font-size: 20rpx;
+  color: var(--text-muted);
+  font-weight: 500;
+  margin-top: 8rpx;
+}
+
+.stat-divider-vertical {
+  width: 2rpx;
+  height: 50rpx;
+  background: var(--border-subtle);
+}
+
+/* ── 历史标题行 ── */
+.history-title-row {
+  margin-top: 30rpx;
+  margin-bottom: 24rpx;
+}
+
+/* ── 分段标题（使用全局 .section-divider 风格）── */
+.section-title-mine {
+  font-size: var(--font-h4);
+  font-weight: 700;
+  color: var(--text-primary);
+  border-left: 6rpx solid var(--brand);
+  padding-left: 16rpx;
+  line-height: 1;
+}
+
+.history-list-scroll {
+  flex: 1;
+}
+
+/* ── 历史记录卡片（暖色毛玻璃）── */
+/* 测评卡片与空状态已被提取为原子组件，原私有样式已物理净化 */
+
+/* ── 服务网格菜单（暖色毛玻璃）── */
+.service-grid-group {
+  display: flex;
+  gap: 24rpx;
+  margin-top: 36rpx;
+  margin-bottom: 40rpx;
+  width: 100%;
+}
+
+.service-grid-item {
+  flex: 1;
+  margin-bottom: 0 !important;
+  padding: 30rpx !important;
+  background: var(--glass-bg) !important;
+  backdrop-filter: var(--glass-blur);
+  -webkit-backdrop-filter: var(--glass-blur);
+  border: 1rpx solid var(--glass-border) !important;
+  border-radius: var(--radius-md);
+  transition: all 0.2s ease;
+}
+
+.service-grid-item:active {
+  transform: scale(0.97);
+  background: var(--bg-surface-hover) !important;
+  border-color: var(--border-strong) !important;
+}
+
+.service-grid-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 16rpx;
+}
+
+.service-grid-icon {
+  font-size: 34rpx;
+}
+
+.service-grid-title {
+  font-size: var(--font-body-lg);
+  font-weight: 700;
+  color: var(--text-primary);
+  display: block;
+  margin-bottom: 6rpx;
+}
+
+.service-grid-desc {
+  font-size: var(--font-caption);
+  color: var(--text-muted);
+  display: block;
+  line-height: 1.4;
+}
+
+.arrow-icon-mini {
+  width: 12rpx;
+  height: 12rpx;
+  border-top: 3rpx solid var(--text-muted);
+  border-right: 3rpx solid var(--text-muted);
+  transform: rotate(45deg);
+}
+
+/* 加载更多指示器 */
+.mine-load-more { display: flex; align-items: center; justify-content: center; gap: 12rpx; padding: 32rpx 0; }
+.mine-load-more-text { font-size: 22rpx; color: var(--text-muted); }
+.mine-load-more-end { font-size: 20rpx; color: var(--text-placeholder); letter-spacing: 2rpx; }

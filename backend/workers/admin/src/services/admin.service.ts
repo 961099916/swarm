@@ -347,6 +347,10 @@ export class AdminService {
     return await this.adminRepo.findAuditLogs({ conditions: [], limit, offset });
   }
 
+  public async getTraceLogs(traceId: string) {
+    return await this.adminRepo.findTraceLogs(traceId);
+  }
+
   // ══════════════════════════════════════════════════
   // 辅助方法
   // ══════════════════════════════════════════════════

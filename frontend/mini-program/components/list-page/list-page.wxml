@@ -1,0 +1,88 @@
+<!-- File: /Users/zhangjiahao/IdeaProjects/swarm/frontend/mini-program/components/list-page/list-page.wxml -->
+<view class="lp-root">
+
+  <!-- 筛选栏（水平滚动胶囊） -->
+  <scroll-view
+    wx:if="{{filterOptions.length > 0}}"
+    class="lp-filter-bar"
+    scroll-x
+    enable-flex
+    enhanced
+    show-scrollbar="{{false}}"
+  >
+    <view class="lp-filter-items">
+      <view
+        wx:for="{{filterOptions}}"
+        wx:key="value"
+        class="pill-filter {{filterValue === item.value ? 'active' : ''}}"
+        data-value="{{item.value}}"
+        bindtap="onFilterChange"
+      >
+        {{item.label}}
+      </view>
+    </view>
+  </scroll-view>
+
+  <!-- 搜索框 (重构：引用 search-bar 原子组件) -->
+  <view wx:if="{{showSearch}}" class="lp-search-wrap">
+    <search-bar
+      value="{{searchQuery}}"
+      placeholder="{{searchPlaceholder}}"
+      bind:change="onSearchInput"
+      bind:confirm="onSearchSubmit"
+    />
+  </view>
+
+  <!-- 滚动列表容器 -->
+  <scroll-view
+    class="lp-scroll"
+    scroll-y
+    enhanced
+    show-scrollbar="{{false}}"
+    refresher-enabled
+    refresher-triggered="{{refreshing}}"
+    bindrefresherrefresh="onRefresh"
+    bindscrolltolower="onLoadMore"
+  >
+    <!-- 骨架屏（首次加载） -->
+    <view wx:if="{{loading && list.length === 0}}" class="lp-skeleton-wrap">
+      <view class="skeleton skeleton-card" wx:for="{{[1,2,3]}}" wx:key="*this"></view>
+    </view>
+
+    <!-- 错误状态 -->
+    <view wx:elif="{{errorMsg && list.length === 0}}" class="error-state">
+      <view class="error-icon">
+        <view class="t-icon t-icon-error-circle-filled" style="font-size: 64rpx;"></view>
+      </view>
+      <text class="error-label">{{errorMsg}}</text>
+      <button class="error-retry-btn" bindtap="onRetry">重新加载</button>
+    </view>
+
+    <!-- 空状态 (重构：引用 empty-state 原子组件) -->
+    <empty-state
+      wx:elif="{{!loading && list.length === 0}}"
+      icon="mail"
+      label="{{emptyText}}"
+      desc="{{emptyDesc}}"
+    />
+
+    <!-- 列表内容（由父页面通过 slot 填充） -->
+    <view wx:else>
+      <slot />
+    </view>
+
+    <!-- 加载更多指示器 -->
+    <view wx:if="{{loading && list.length > 0}}" class="lp-load-more">
+      <view class="spinner-ios"></view>
+      <text class="lp-load-more-text">加载中...</text>
+    </view>
+
+    <!-- 没有更多了 -->
+    <view wx:elif="{{!hasMore && list.length > 0}}" class="lp-load-more">
+      <text class="lp-load-more-end">— 已展示全部 {{total}} 条 —</text>
+    </view>
+
+    <!-- 底部安全间距 -->
+    <view style="height: 40rpx;"></view>
+  </scroll-view>
+</view>

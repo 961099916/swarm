@@ -1,3 +1,4 @@
+// File: packages/credits/src/index.ts
 /**
  * @swarm/credits — 积分经济限界上下文
  *
@@ -5,12 +6,9 @@
  * Aggregate Roots: CreditsLedger (积分流水聚合)
  */
 
-export { creditsLedger, adRewardLogs, userInvitations } from './schema';
+export { creditsLedger, adRewardLogs, userInvitations } from './infrastructure/db/schema';
 export type {
   CreditReason, CreditsLedgerRow, AdRewardLogRow, UserInvitationRow,
   BindInviteReq, AdRewardReq,
 } from './types';
-export {
-  INITIAL_CREDITS, INVITE_REWARD, AD_REWARD, TASK_COST,
-  DEFAULT_PAGE_LIMIT, CREDITS_LIMIT,
-} from './constants';
+export { CreditsConfig } from './constants';

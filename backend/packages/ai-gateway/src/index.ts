@@ -11,6 +11,7 @@ export type {
   AIChatRequest, AIChatResponse,
   AIEmbedRequest, AIEmbedResponse,
   AICallLogDTO, AIStatsDTO,
+  IAiService,
 } from './types';
 export {
   AI_DEFAULT_RPM, AI_DEFAULT_TPM,

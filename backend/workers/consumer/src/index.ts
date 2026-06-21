@@ -1,13 +1,7 @@
 // File: /Users/zhangjiahao/IdeaProjects/swarm/backend/workers/consumer/src/index.ts
-
-/**
- * swarm-consumer — 异步任务队列消费者
- *
- * 从 Queue 接收任务创建消息，异步触发 Cloudflare Workflows 引擎。
- */
 import { tasks, taskLogs } from "@swarm/agent";
 import { users } from "@swarm/identity";
-import { creditsLedger, TASK_COST } from "@swarm/credits";
+import { creditsLedger, CreditsConfig } from "@swarm/credits";
 import { TraceLogger, getErrorMessage } from "@swarm/kernel";
 import { drizzle } from "drizzle-orm/d1";
 import { eq, sql } from "drizzle-orm";
@@ -88,11 +82,12 @@ async function handleFailureAndRefund(
   try {
     const drizzleDb = drizzle(db);
     const now = new Date().toISOString();
+    const taskCost = await CreditsConfig.getTaskCost(db);
 
     await drizzleDb.transaction(async (tx) => {
       const refundRes = await tx
         .update(users)
-        .set({ credits: sql`credits + ${TASK_COST}`, updatedAt: now })
+        .set({ credits: sql`credits + ${taskCost}`, updatedAt: now })
         .where(eq(users.id, userId))
         .returning({ credits: users.credits });
 
@@ -100,7 +95,7 @@ async function handleFailureAndRefund(
 
       await tx.insert(creditsLedger).values({
         userId,
-        delta: TASK_COST,
+        delta: taskCost,
         balance: newBalance,
         reason: "ADMIN_ADJUST",
         refId: taskId,
@@ -119,7 +114,7 @@ async function handleFailureAndRefund(
       await tx.insert(taskLogs).values({
         taskId,
         level: "ERROR",
-        message: `工作流启动异常: ${errorMsg}，系统自动触发逆向退款补偿成功，退回 ${TASK_COST} 积分，剩余 ${newBalance} 积分`,
+        message: `工作流启动异常: ${errorMsg}，系统自动触发逆向退款补偿成功，退回 ${taskCost} 积分，剩余 ${newBalance} 积分`,
         createdAt: now,
       });
     });

@@ -1,0 +1,58 @@
+/* File: /Users/zhangjiahao/IdeaProjects/swarm/frontend/mini-program/components/list-page/list-page.wxss */
+.lp-root {
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+  background: var(--bg-root);
+  box-sizing: border-box;
+}
+
+/* ── 筛选栏 ── */
+.lp-filter-bar {
+  width: 100%;
+  white-space: nowrap;
+  padding: 24rpx 24rpx 0;
+  box-sizing: border-box;
+  flex-shrink: 0;
+}
+.lp-filter-items {
+  display: inline-flex;
+  gap: 12rpx;
+}
+
+/* ── 搜索框包装 ── */
+.lp-search-wrap {
+  padding: 16rpx 24rpx 0;
+  flex-shrink: 0;
+}
+
+/* ── 滚动列表（flex:1 撑满剩余空间） ── */
+.lp-scroll {
+  flex: 1;
+  height: 0;
+  padding: 0 24rpx;
+  box-sizing: border-box;
+}
+
+/* ── 骨架屏外层 ── */
+.lp-skeleton-wrap {
+  padding-top: 16rpx;
+}
+
+/* ── 加载更多 ── */
+.lp-load-more {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12rpx;
+  padding: 32rpx 0;
+}
+.lp-load-more-text {
+  font-size: 22rpx;
+  color: var(--text-muted);
+}
+.lp-load-more-end {
+  font-size: 22rpx;
+  color: var(--text-placeholder);
+  letter-spacing: 2rpx;
+}

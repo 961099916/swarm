@@ -1,5 +1,5 @@
 {
-  "name": "swarm-gateway",
+  "name": "@swarm/worker-gateway",
   "version": "1.0.0",
   "private": true,
   "scripts": {
@@ -8,10 +8,10 @@
     "type-check": "tsc --noEmit"
   },
   "dependencies": {
-    "@swarm/kernel": "*",
-    "@swarm/identity": "*",
-    "@swarm/credits": "*",
-    "@swarm/agent": "*",
+    "@swarm/kernel": "workspace:*",
+    "@swarm/identity": "workspace:*",
+    "@swarm/credits": "workspace:*",
+    "@swarm/agent": "workspace:*",
     "hono": "^4.0.0",
     "drizzle-orm": "^0.45.2"
   },

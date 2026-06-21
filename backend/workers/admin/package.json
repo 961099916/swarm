@@ -1,5 +1,5 @@
 {
-  "name": "swarm-admin",
+  "name": "@swarm/worker-admin",
   "version": "1.0.0",
   "private": true,
   "scripts": {
@@ -8,13 +8,14 @@
     "type-check": "tsc --noEmit"
   },
   "dependencies": {
-    "@swarm/kernel": "*",
-    "@swarm/identity": "*",
-    "@swarm/credits": "*",
-    "@swarm/agent": "*",
-    "@swarm/ai-gateway": "*",
+    "@swarm/agent": "workspace:*",
+    "@swarm/ai-gateway": "workspace:*",
+    "@swarm/credits": "workspace:*",
+    "@swarm/identity": "workspace:*",
+    "@swarm/kernel": "workspace:*",
+    "drizzle-orm": "^0.45.2",
     "hono": "^4.0.0",
-    "drizzle-orm": "^0.45.2"
+    "zod": "^4.4.3"
   },
   "devDependencies": {
     "@cloudflare/workers-types": "^4.20240923.0",

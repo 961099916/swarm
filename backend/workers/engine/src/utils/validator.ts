@@ -57,7 +57,7 @@ export class ToolsSecurityValidator implements RequestValidator<Record<string, a
 
 export class TaskTypeValidator implements RequestValidator<Record<string, any>> {
   public validate(data: Record<string, any>): string | null {
-    const validTypes = ["AGENT_ORCHESTRATION"];
+    const validTypes = ["AGENT_ORCHESTRATION", "WORKFLOW_EXECUTION"];
     if (!data.taskType || !validTypes.includes(data.taskType)) {
       return "暂不支持该任务类型";
     }

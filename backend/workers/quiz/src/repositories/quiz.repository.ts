@@ -2,7 +2,7 @@
 
 import { quizUsers, testHistory, userStageProgress, systemConfigs, quizStages, quizNpcs, quizQuestions } from "@swarm/quiz";
 import type { QuizUserRow, UserStageProgressRow, TestHistoryRow } from "@swarm/quiz";
-import { EXP_PER_LEVEL, QUIZ_PASS_THRESHOLD } from "@swarm/quiz";
+import { QuizConfig } from "@swarm/quiz";
 import { TraceLogger } from "@swarm/kernel";
 import { drizzle } from "drizzle-orm/d1";
 import { eq, and, desc, sql } from "drizzle-orm";
@@ -28,7 +28,7 @@ interface QuizUserSnapshot {
 }
 
 export class QuizRepository {
-  constructor(private db: D1Database) {}
+  constructor(public readonly db: D1Database) {}
 
   private getDrizzle() {
     return drizzle(this.db);
@@ -108,7 +108,7 @@ export class QuizRepository {
     const user = await this.ensureUserQuiz(userId);
     const previousLevel = user.level ?? 1;
     const newExp = (user.exp ?? 0) + exp;
-    const expPerLevel = EXP_PER_LEVEL;
+    const expPerLevel = await QuizConfig.getExpPerLevel(this.db);
     const newLevel = newExp >= (user.level ?? 1) * expPerLevel
       ? Math.floor(newExp / expPerLevel) + 1
       : (user.level ?? 1);
@@ -220,7 +220,8 @@ export class QuizRepository {
     score: number,
     total: number
   ): Promise<void> {
-    const passed = score >= total * QUIZ_PASS_THRESHOLD ? 1 : 0;
+    const passThreshold = await QuizConfig.getQuizPassThreshold(this.db);
+    const passed = score >= total * passThreshold ? 1 : 0;
     const now = new Date().toISOString();
     const drizzleDb = this.getDrizzle();
 

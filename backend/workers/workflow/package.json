@@ -1,5 +1,5 @@
 {
-  "name": "swarm-workflow",
+  "name": "@swarm/worker-workflow",
   "version": "1.0.0",
   "private": true,
   "scripts": {
@@ -8,9 +8,9 @@
     "type-check": "tsc --noEmit"
   },
   "dependencies": {
-    "@swarm/kernel": "*",
-    "@swarm/agent": "*",
-    "@swarm/ai-gateway": "*",
+    "@swarm/kernel": "workspace:*",
+    "@swarm/agent": "workspace:*",
+    "@swarm/ai-gateway": "workspace:*",
     "drizzle-orm": "^0.45.2"
   },
   "devDependencies": {

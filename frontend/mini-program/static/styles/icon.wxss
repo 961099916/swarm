@@ -1,0 +1,44 @@
+/**
+ * Swarm 自定义图标 — SVG mask 回退方案
+ *
+ * 注意：TDesign 图标字体通过 @font-face + wx.loadFontFace 加载，
+ * 标准图标名（service / user / close / check 等）直接使用 TDesign 字体渲染。
+ *
+ * 此处为 .t-icon 提供基础尺寸（不覆盖 font-family，避免与 TDesign 冲突），
+ * 并定义 TDesign 字体中不存在的自定义图标回退。
+ */
+
+/* ── .t-icon 基础尺寸（TDesign 的 icon.wxss 仅设 font-family: t !important，
+ *    此处补充尺寸和对齐，不设 background-color / mask 以避免冲突）── */
+.t-icon {
+  display: inline-block;
+  width: 1em;
+  height: 1em;
+  vertical-align: middle;
+}
+
+/* ── TDesign 中不存在的自定义图标，使用 SVG mask 回退 ── */
+.t-icon-ai-terminal,
+.t-icon-user-avatar {
+  display: inline-block;
+  width: 1em;
+  height: 1em;
+  background-color: currentColor;
+  -webkit-mask-repeat: no-repeat;
+  mask-repeat: no-repeat;
+  -webkit-mask-size: 100% 100%;
+  mask-size: 100% 100%;
+  vertical-align: middle;
+}
+
+/* ai-terminal — 终端图标（TDesign 无此图标） */
+.t-icon-ai-terminal {
+  -webkit-mask-image: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="black" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="4 17 10 11 4 5"/><line x1="12" y1="19" x2="20" y2="19"/></svg>');
+  mask-image: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="black" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="4 17 10 11 4 5"/><line x1="12" y1="19" x2="20" y2="19"/></svg>');
+}
+
+/* user-avatar — 用户头像占位（TDesign 无此图标） */
+.t-icon-user-avatar {
+  -webkit-mask-image: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="black" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="5"/><path d="M3 21v-2a7 7 0 0 1 7-7h4a7 7 0 0 1 7 7v2"/></svg>');
+  mask-image: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="black" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="5"/><path d="M3 21v-2a7 7 0 0 1 7-7h4a7 7 0 0 1 7 7v2"/></svg>');
+}

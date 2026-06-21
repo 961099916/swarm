@@ -10,9 +10,10 @@ import { TraceLogger, getErrorMessage } from "@swarm/kernel";
  */
 
 import { WorkflowEntrypoint, WorkflowStep, WorkflowEvent } from "cloudflare:workers";
-import { splitText } from "./chunker";
-import { generateEmbeddings } from "./embedder";
-import { VectorStore } from "./vector-store";
+import { splitText } from "./chunker.js";
+import { generateEmbeddings } from "./embedder.js";
+import { VectorStore } from "./vector-store.js";
+import { KnowledgeConfig } from "@swarm/knowledge";
 
 export interface Env {
   DB: D1Database;
@@ -186,7 +187,9 @@ export class DocumentProcessWorkflow extends WorkflowEntrypoint<Env, Params> {
           text: c.text,
         }));
 
-        const embeddings = await generateEmbeddings(this.env.AI, chunkInputs);
+        const embedModel = await KnowledgeConfig.getDefaultEmbedModel(db);
+        const maxConcurrent = await KnowledgeConfig.getMaxConcurrentEmbeddings(db);
+        const embeddings = await generateEmbeddings(this.env.AI, chunkInputs, embedModel, maxConcurrent);
         TraceLogger.info("RAG", "DOC_WF_EMBED", traceId, `嵌入生成完成: ${embeddings.length} 个向量`);
 
         return { chunkInputs, embeddings };
@@ -306,7 +309,6 @@ export async function processDocumentInline(
     }
 
     // 3. 分块
-    const { splitText } = await import("./chunker");
     const kb = await db.prepare("SELECT chunk_size, chunk_overlap FROM knowledge_bases WHERE id = ?").bind(kbId).first<any>();
     const chunkSize = kb?.chunk_size || 500;
     const chunkOverlap = kb?.chunk_overlap || 100;
@@ -315,12 +317,12 @@ export async function processDocumentInline(
 
     // 4. 生成嵌入
     if (!env.AI) throw new Error("AI 绑定不可用");
-    const { generateEmbeddings } = await import("./embedder");
     const chunkInputs = chunks.map(c => ({ id: `${kbId}:${docId}:${c.index}`, text: c.text }));
-    const embeddings = await generateEmbeddings(env.AI, chunkInputs);
+    const embedModel = await KnowledgeConfig.getDefaultEmbedModel(db);
+    const maxConcurrent = await KnowledgeConfig.getMaxConcurrentEmbeddings(db);
+    const embeddings = await generateEmbeddings(env.AI, chunkInputs, embedModel, maxConcurrent);
 
     // 5. 写入 D1 + Vectorize
-    const { VectorStore } = await import("./vector-store");
     const vectorStore = new VectorStore(undefined, db);
     const now = new Date().toISOString();
     const vectorRecords = embeddings.map(e => ({ id: e.chunkId, values: e.vector }));

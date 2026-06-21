@@ -1,0 +1,124 @@
+<!-- File: /Users/zhangjiahao/IdeaProjects/swarm/frontend/mini-program/packageKnowledge/detail/index.wxml -->
+<view class="page {{theme}}">
+  <!-- 知识库信息头 -->
+  <view class="kb-header" wx:if="{{kbInfo}}">
+    <view class="kb-header-top">
+      <view class="kb-icon {{kbInfo.isPublic ? 'icon-public' : 'icon-private'}}">
+        <t-icon name="{{kbInfo.isPublic ? 'bookmark' : 'lock-on'}}" size="14" />
+      </view>
+      <view class="kb-header-info">
+        <text class="kb-title">{{kbInfo.name}}</text>
+        <text class="kb-desc">{{kbInfo.description || '暂无描述'}}</text>
+      </view>
+    </view>
+    <view class="kb-config">
+      <text>分块: {{kbInfo.chunkSize}}字符</text>
+      <text>重叠: {{kbInfo.chunkOverlap}}字符</text>
+    </view>
+  </view>
+
+  <!-- 操作按钮 -->
+  <view class="action-bar">
+    <view class="action-btn btn-primary" bindtap="goToAdd">
+      <t-icon name="add" size="14" /><text>添加文档</text>
+    </view>
+    <view class="action-btn" bindtap="loadDocuments">
+      <t-icon name="refresh" size="14" /><text>刷新</text>
+    </view>
+    <view class="action-btn" bindtap="goToChat">
+      <t-icon name="chat" size="14" /><text>智能问答</text>
+    </view>
+  </view>
+
+  <!-- 文档列表 -->
+  <view class="section-title">
+    <text>文档列表</text>
+    <text class="section-count">{{documents.length}} 篇</text>
+  </view>
+
+  <!-- 骨架屏占位（符合系统加载规范） -->
+  <view wx:if="{{loading && documents.length === 0}}" class="skeleton-wrap">
+    <view class="skeleton skeleton-card" wx:for="{{[1,2,3]}}" wx:key="*this"></view>
+  </view>
+
+  <!-- 文档列表（符合系统卡片与延迟交错入场动效规范） -->
+  <view wx:elif="{{documents.length > 0}}" class="doc-list">
+    <view
+      wx:for="{{documents}}"
+      wx:key="id"
+      class="card card-actionable doc-card fade-up"
+      data-doc="{{item}}"
+      bindtap="showDocDetail"
+      style="animation-delay: {{index * 0.05}}s;"
+    >
+      <view class="doc-header">
+        <t-icon name="file-txt" size="14" />
+        <view class="doc-title-area">
+          <text class="doc-title">{{item.title}}</text>
+          <text class="doc-source">{{item.sourceType === 'WEB_SCRAPE' ? '网页抓取' : item.sourceType === 'MANUAL' ? '手动录入' : '上传'}}</text>
+        </view>
+        <!-- 统一的功能状态标签与呼吸圆点 -->
+        <view class="tag tag-{{item.status === 'READY' ? 'success' : item.status === 'PROCESSING' ? 'running' : item.status === 'FAILED' ? 'failed' : 'pending'}}">
+          <view wx:if="{{item.status === 'PROCESSING'}}" class="status-dot status-dot-running"></view>
+          <text>{{item.status === 'READY' ? '就绪' : item.status === 'PROCESSING' ? '处理中' : item.status === 'FAILED' ? '失败' : '待处理'}}</text>
+        </view>
+      </view>
+      <view class="doc-meta">
+        <text wx:if="{{item.chunkCount}}">{{item.chunkCount}} 个分块</text>
+        <text wx:if="{{item.errorMessage}}" class="error-text">{{item.errorMessage}}</text>
+        <text>{{item.createdAt ? item.createdAt.slice(0, 10) : ''}}</text>
+      </view>
+      <view class="doc-actions">
+        <view class="action-sm-btn delete-btn" data-doc="{{item}}" catchtap="onDeleteDoc">
+          <t-icon name="delete" size="11" /><text>删除</text>
+        </view>
+      </view>
+    </view>
+
+    <!-- 统一底线提示 -->
+    <view class="load-more-indicator">
+      <text class="load-more-end">— 已展示全部 {{documents.length}} 篇文档 —</text>
+    </view>
+  </view>
+
+  <!-- 空状态（引入原子组件） -->
+  <empty-state
+    wx:else
+    icon="mail"
+    label="暂无文档"
+    desc="点击「添加文档」开始录入"
+    iconSize="{{40}}"
+    iconWrapSize="{{70}}"
+  />
+
+  <!-- 文档详情抽屉 -->
+  <t-popup visible="{{showDocPopup}}" placement="right" bind:visible-change="onCloseDocPopup">
+    <view class="doc-detail-drawer" style="padding-bottom: env(safe-area-inset-bottom);">
+      <view class="doc-detail-header">
+        <text class="doc-detail-title">{{selectedDocTitle}}</text>
+        <view class="doc-detail-close" bindtap="onCloseDocPopup">
+          <t-icon name="close" size="36rpx" />
+        </view>
+      </view>
+      <scroll-view class="doc-detail-content" scroll-y>
+        <view wx:if="{{docDetailLoading}}" class="doc-detail-loading">
+          <t-loading size="40rpx" theme="circular" text="加载中..." />
+        </view>
+        <view wx:else class="doc-detail-body">
+          <view class="doc-origin-bar" wx:if="{{selectedDoc && (selectedDoc.sourceType === 'UPLOAD' || selectedDoc.sourceType === 'WEB_SCRAPE')}}">
+            <view wx:if="{{selectedDoc.sourceType === 'UPLOAD'}}" class="origin-btn btn-primary-green" bindtap="previewDocument">
+              <t-icon name="file-pdf" size="14" />
+              <text>查看 Office/PDF 原件</text>
+            </view>
+            <view wx:if="{{selectedDoc.sourceType === 'WEB_SCRAPE' && selectedDoc.sourceUrl}}" class="origin-btn btn-secondary-gray" bindtap="copySourceUrl">
+              <t-icon name="link" size="14" />
+              <text>复制网页原文链接</text>
+            </view>
+          </view>
+          <mp-html wx:if="{{selectedDocContent}}" content="{{selectedDocContent}}"></mp-html>
+          <view wx:else class="doc-detail-empty">暂无文档内容</view>
+        </view>
+      </scroll-view>
+    </view>
+  </t-popup>
+</view>

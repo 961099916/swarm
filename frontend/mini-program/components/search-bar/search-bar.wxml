@@ -1,0 +1,18 @@
+<!-- File: /Users/zhangjiahao/IdeaProjects/swarm/frontend/mini-program/components/search-bar/search-bar.wxml -->
+<view class="search-bar-wrap custom-class">
+  <view class="search-bar-inner">
+    <view class="t-icon t-icon-search search-icon"></view>
+    <input
+      class="search-input"
+      placeholder="{{placeholder}}"
+      placeholder-class="search-placeholder"
+      value="{{value}}"
+      bindinput="onInput"
+      bindconfirm="onConfirm"
+      confirm-type="search"
+    />
+    <view wx:if="{{value}}" class="search-clear" bindtap="onClear">
+      <view class="t-icon t-icon-close search-clear-icon"></view>
+    </view>
+  </view>
+</view>

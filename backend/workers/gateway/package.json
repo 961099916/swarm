@@ -12,7 +12,7 @@
     "@swarm/identity": "workspace:*",
     "@swarm/credits": "workspace:*",
     "@swarm/agent": "workspace:*",
-    "hono": "^4.0.0",
+    "hono": "^4.12.27",
     "drizzle-orm": "^0.45.2"
   },
   "devDependencies": {
